@@ -1,0 +1,51 @@
+# .dockerignore for OmniFlow Backend
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# IDE files
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*
+
+# CI/CD
+.github/
+**/*.md
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# NuGet
+**/packages/
+*.nupkg
+*.snupkg
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
