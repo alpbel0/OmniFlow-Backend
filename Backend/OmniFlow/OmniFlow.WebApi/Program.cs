@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddInfrastructureLayer(builder.Configuration);
 
 var app = builder.Build();
@@ -23,6 +24,9 @@ using (var scope = app.Services.CreateScope())
 	await DefaultSuperAdmin.SeedAsync(userManager, roleManager, dbContext);
 	await DefaultBasicUser.SeedAsync(userManager, roleManager);
 }
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapControllers();
 app.MapGet("/", () => Results.Ok("OmniFlow WebApi"));
