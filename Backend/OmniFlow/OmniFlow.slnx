@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="OmniFlow.Application/OmniFlow.Application.csproj" />
+  <Project Path="OmniFlow.Domain/OmniFlow.Domain.csproj" />
+  <Project Path="OmniFlow.Infrastructure/OmniFlow.Infrastructure.csproj" />
+  <Project Path="OmniFlow.WebApi/OmniFlow.WebApi.csproj" />
+</Solution>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\OmniFlow.Application\OmniFlow.Application.csproj" />
+		<ProjectReference Include="..\OmniFlow.Infrastructure\OmniFlow.Infrastructure.csproj" />
+	</ItemGroup>
+</Project>
