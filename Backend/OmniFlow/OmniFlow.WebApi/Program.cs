@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Infrastructure;
+using OmniFlow.Infrastructure.Contexts;
 using OmniFlow.Infrastructure.Models;
 using OmniFlow.Infrastructure.Seeds;
 
@@ -22,7 +23,7 @@ using (var scope = app.Services.CreateScope())
 		var context = services.GetRequiredService<ApplicationDbContext>();
 		context.Database.Migrate(); // Bu satır eksik tabloları Azure'a otomatik basar
 	}
-	catch (Exception ex)
+	catch (Exception)
 	{
 		// Hata loglama buraya gelebilir
 	}
