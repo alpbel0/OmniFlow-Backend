@@ -9,4 +9,14 @@
 		<ProjectReference Include="..\OmniFlow.Application\OmniFlow.Application.csproj" />
 		<ProjectReference Include="..\OmniFlow.Infrastructure\OmniFlow.Infrastructure.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
+	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.15" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.15">
+	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	    <PrivateAssets>all</PrivateAssets>
+	  </PackageReference>
+	  <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.2" />
+	</ItemGroup>
 </Project>
