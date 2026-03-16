@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Infrastructure;
 using OmniFlow.Infrastructure.Models;
@@ -16,6 +17,16 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
 	var services = scope.ServiceProvider;
+	try
+	{
+		var context = services.GetRequiredService<ApplicationDbContext>();
+		context.Database.Migrate(); // Bu satır eksik tabloları Azure'a otomatik basar
+	}
+	catch (Exception ex)
+	{
+		// Hata loglama buraya gelebilir
+	}
+
 	var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 	var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 	var dbContext = services.GetRequiredService<IApplicationDbContext>();
