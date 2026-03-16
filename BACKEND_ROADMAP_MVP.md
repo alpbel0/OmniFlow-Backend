@@ -50,7 +50,7 @@
 ### Definition of Done
 
 Phase 1 tamamlanmış sayılır eğer:
-- [ ] 4 proje oluşturuldu ve referans zinciri doğru (Domain → Application → Infrastructure → WebApi)
+- [x] 4 proje oluşturuldu ve referans zinciri doğru (Domain → Application → Infrastructure → WebApi)
 - [ ] 18 entity, 20 enum, tüm EF Core configuration'lar yazıldı
 - [ ] Azure PostgreSQL'e migration başarıyla uygulandı, 18 tablo oluştu
 - [ ] Register → Login → Access Token → Refresh Token akışı çalışıyor
@@ -71,56 +71,56 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 1.1: Solution & Project Creation
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] OmniFlow solution'ı oluştur
-- [ ] 4 proje oluştur: OmniFlow.Domain, OmniFlow.Application, OmniFlow.Infrastructure, OmniFlow.WebApi
-- [ ] Solution'a tüm projeleri ekle
-- [ ] Referans zincirini kur: Application → Domain, Infrastructure → Application, WebApi → Application + Infrastructure
-- [ ] Build al ve 0 error olduğunu doğrula
-- [ ] .gitignore dosyası ekle (dotnet template)
-- [ ] Initial commit yap
+- [x] OmniFlow solution'ı oluştur
+- [x] 4 proje oluştur: OmniFlow.Domain, OmniFlow.Application, OmniFlow.Infrastructure, OmniFlow.WebApi
+- [x] Solution'a tüm projeleri ekle
+- [x] Referans zincirini kur: Application → Domain, Infrastructure → Application, WebApi → Application + Infrastructure
+- [x] Build al ve 0 error olduğunu doğrula
+- [x] .gitignore dosyası ekle (dotnet template)
+- [x] Initial commit yap
 
 ---
 
 ### Task 1.2: Domain — Base Entity'ler
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Domain/Common/BaseEntity.cs` oluştur — Guid Id property, auto-generate
-- [ ] `Domain/Common/AuditableBaseEntity.cs` oluştur — BaseEntity'den türer, CreatedAt, UpdatedAt, DeletedAt (nullable) property'leri
+- [x] `Domain/Common/BaseEntity.cs` oluştur — Guid Id property, auto-generate
+- [x] `Domain/Common/AuditableBaseEntity.cs` oluştur — BaseEntity'den türer, CreatedAt, UpdatedAt, DeletedAt (nullable) property'leri
 
 ---
 
 ### Task 1.3: Domain — Enums (20 adet)
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] Roles — Traveler, Admin
-- [ ] BudgetTier — Economy, Standard, Premium
-- [ ] TravelStyle — Solo, Family, Adventure, Luxury, Relax
-- [ ] TripStatus — Draft, Published, Archived
-- [ ] PlaceCategory — Museum, Restaurant, Cafe, Historical, Nature, Entertainment, Hotel, Transport
-- [ ] TransportMode — Walking, Metro, Taxi, Bus, Car, Train, Ferry
-- [ ] StopAddedBy — Ai, User
-- [ ] CabinClass — Economy, Business, First
-- [ ] FlightStatus — Scheduled, Cancelled, Completed
-- [ ] FlightDirection — Outbound, Return
-- [ ] FlightDataSource — Mock, Amadeus, RapidApi
-- [ ] RoomType — Single, Double, Suite, Deluxe
-- [ ] CancellationPolicy — Free, NonRefundable, Partial
-- [ ] HotelStatus — Confirmed, Cancelled, Completed
-- [ ] HotelDataSource — Mock, Amadeus, RapidApi
-- [ ] PostType — Photo, Tip, Route
-- [ ] NotificationType — Follow, PostUpvote, CommentUpvote, TipUpvote, TripUpvote, Comment, Mention, Fork
-- [ ] NotificationTargetType — Post, Trip, Comment, Tip
-- [ ] KarmaEventType — TripPublished, TripForked, PostUpvoted, TipUpvoted, TripUpvoted
-- [ ] KarmaSourceType — Trip, Post, Tip
+- [x] Roles — Traveler, Admin
+- [x] BudgetTier — Economy, Standard, Premium
+- [x] TravelStyle — Solo, Family, Adventure, Luxury, Relax
+- [x] TripStatus — Draft, Published, Archived
+- [x] PlaceCategory — Museum, Restaurant, Cafe, Historical, Nature, Entertainment, Hotel, Transport
+- [x] TransportMode — Walking, Metro, Taxi, Bus, Car, Train, Ferry
+- [x] StopAddedBy — Ai, User
+- [x] CabinClass — Economy, Business, First
+- [x] FlightStatus — Scheduled, Cancelled, Completed
+- [x] FlightDirection — Outbound, Return
+- [x] FlightDataSource — Mock, Amadeus, RapidApi
+- [x] RoomType — Single, Double, Suite, Deluxe
+- [x] CancellationPolicy — Free, NonRefundable, Partial
+- [x] HotelStatus — Confirmed, Cancelled, Completed
+- [x] HotelDataSource — Mock, Amadeus, RapidApi
+- [x] PostType — Photo, Tip, Route
+- [x] NotificationType — Follow, PostUpvote, CommentUpvote, TipUpvote, TripUpvote, Comment, Mention, Fork
+- [x] NotificationTargetType — Post, Trip, Comment, Tip
+- [x] KarmaEventType — TripPublished, TripForked, PostUpvoted, TipUpvoted, TripUpvoted
+- [x] KarmaSourceType — Trip, Post, Tip
 
 **Notlar:**
 - Tüm enum değerler PostgreSQL ENUM'larıyla birebir eşleşecek
@@ -131,58 +131,58 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 1.4: Domain — Core Entities (6 adet)
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `User.cs` — AuditableBaseEntity'den türer. Username (string), Email (string), Bio (nullable), ProfilePhotoUrl (nullable), KarmaScore (int, default 0), FollowersCount (int, default 0), FollowingCount (int, default 0), Role (Roles enum, default Traveler), IsVerified (bool), IsSuspended (bool). Navigation property'ler: Trips, Posts, Followers, Following koleksiyonları. Not: password_hash tutmaz, bu ApplicationUser (Identity) tarafında
-- [ ] `Trip.cs` — AuditableBaseEntity'den türer. OwnerId (Guid), ForkedFromId (nullable Guid), Title (string, max 100), Description (nullable), CoverPhotoUrl (nullable), Status (TripStatus, default Draft), City (string), Country (string), StartDate (DateOnly), EndDate (DateOnly), PersonCount (int, default 1), BudgetTier (enum), TravelStyle (enum), UserBudget (nullable decimal), EstimatedCost (nullable decimal), ForkCount/UpvoteCount/ViewCount (int, default 0), PopularityScore (decimal, default 0), Tags (List of string). Navigation: Owner, Stops, Flights, Hotels koleksiyonları
-- [ ] `Place.cs` — BaseEntity'den türer (soft delete yok, is_active var). Name (string), Description (nullable), Category (PlaceCategory), PhotoUrl (nullable), Phone (nullable), WebsiteUrl (nullable), Latitude (double), Longitude (double), Address (nullable), City (string), Country (string), Timezone (nullable), GooglePlaceId (nullable, unique), EstimatedPrice (decimal, default 0), CurrencyCode (string, default "USD"), IsFree (bool), BudgetTiers (List of BudgetTier), TravelStyles (List of TravelStyle), DurationMinutes (nullable int), Rating (nullable decimal), OpeningHours (nullable JSON), BestMonths (List of int), IsActive (bool, default true)
-- [ ] `Stop.cs` — AuditableBaseEntity'den türer. TripId (Guid), PlaceId (nullable Guid), FallbackPlaceId (nullable Guid), DayNumber (int), OrderIndex (double, LexoRank), ArrivalTime (TimeOnly nullable), DurationMinutes (nullable int), IsTimeLocked (bool), CustomName (nullable), CustomCategory (nullable PlaceCategory), CustomPhotoUrl (nullable), CustomLatitude/CustomLongitude (nullable double), Notes (nullable), BookingReference (nullable), ReservationNote (nullable), ActivityPrice (decimal, default 0), TransportPrice (decimal, default 0), CurrencyCode (string), TransportFromPrevious (nullable TransportMode), TravelTimeFromPrevious (nullable int), IsVisited (bool), VisitedAt (nullable DateTime), AddedBy (StopAddedBy, default User), AiReasoning (nullable). Navigation: Trip, Place, FallbackPlace
-- [ ] `Flight.cs` — TripId (Guid), ItineraryGroupId (nullable Guid), FlightDirection (enum), FromCity/FromAirport/ToCity/ToAirport (string), DepartureAt/ArrivalAt (DateTime, timezone'suz), DurationMinutes (int), Airline (string), FlightNumber (string), CabinClass (enum), IsDirect (bool), PricePerPerson/TotalPrice (decimal), CurrencyCode (string), IsBooked (bool), BookedAt (nullable), BookingReference (nullable), Status (FlightStatus), DataSource (FlightDataSource), DataFetchedAt (DateTime). Navigation: Trip
-- [ ] `Hotel.cs` — TripId (Guid), PlaceId (nullable Guid), HotelName (nullable), HotelLatitude/HotelLongitude (nullable double), HotelAddress/HotelPhone (nullable), ProviderUrl (nullable), Stars (nullable int), RoomType (enum), BreakfastIncluded (bool), CancellationPolicy (enum), CheckIn/CheckOut (DateTime, timezone'suz), PricePerNight/TotalPrice (decimal), CurrencyCode (string), IsBooked (bool), BookedAt (nullable), BookingReference (nullable), Status (HotelStatus), DataSource (HotelDataSource), DataFetchedAt (DateTime). Navigation: Trip, Place
+- [x] `User.cs` — AuditableBaseEntity'den türer. Username (string), Email (string), Bio (nullable), ProfilePhotoUrl (nullable), KarmaScore (int, default 0), FollowersCount (int, default 0), FollowingCount (int, default 0), Role (Roles enum, default Traveler), IsVerified (bool), IsSuspended (bool). Navigation property'ler: Trips, Posts, Followers, Following koleksiyonları. Not: password_hash tutmaz, bu ApplicationUser (Identity) tarafında
+- [x] `Trip.cs` — AuditableBaseEntity'den türer. OwnerId (Guid), ForkedFromId (nullable Guid), Title (string, max 100), Description (nullable), CoverPhotoUrl (nullable), Status (TripStatus, default Draft), City (string), Country (string), StartDate (DateOnly), EndDate (DateOnly), PersonCount (int, default 1), BudgetTier (enum), TravelStyle (enum), UserBudget (nullable decimal), EstimatedCost (nullable decimal), ForkCount/UpvoteCount/ViewCount (int, default 0), PopularityScore (decimal, default 0), Tags (List of string). Navigation: Owner, Stops, Flights, Hotels koleksiyonları
+- [x] `Place.cs` — BaseEntity'den türer (soft delete yok, is_active var). Name (string), Description (nullable), Category (PlaceCategory), PhotoUrl (nullable), Phone (nullable), WebsiteUrl (nullable), Latitude (double), Longitude (double), Address (nullable), City (string), Country (string), Timezone (nullable), GooglePlaceId (nullable, unique), EstimatedPrice (decimal, default 0), CurrencyCode (string, default "USD"), IsFree (bool), BudgetTiers (List of BudgetTier), TravelStyles (List of TravelStyle), DurationMinutes (nullable int), Rating (nullable decimal), OpeningHours (nullable JSON), BestMonths (List of int), IsActive (bool, default true)
+- [x] `Stop.cs` — AuditableBaseEntity'den türer. TripId (Guid), PlaceId (nullable Guid), FallbackPlaceId (nullable Guid), DayNumber (int), OrderIndex (double, LexoRank), ArrivalTime (TimeOnly nullable), DurationMinutes (nullable int), IsTimeLocked (bool), CustomName (nullable), CustomCategory (nullable PlaceCategory), CustomPhotoUrl (nullable), CustomLatitude/CustomLongitude (nullable double), Notes (nullable), BookingReference (nullable), ReservationNote (nullable), ActivityPrice (decimal, default 0), TransportPrice (decimal, default 0), CurrencyCode (string), TransportFromPrevious (nullable TransportMode), TravelTimeFromPrevious (nullable int), IsVisited (bool), VisitedAt (nullable DateTime), AddedBy (StopAddedBy, default User), AiReasoning (nullable). Navigation: Trip, Place, FallbackPlace
+- [x] `Flight.cs` — TripId (Guid), ItineraryGroupId (nullable Guid), FlightDirection (enum), FromCity/FromAirport/ToCity/ToAirport (string), DepartureAt/ArrivalAt (DateTime, timezone'suz), DurationMinutes (int), Airline (string), FlightNumber (string), CabinClass (enum), IsDirect (bool), PricePerPerson/TotalPrice (decimal), CurrencyCode (string), IsBooked (bool), BookedAt (nullable), BookingReference (nullable), Status (FlightStatus), DataSource (FlightDataSource), DataFetchedAt (DateTime). Navigation: Trip
+- [x] `Hotel.cs` — TripId (Guid), PlaceId (nullable Guid), HotelName (nullable), HotelLatitude/HotelLongitude (nullable double), HotelAddress/HotelPhone (nullable), ProviderUrl (nullable), Stars (nullable int), RoomType (enum), BreakfastIncluded (bool), CancellationPolicy (enum), CheckIn/CheckOut (DateTime, timezone'suz), PricePerNight/TotalPrice (decimal), CurrencyCode (string), IsBooked (bool), BookedAt (nullable), BookingReference (nullable), Status (HotelStatus), DataSource (HotelDataSource), DataFetchedAt (DateTime). Navigation: Trip, Place
 
 ---
 
 ### Task 1.5: Domain — Social Entities (9 adet)
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Post.cs` — AuditableBaseEntity'den türer. UserId (Guid), TripId (nullable Guid), PlaceId (nullable Guid), PostType (enum), Content (nullable), Photos (List of string, JSONB), Tags (List of string), AiTags (List of string), LocationLatitude/LocationLongitude (nullable double), City/Country (nullable), UpvoteCount/CommentCount (int, default 0), IsVisible (bool, default true). Navigation: User, Trip, Place, Comments
-- [ ] `Comment.cs` — AuditableBaseEntity'den türer. PostId (Guid), UserId (Guid), ParentCommentId (nullable Guid), Content (string), Mentions (List of string, JSONB), UpvoteCount (int, default 0), IsVisible (bool). Navigation: Post, User, ParentComment, Replies. Not: Composite FK ile cross-post koruması EF Configuration'da yapılacak
-- [ ] `CommunityTip.cs` — AuditableBaseEntity'den türer. TripId (Guid), UserId (Guid), PlaceId (nullable Guid), Content (string), UpvoteCount (int, default 0), IsVisible (bool). Navigation: Trip, User, Place
-- [ ] `Follow.cs` — BaseEntity'den türemez, composite PK. FollowerId (Guid), FollowingId (Guid), CreatedAt (DateTime). Navigation: Follower, Following
-- [ ] `PostUpvote.cs` — Composite PK. PostId (Guid), UserId (Guid), CreatedAt
-- [ ] `CommentUpvote.cs` — Composite PK. CommentId (Guid), UserId (Guid), CreatedAt
-- [ ] `TipUpvote.cs` — Composite PK. TipId (Guid), UserId (Guid), CreatedAt
-- [ ] `TripUpvote.cs` — Composite PK. TripId (Guid), UserId (Guid), CreatedAt
-- [ ] `SavedTrip.cs` — Composite PK. UserId (Guid), TripId (Guid), CreatedAt
+- [x] `Post.cs` — AuditableBaseEntity'den türer. UserId (Guid), TripId (nullable Guid), PlaceId (nullable Guid), PostType (enum), Content (nullable), Photos (List of string, JSONB), Tags (List of string), AiTags (List of string), LocationLatitude/LocationLongitude (nullable double), City/Country (nullable), UpvoteCount/CommentCount (int, default 0), IsVisible (bool, default true). Navigation: User, Trip, Place, Comments
+- [x] `Comment.cs` — AuditableBaseEntity'den türer. PostId (Guid), UserId (Guid), ParentCommentId (nullable Guid), Content (string), Mentions (List of string, JSONB), UpvoteCount (int, default 0), IsVisible (bool). Navigation: Post, User, ParentComment, Replies. Not: Composite FK ile cross-post koruması EF Configuration'da yapılacak
+- [x] `CommunityTip.cs` — AuditableBaseEntity'den türer. TripId (Guid), UserId (Guid), PlaceId (nullable Guid), Content (string), UpvoteCount (int, default 0), IsVisible (bool). Navigation: Trip, User, Place
+- [x] `Follow.cs` — BaseEntity'den türemez, composite PK. FollowerId (Guid), FollowingId (Guid), CreatedAt (DateTime). Navigation: Follower, Following
+- [x] `PostUpvote.cs` — Composite PK. PostId (Guid), UserId (Guid), CreatedAt
+- [x] `CommentUpvote.cs` — Composite PK. CommentId (Guid), UserId (Guid), CreatedAt
+- [x] `TipUpvote.cs` — Composite PK. TipId (Guid), UserId (Guid), CreatedAt
+- [x] `TripUpvote.cs` — Composite PK. TripId (Guid), UserId (Guid), CreatedAt
+- [x] `SavedTrip.cs` — Composite PK. UserId (Guid), TripId (Guid), CreatedAt
 
 ---
 
 ### Task 1.6: Domain — System Entities (3 adet)
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Notification.cs` — BaseEntity'den türer. UserId (Guid), ActorId (nullable Guid), NotificationType (enum), TargetId (nullable Guid), TargetType (nullable enum), IsRead (bool, default false), ReadAt (nullable DateTime), CreatedAt. Navigation: User, Actor
-- [ ] `KarmaEvent.cs` — BaseEntity'den türer. UserId (Guid), ActorId (nullable Guid), EventType (KarmaEventType), Points (int), SourceId (nullable Guid), SourceType (nullable KarmaSourceType), CreatedAt. Navigation: User, Actor
-- [ ] `RefreshToken.cs` — BaseEntity'den türer. UserId (Guid), TokenHash (string), ExpiresAt (DateTime), RevokedAt (nullable DateTime), DeviceFingerprint (nullable string), CreatedAt
+- [x] `Notification.cs` — BaseEntity'den türer. UserId (Guid), ActorId (nullable Guid), NotificationType (enum), TargetId (nullable Guid), TargetType (nullable enum), IsRead (bool, default false), ReadAt (nullable DateTime), CreatedAt. Navigation: User, Actor
+- [x] `KarmaEvent.cs` — BaseEntity'den türer. UserId (Guid), ActorId (nullable Guid), EventType (KarmaEventType), Points (int), SourceId (nullable Guid), SourceType (nullable KarmaSourceType), CreatedAt. Navigation: User, Actor
+- [x] `RefreshToken.cs` — BaseEntity'den türer. UserId (Guid), TokenHash (string), ExpiresAt (DateTime), RevokedAt (nullable DateTime), DeviceFingerprint (nullable string), CreatedAt
 
 ---
 
 ### Task 1.7: Domain — Exceptions
 
 **Tahmini Süre:** 30 dakika  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `DuplicateUpvoteException.cs` — Mesajda content type ve content ID bilgisi olacak
-- [ ] `SelfFollowException.cs` — Mesajda user ID bilgisi olacak
-- [ ] `SelfForkException.cs` — Mesajda user ID ve trip ID bilgisi olacak
-- [ ] Domain projesini build et, 0 error doğrula
+- [x] `DuplicateUpvoteException.cs` — Mesajda content type ve content ID bilgisi olacak
+- [x] `SelfFollowException.cs` — Mesajda user ID bilgisi olacak
+- [x] `SelfForkException.cs` — Mesajda user ID ve trip ID bilgisi olacak
+- [x] Domain projesini build et, 0 error doğrula
 
 ---
 
@@ -195,45 +195,45 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 2.1: NuGet Paketleri
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] Infrastructure'a ekle: Npgsql.EntityFrameworkCore.PostgreSQL, Microsoft.AspNetCore.Identity.EntityFrameworkCore, Microsoft.EntityFrameworkCore.Tools
-- [ ] Application'a ekle: MediatR, FluentValidation, FluentValidation.DependencyInjectionExtensions, AutoMapper.Extensions.Microsoft.DependencyInjection
-- [ ] WebApi'ye ekle: Microsoft.AspNetCore.Authentication.JwtBearer, Swashbuckle.AspNetCore
-- [ ] Build al, 0 error doğrula
+- [x] Infrastructure'a ekle: Npgsql.EntityFrameworkCore.PostgreSQL, Microsoft.AspNetCore.Identity.EntityFrameworkCore, Microsoft.EntityFrameworkCore.Tools
+- [x] Application'a ekle: MediatR, FluentValidation, FluentValidation.DependencyInjectionExtensions, AutoMapper.Extensions.Microsoft.DependencyInjection
+- [x] WebApi'ye ekle: Microsoft.AspNetCore.Authentication.JwtBearer, Swashbuckle.AspNetCore
+- [x] Build al, 0 error doğrula
 
 ---
 
 ### Task 2.2: Application — Exceptions & Interfaces
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Application/Exceptions/ApiException.cs` — HTTP/API seviyesi genel hata, mesaj ve status code tutar
-- [ ] `Application/Exceptions/ValidationException.cs` — FluentValidation hataları listesi tutar
-- [ ] `Application/Exceptions/EntityNotFoundException.cs` — Entity tipi ve ID bilgisi tutar
-- [ ] `Application/Exceptions/ForbiddenException.cs` — Yetkilendirme hatası mesajı tutar
-- [ ] `Application/Interfaces/IApplicationDbContext.cs` — 18 DbSet property tanımı (Users, Trips, Places, Stops, Flights, Hotels, Posts, Comments, CommunityTips, Follows, PostUpvotes, CommentUpvotes, TipUpvotes, TripUpvotes, SavedTrips, Notifications, KarmaEvents, RefreshTokens) + SaveChangesAsync metod imzası
-- [ ] `Application/Interfaces/IGenericRepositoryAsync.cs` — GetByIdAsync, GetAllAsync, GetPagedAsync, AddAsync, UpdateAsync, DeleteAsync metod imzaları
-- [ ] `Application/Interfaces/IAccountService.cs` — RegisterAsync, LoginAsync, RefreshTokenAsync, ForgotPasswordAsync metod imzaları
-- [ ] `Application/Interfaces/IAuthenticatedUserService.cs` — UserId property
-- [ ] `Application/Interfaces/IDateTimeService.cs` — NowUtc property
-- [ ] `Application/Parameters/RequestParameter.cs` — PageNumber, PageSize property'leri
-- [ ] `Application/Wrappers/PagedResponse.cs` — Data, PageNumber, PageSize, TotalCount
-- [ ] `Application/Wrappers/ErrorResponse.cs` — Message, Errors listesi
+- [x] `Application/Exceptions/ApiException.cs` — HTTP/API seviyesi genel hata, mesaj ve status code tutar
+- [x] `Application/Exceptions/ValidationException.cs` — FluentValidation hataları listesi tutar
+- [x] `Application/Exceptions/EntityNotFoundException.cs` — Entity tipi ve ID bilgisi tutar
+- [x] `Application/Exceptions/ForbiddenException.cs` — Yetkilendirme hatası mesajı tutar
+- [x] `Application/Interfaces/IApplicationDbContext.cs` — 18 DbSet property tanımı (Users, Trips, Places, Stops, Flights, Hotels, Posts, Comments, CommunityTips, Follows, PostUpvotes, CommentUpvotes, TipUpvotes, TripUpvotes, SavedTrips, Notifications, KarmaEvents, RefreshTokens) + SaveChangesAsync metod imzası
+- [x] `Application/Interfaces/IGenericRepositoryAsync.cs` — GetByIdAsync, GetAllAsync, GetPagedAsync, AddAsync, UpdateAsync, DeleteAsync metod imzaları
+- [x] `Application/Interfaces/IAccountService.cs` — RegisterAsync, LoginAsync, RefreshTokenAsync, ForgotPasswordAsync metod imzaları
+- [x] `Application/Interfaces/IAuthenticatedUserService.cs` — UserId property
+- [x] `Application/Interfaces/IDateTimeService.cs` — NowUtc property
+- [x] `Application/Parameters/RequestParameter.cs` — PageNumber, PageSize property'leri
+- [x] `Application/Wrappers/PagedResponse.cs` — Data, PageNumber, PageSize, TotalCount
+- [x] `Application/Wrappers/ErrorResponse.cs` — Message, Errors listesi
 
 ---
 
 ### Task 2.3: Infrastructure — ApplicationUser & Identity
 
 **Tahmini Süre:** 30 dakika  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Infrastructure/Models/ApplicationUser.cs` oluştur — IdentityUser<Guid>'den türer, sadece Identity/auth modeli olarak kalır
-- [ ] Domain User entity ile aynı Guid Id'yi paylaşacak, aralarında 1:1 mapping ApplicationDbContext'te tanımlanacak
+- [x] `Infrastructure/Models/ApplicationUser.cs` oluştur — IdentityUser<Guid>'den türer, sadece Identity/auth modeli olarak kalır
+- [x] Domain User entity ile aynı Guid Id'yi paylaşacak, aralarında 1:1 mapping ApplicationDbContext'te tanımlanacak
 
 **Notlar:**
 - ApplicationUser: login, password hash, token — Identity concern'ü
@@ -245,27 +245,27 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 2.4: Infrastructure — EF Core Configurations (18 adet)
 
 **Tahmini Süre:** 5 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `UserConfiguration.cs` — users tablosu, citext kolonlar, partial unique index'ler (deleted_at IS NULL), non_negative_follow_counts CHECK, username_format regex CHECK
-- [ ] `TripConfiguration.cs` — trips tablosu, enum string conversion'lar, valid_dates CHECK (end >= start), valid_person_count CHECK, non_negative_counts CHECK, tags_is_array CHECK, idx_trips_explore partial index (published + deleted_at IS NULL), GIN index (tags)
-- [ ] `PlaceConfiguration.cs` — places tablosu, PostGIS Point (latitude/longitude), valid_rating CHECK (1-5), free_has_zero_price CHECK, valid_best_months CHECK, GIN index'ler (budget_tier, travel_style, best_months, opening_hours), GIST index (location), city partial index
-- [ ] `StopConfiguration.cs` — stops tablosu, place_or_custom_name CHECK, custom_place_requires_category CHECK, time_lock_requires_arrival CHECK, visited_consistency CHECK, fallback_differs_from_place CHECK, ai_reasoning_required CHECK, LexoRank order_index (double precision), composite index (trip_id, day_number, order_index)
-- [ ] `FlightConfiguration.cs` — flights tablosu, IATA code regex CHECK (from_airport, to_airport), valid_duration CHECK, booked_consistency CHECK, booking_ref_requires_is_booked CHECK, departure/arrival TIMESTAMP (timezone'suz), itinerary_group_id index
-- [ ] `HotelConfiguration.cs` — hotels tablosu, place_or_hotel_name CHECK, valid_dates CHECK (check_out > check_in), valid_stars CHECK (1-5), booked_consistency CHECK, GIST index (hotel_location)
-- [ ] `PostConfiguration.cs` — posts tablosu, route_requires_trip CHECK, content_or_photo CHECK, tags/photos/ai_tags is_array CHECK, non_negative_counts CHECK, partial index'ler (deleted_at IS NULL AND is_visible = TRUE), GIN index (tags, ai_tags), GIST index (location)
-- [ ] `CommentConfiguration.cs` — comments tablosu, Composite FK kurulumu: (parent_comment_id, post_id) → comments(id, post_id) cross-post koruması, UNIQUE (id, post_id) eklenmesi, valid_content CHECK, GIN index (mentions)
-- [ ] `CommunityTipConfiguration.cs` — community_tips tablosu, valid_content CHECK, partial index'ler
-- [ ] `FollowConfiguration.cs` — follows tablosu, composite PK (follower_id, following_id), no_self_follow CHECK, following_id index
-- [ ] `PostUpvoteConfiguration.cs` — composite PK (post_id, user_id), user_id index
-- [ ] `CommentUpvoteConfiguration.cs` — composite PK (comment_id, user_id), user_id index
-- [ ] `TipUpvoteConfiguration.cs` — composite PK (tip_id, user_id), user_id index
-- [ ] `TripUpvoteConfiguration.cs` — composite PK (trip_id, user_id), user_id index
-- [ ] `SavedTripConfiguration.cs` — composite PK (user_id, trip_id), trip_id index
-- [ ] `NotificationConfiguration.cs` — valid_notification_target_type CHECK (her notification_type hangi target_type ile gelebilir), follow_has_no_target CHECK, read_consistency CHECK, partial index (is_read = FALSE)
-- [ ] `KarmaEventConfiguration.cs` — valid_event_source_type CHECK, source_consistency CHECK, valid_points CHECK (!=0), farming koruması unique index'ler: idx_karma_publish_unique (user_id, source_id, event_type WHERE trip_published), idx_karma_interaction_unique (user_id, source_id, event_type, actor_id WHERE diğerleri)
-- [ ] `RefreshTokenConfiguration.cs` — valid_expiry CHECK (expires_at > created_at), partial unique index (token_hash WHERE revoked_at IS NULL), user partial index (WHERE revoked_at IS NULL)
+- [x] `UserConfiguration.cs` — users tablosu, citext kolonlar, partial unique index'ler (deleted_at IS NULL), non_negative_follow_counts CHECK, username_format regex CHECK
+- [x] `TripConfiguration.cs` — trips tablosu, enum string conversion'lar, valid_dates CHECK (end >= start), valid_person_count CHECK, non_negative_counts CHECK, tags_is_array CHECK, idx_trips_explore partial index (published + deleted_at IS NULL), GIN index (tags)
+- [x] `PlaceConfiguration.cs` — places tablosu, PostGIS Point (latitude/longitude), valid_rating CHECK (1-5), free_has_zero_price CHECK, valid_best_months CHECK, GIN index'ler (budget_tier, travel_style, best_months, opening_hours), GIST index (location), city partial index
+- [x] `StopConfiguration.cs` — stops tablosu, place_or_custom_name CHECK, custom_place_requires_category CHECK, time_lock_requires_arrival CHECK, visited_consistency CHECK, fallback_differs_from_place CHECK, ai_reasoning_required CHECK, LexoRank order_index (double precision), composite index (trip_id, day_number, order_index)
+- [x] `FlightConfiguration.cs` — flights tablosu, IATA code regex CHECK (from_airport, to_airport), valid_duration CHECK, booked_consistency CHECK, booking_ref_requires_is_booked CHECK, departure/arrival TIMESTAMP (timezone'suz), itinerary_group_id index
+- [x] `HotelConfiguration.cs` — hotels tablosu, place_or_hotel_name CHECK, valid_dates CHECK (check_out > check_in), valid_stars CHECK (1-5), booked_consistency CHECK, GIST index (hotel_location)
+- [x] `PostConfiguration.cs` — posts tablosu, route_requires_trip CHECK, content_or_photo CHECK, tags/photos/ai_tags is_array CHECK, non_negative_counts CHECK, partial index'ler (deleted_at IS NULL AND is_visible = TRUE), GIN index (tags, ai_tags), GIST index (location)
+- [x] `CommentConfiguration.cs` — comments tablosu, Composite FK kurulumu: (parent_comment_id, post_id) → comments(id, post_id) cross-post koruması, UNIQUE (id, post_id) eklenmesi, valid_content CHECK, GIN index (mentions)
+- [x] `CommunityTipConfiguration.cs` — community_tips tablosu, valid_content CHECK, partial index'ler
+- [x] `FollowConfiguration.cs` — follows tablosu, composite PK (follower_id, following_id), no_self_follow CHECK, following_id index
+- [x] `PostUpvoteConfiguration.cs` — composite PK (post_id, user_id), user_id index
+- [x] `CommentUpvoteConfiguration.cs` — composite PK (comment_id, user_id), user_id index
+- [x] `TipUpvoteConfiguration.cs` — composite PK (tip_id, user_id), user_id index
+- [x] `TripUpvoteConfiguration.cs` — composite PK (trip_id, user_id), user_id index
+- [x] `SavedTripConfiguration.cs` — composite PK (user_id, trip_id), trip_id index
+- [x] `NotificationConfiguration.cs` — valid_notification_target_type CHECK (her notification_type hangi target_type ile gelebilir), follow_has_no_target CHECK, read_consistency CHECK, partial index (is_read = FALSE)
+- [x] `KarmaEventConfiguration.cs` — valid_event_source_type CHECK, source_consistency CHECK, valid_points CHECK (!=0), farming koruması unique index'ler: idx_karma_publish_unique (user_id, source_id, event_type WHERE trip_published), idx_karma_interaction_unique (user_id, source_id, event_type, actor_id WHERE diğerleri)
+- [x] `RefreshTokenConfiguration.cs` — valid_expiry CHECK (expires_at > created_at), partial unique index (token_hash WHERE revoked_at IS NULL), user partial index (WHERE revoked_at IS NULL)
 
 **Notlar:**
 - Her Configuration omniflow_sql_schema_V3.md ile birebir eşleşmeli
@@ -276,15 +276,15 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 2.5: Infrastructure — ApplicationDbContext
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `ApplicationDbContext.cs` oluştur — IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>'den türer, IApplicationDbContext implement eder
-- [ ] 18 DbSet property tanımla
-- [ ] OnModelCreating'de PostgreSQL extension'ları aktifleştir: citext, postgis
-- [ ] OnModelCreating'de ApplyConfigurationsFromAssembly ile tüm configuration'ları otomatik yükle
-- [ ] SaveChangesAsync override — modified entity'lerde UpdatedAt otomatik güncelleme
-- [ ] Build al, 0 error doğrula
+- [x] `ApplicationDbContext.cs` oluştur — IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>'den türer, IApplicationDbContext implement eder
+- [x] 18 DbSet property tanımla
+- [x] OnModelCreating'de PostgreSQL extension'ları aktifleştir: citext, postgis
+- [x] OnModelCreating'de ApplyConfigurationsFromAssembly ile tüm configuration'ları otomatik yükle
+- [x] SaveChangesAsync override — modified entity'lerde UpdatedAt otomatik güncelleme
+- [x] Build al, 0 error doğrula
 
 ---
 
@@ -307,14 +307,14 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 2.7: Seed Data
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `DefaultRoles.cs` — "Traveler" ve "Admin" rollerini oluştur (yoksa ekle, varsa atla)
-- [ ] `DefaultSuperAdmin.cs` — admin@omniflow.com kullanıcısını oluştur, Admin rolü ata, aynı ID ile Domain User entity de oluştur
-- [ ] `DefaultBasicUser.cs` — traveler@omniflow.com kullanıcısını oluştur, Traveler rolü ata
-- [ ] Program.cs'de uygulama başlarken seed metotlarını çağır
-- [ ] Uygulamayı çalıştır, seed data'nın oluştuğunu DB'den doğrula
+- [x] `DefaultRoles.cs` — "Traveler" ve "Admin" rollerini oluştur (yoksa ekle, varsa atla)
+- [x] `DefaultSuperAdmin.cs` — admin@omniflow.com kullanıcısını oluştur, Admin rolü ata, aynı ID ile Domain User entity de oluştur
+- [x] `DefaultBasicUser.cs` — traveler@omniflow.com kullanıcısını oluştur, Traveler rolü ata
+- [x] Program.cs'de uygulama başlarken seed metotlarını çağır
+- [x] Uygulamayı çalıştır, seed data'nın oluştuğunu DB'den doğrula
 
 ---
 
@@ -327,14 +327,14 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 3.1: Application — Auth DTOs
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `RegisterRequest.cs` — Username, Email, Password, ConfirmPassword property'leri
-- [ ] `AuthenticationRequest.cs` — Email, Password
-- [ ] `AuthenticationResponse.cs` — AccessToken (string), RefreshToken (string, sadece mobile'da dönecek), User bilgisi (Id, Username, Email, Role)
-- [ ] `RefreshTokenRequest.cs` — RefreshToken (string, mobile body'den gelecek)
-- [ ] `ForgotPasswordRequest.cs` — Email
+- [x] `RegisterRequest.cs` — Username, Email, Password, ConfirmPassword property'leri
+- [x] `AuthenticationRequest.cs` — Email, Password
+- [x] `AuthenticationResponse.cs` — AccessToken (string), RefreshToken (string, sadece mobile'da dönecek), User bilgisi (Id, Username, Email, Role)
+- [x] `RefreshTokenRequest.cs` — RefreshToken (string, mobile body'den gelecek)
+- [x] `ForgotPasswordRequest.cs` — Email
 
 ---
 
