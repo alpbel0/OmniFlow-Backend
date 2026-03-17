@@ -21,20 +21,28 @@ using (var scope = app.Services.CreateScope())
 	try
 	{
 		var context = services.GetRequiredService<ApplicationDbContext>();
-		context.Database.Migrate(); // Bu satır eksik tabloları Azure'a otomatik basar
+
+		// 1. ADIM: Önce tabloları oluştur (Migration)
+		Console.WriteLine("Migration uygulanıyor...");
+		await context.Database.MigrateAsync();
+
+		// 2. ADIM: Tablolar oluştuktan sonra verileri ekle (Seed)
+		var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+		var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+		var dbContext = services.GetRequiredService<IApplicationDbContext>();
+
+		Console.WriteLine("Seed datalar ekleniyor...");
+		await DefaultRoles.SeedAsync(roleManager);
+		await DefaultSuperAdmin.SeedAsync(userManager, roleManager, dbContext);
+		await DefaultBasicUser.SeedAsync(userManager, roleManager);
+
+		Console.WriteLine("Veritabanı işlemleri başarıyla tamamlandı!");
 	}
-	catch (Exception)
+	catch (Exception ex)
 	{
-		// Hata loglama buraya gelebilir
+		Console.WriteLine($"HATA: Veritabanı yapılandırılırken bir sorun oluştu: {ex.Message}");
+		// Hata varsa burada kalsın, uygulama patlamasın diye throw etmiyoruz şimdilik
 	}
-
-	var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-	var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-	var dbContext = services.GetRequiredService<IApplicationDbContext>();
-
-	await DefaultRoles.SeedAsync(roleManager);
-	await DefaultSuperAdmin.SeedAsync(userManager, roleManager, dbContext);
-	await DefaultBasicUser.SeedAsync(userManager, roleManager);
 }
 
 app.UseSwagger();
