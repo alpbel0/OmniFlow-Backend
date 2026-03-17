@@ -1,0 +1,46 @@
+trigger:
+- main
+
+pool:
+  name: 'Default' # Senin localindeki Agent'ın ismi (YIGITALP ise oraya bak)
+
+variables:
+  buildConfiguration: 'Release'
+  # Projenin yolu (Senin klasör yapına göre güncellendi)
+  projectPath: 'OmniFlow/OmniFlow.WebApi/OmniFlow.WebApi.csproj'
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Install .NET SDK'
+  inputs:
+    packageType: 'sdk'
+    version: '8.x' # .NET 8 kullandığın için
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore'
+  inputs:
+    command: 'restore'
+    projects: '$(projectPath)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build'
+  inputs:
+    command: 'build'
+    projects: '$(projectPath)'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish'
+  inputs:
+    command: 'publish'
+    publishWebProjects: false
+    projects: '$(projectPath)'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    zipAfterPublish: true
+
+- task: AzureRmWebAppDeployment@4
+  displayName: 'Deploy to Azure Web App'
+  inputs:
+    azureSubscription: 'OmniFlow-Azure-Conn' # Azure Service Connection adın
+    WebAppName: 'omniflow-backend' # Azure'daki App Service adın
+    packageForLinux: '$(Build.ArtifactStagingDirectory)/**/*.zip'
