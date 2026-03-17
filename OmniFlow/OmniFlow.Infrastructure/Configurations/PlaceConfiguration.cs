@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OmniFlow.Domain.Entities;
@@ -46,18 +47,26 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 		var budgetTierConverter = new ValueConverter<List<BudgetTier>, string[]>(
 			v => v.Select(x => x.ToString()).ToArray(),
 			v => v.Select(x => Enum.Parse<BudgetTier>(x)).ToList());
+		var budgetTierComparer = new ValueComparer<List<BudgetTier>>(
+			(a, b) => a != null && b != null && a.SequenceEqual(b),
+			v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
+			v => v.ToList());
 		builder.Property(p => p.BudgetTiers)
 			.HasColumnName("budget_tiers")
 			.HasColumnType("text[]")
-			.HasConversion(budgetTierConverter);
+			.HasConversion(budgetTierConverter, budgetTierComparer);
 
 		var travelStyleConverter = new ValueConverter<List<TravelStyle>, string[]>(
 			v => v.Select(x => x.ToString()).ToArray(),
 			v => v.Select(x => Enum.Parse<TravelStyle>(x)).ToList());
+		var travelStyleComparer = new ValueComparer<List<TravelStyle>>(
+			(a, b) => a != null && b != null && a.SequenceEqual(b),
+			v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
+			v => v.ToList());
 		builder.Property(p => p.TravelStyles)
 			.HasColumnName("travel_styles")
 			.HasColumnType("text[]")
-			.HasConversion(travelStyleConverter);
+			.HasConversion(travelStyleConverter, travelStyleComparer);
 
 		builder.HasIndex(p => p.BudgetTiers)
 			.HasMethod("gin")

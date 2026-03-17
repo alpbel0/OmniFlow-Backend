@@ -288,7 +288,7 @@ Phase 1 tamamlanmış sayılır eğer:
 
 ---
 
-### Task 2.6: Azure PostgreSQL Connection & Migration
+### Task 2.6: Azure PostgreSQL Connection & Migration (BU KISIM TAMAM ŞU AN LOCAL ORTAMDA ÇALIŞYIORUM BURAYI OKUMA KAFAN KARIŞMASIN)
 
 **Tahmini Süre:** 2 saat  
 **Durum:** ⏳ Bekliyor
@@ -341,45 +341,45 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 3.2: Application — Auth Interface & Settings
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IAccountService.cs` interface'inde 4 metod: RegisterAsync, LoginAsync, RefreshTokenAsync, ForgotPasswordAsync
-- [ ] `JWTSettings.cs` — Key, Issuer, Audience, AccessTokenExpirationMinutes (default 15), RefreshTokenExpirationDays (default 7)
-- [ ] `MailSettings.cs` — SmtpHost, SmtpPort, SenderEmail, SenderName (placeholder, MVP'de kullanılmayacak)
-- [ ] `OpenAISettings.cs` — ApiKey, Model, MaxTokens (Phase 6'da kullanılacak ama yapı hazır)
-- [ ] `GoogleMapsSettings.cs` — ApiKey (frontend entegrasyonunda kullanılacak)
+- [x] `IAccountService.cs` interface'inde 4 metod: RegisterAsync, LoginAsync, RefreshTokenAsync, ForgotPasswordAsync
+- [x] `JWTSettings.cs` — Key, Issuer, Audience, AccessTokenExpirationMinutes (default 15), RefreshTokenExpirationDays (default 7)
+- [x] `MailSettings.cs` — SmtpHost, SmtpPort, SenderEmail, SenderName (placeholder, MVP'de kullanılmayacak)
+- [x] `OpenAISettings.cs` — ApiKey, Model, MaxTokens (Phase 6'da kullanılacak ama yapı hazır)
+- [x] `GoogleMapsSettings.cs` — ApiKey (frontend entegrasyonunda kullanılacak)
 
 ---
 
 ### Task 3.3: Infrastructure — AccountService Implementation
 
 **Tahmini Süre:** 4 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `AccountService.cs` oluştur, IAccountService'i implement et
-- [ ] RegisterAsync implementasyonu:
-  - [ ] UserManager ile ApplicationUser oluştur
-  - [ ] Traveler rolü ata
-  - [ ] Aynı Guid Id ile Domain User entity oluştur (bio, karma = 0)
-  - [ ] Access token üret (JWT, 15 dk ömür)
-  - [ ] Refresh token üret (random string → SHA256 hash → refresh_tokens tablosuna kaydet)
-  - [ ] AuthenticationResponse dön
-- [ ] LoginAsync implementasyonu:
-  - [ ] Email ile ApplicationUser bul
-  - [ ] Password doğrula
-  - [ ] Suspended kontrolü yap
-  - [ ] Token pair üret (access + refresh)
-  - [ ] AuthenticationResponse dön
-- [ ] RefreshTokenAsync implementasyonu:
-  - [ ] Gelen token'ı hash'le, refresh_tokens'ta ara
-  - [ ] Geçerliliğini kontrol et (expires_at > now, revoked_at IS NULL)
-  - [ ] Eski token'ı revoke et (revoked_at = now)
-  - [ ] Yeni token pair üret (rotation)
-  - [ ] AuthenticationResponse dön
-- [ ] JWT token generation helper metodu — claims: NameIdentifier (user ID), Email, Name (username), Role
-- [ ] Refresh token generation helper — 64 byte random → base64 → SHA256 hash DB'ye
+- [x] `AccountService.cs` oluştur, IAccountService'i implement et
+- [x] RegisterAsync implementasyonu:
+  - [x] UserManager ile ApplicationUser oluştur
+  - [x] Traveler rolü ata
+  - [x] Aynı Guid Id ile Domain User entity oluştur (bio, karma = 0)
+  - [x] Access token üret (JWT, 15 dk ömür)
+  - [x] Refresh token üret (random string → SHA256 hash → refresh_tokens tablosuna kaydet)
+  - [x] AuthenticationResponse dön
+- [x] LoginAsync implementasyonu:
+  - [x] Email ile ApplicationUser bul
+  - [x] Password doğrula
+  - [x] Suspended kontrolü yap
+  - [x] Token pair üret (access + refresh)
+  - [x] AuthenticationResponse dön
+- [x] RefreshTokenAsync implementasyonu:
+  - [x] Gelen token'ı hash'le, refresh_tokens'ta ara
+  - [x] Geçerliliğini kontrol et (expires_at > now, revoked_at IS NULL)
+  - [x] Eski token'ı revoke et (revoked_at = now)
+  - [x] Yeni token pair üret (rotation)
+  - [x] AuthenticationResponse dön
+- [x] JWT token generation helper metodu — claims: NameIdentifier (user ID), Email, Name (username), Role
+- [x] Refresh token generation helper — 64 byte random → base64 → SHA256 hash DB'ye
 
 **Notlar:**
 - Access token: 15 dakika ömür, ClockSkew = 0
@@ -391,74 +391,82 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Task 3.4: WebApi — Auth Controller & Dual Platform Refresh
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `AccountController.cs` oluştur (route: api/account)
-- [ ] POST /api/account/register endpoint'i:
-  - [ ] RegisterRequest body'den al
-  - [ ] AccountService.RegisterAsync çağır
-  - [ ] Refresh token'ı HttpOnly cookie olarak set et
-  - [ ] Access token + user bilgisi response body'de dön
-- [ ] POST /api/account/login endpoint'i:
-  - [ ] AuthenticationRequest body'den al
-  - [ ] AccountService.LoginAsync çağır
-  - [ ] Refresh token'ı HttpOnly cookie olarak set et
-  - [ ] Access token + user bilgisi dön
-- [ ] POST /api/account/refresh-token endpoint'i (dual platform):
-  - [ ] Önce cookie'den refresh token okumayı dene (web)
-  - [ ] Cookie yoksa body'den RefreshTokenRequest oku (mobile)
-  - [ ] İkisi de yoksa 400 Bad Request dön
-  - [ ] AccountService.RefreshTokenAsync çağır
-  - [ ] X-Platform header'ı "mobile" ise: access token + refresh token body'de dön
-  - [ ] Değilse (web): refresh token'ı cookie'ye yaz, sadece access token body'de dön
-- [ ] Cookie ayarları: HttpOnly = true, Secure = true, SameSite = Strict, Expires = 7 gün
-- [ ] POST /api/account/forgot-password endpoint'i (placeholder, mail servisi MVP'de yok)
+- [x] `AccountController.cs` oluştur (route: api/account)
+- [x] POST /api/account/register endpoint'i:
+  - [x] RegisterRequest body'den al
+  - [x] AccountService.RegisterAsync çağır
+  - [x] Refresh token'ı HttpOnly cookie olarak set et
+  - [x] Access token + user bilgisi response body'de dön
+- [x] POST /api/account/login endpoint'i:
+  - [x] AuthenticationRequest body'den al
+  - [x] AccountService.LoginAsync çağır
+  - [x] Refresh token'ı HttpOnly cookie olarak set et
+  - [x] Access token + user bilgisi dön
+- [x] POST /api/account/refresh-token endpoint'i (dual platform):
+  - [x] Önce cookie'den refresh token okumayı dene (web)
+  - [x] Cookie yoksa body'den RefreshTokenRequest oku (mobile)
+  - [x] İkisi de yoksa 400 Bad Request dön
+  - [x] AccountService.RefreshTokenAsync çağır
+  - [x] X-Platform header'ı "mobile" ise: access token + refresh token body'de dön
+  - [x] Değilse (web): refresh token'ı cookie'ye yaz, sadece access token body'de dön
+- [x] Cookie ayarları: HttpOnly = true, Secure = Request.IsHttps, SameSite = Strict, Expires = 7 gün
+- [x] POST /api/account/forgot-password endpoint'i (placeholder, mail servisi MVP'de yok)
 
 ---
 
 ### Task 3.5: WebApi — JWT Configuration & Middleware
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] Program.cs'de JWT authentication yapılandırması: ValidateIssuer, ValidateAudience, ValidateLifetime, ValidateIssuerSigningKey, ClockSkew = TimeSpan.Zero
-- [ ] Global error handling middleware oluştur — exception tipine göre HTTP status code:
-  - [ ] ApiException → 400
-  - [ ] ValidationException → 422 (hata listesi ile)
-  - [ ] EntityNotFoundException → 404
-  - [ ] ForbiddenException → 403
-  - [ ] DuplicateUpvoteException → 409
-  - [ ] SelfFollowException → 409
-  - [ ] SelfForkException → 409
-  - [ ] Diğer Exception → 500 (log + generic mesaj)
-- [ ] Swagger'da JWT Authorization header desteği ekle (Bearer token input)
-- [ ] CORS policy ekle: frontend URL'leri (localhost:3000, production URL)
-- [ ] Program.cs'de middleware pipeline sıralaması: ErrorHandler → CORS → Authentication → Authorization → Controllers
+- [x] Program.cs'de JWT authentication yapılandırması: ValidateIssuer, ValidateAudience, ValidateLifetime, ValidateIssuerSigningKey, ClockSkew = TimeSpan.Zero
+- [x] Global error handling middleware oluştur — exception tipine göre HTTP status code:
+  - [x] ApiException → 400
+  - [x] ValidationException → 422 (hata listesi ile)
+  - [x] EntityNotFoundException → 404
+  - [x] ForbiddenException → 403
+  - [x] DuplicateUpvoteException → 409
+  - [x] SelfFollowException → 409
+  - [x] SelfForkException → 409
+  - [x] Diğer Exception → 500 (log + generic mesaj)
+- [x] Swagger'da JWT Authorization header desteği ekle (Bearer token input)
+- [x] CORS policy ekle: frontend URL'leri (localhost:3000, production URL)
+- [x] Program.cs'de middleware pipeline sıralaması: ErrorHandler → CORS → Authentication → Authorization → Controllers
+
+**Test Kapsamı (Task 3.5):**
+- [x] `ErrorHandlerMiddlewareTests` — 11 test: ApiException (400/401/custom), ValidationException (422+errors), EntityNotFoundException (404), ForbiddenException (403), DuplicateUpvoteException (409), SelfFollowException (409), SelfForkException (409), UnhandledException (500 generic), ContentType=JSON
+- [x] `JwtConfigurationTests` — 7 test: WrongIssuer→401, WrongAudience→401, WrongKey→401, ExpiredToken→401 (ClockSkew=Zero), ValidToken→200, NoToken→401, CorrectIssuer→200
+- [x] `CorsMiddlewareTests` — 6 test: Preflight localhost origin, Preflight production origin, AllowCredentials header, AllowCustomHeader, ActualRequest allowed origin, ActualRequest disallowed origin
 
 ---
 
 ### Task 3.6: WebApi — BaseApiController & MetaController
 
 **Tahmini Süre:** 30 dakika  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `BaseApiController.cs` — abstract, route "api/v1/[controller]", IMediator property (lazy resolve from HttpContext)
-- [ ] `MetaController.cs` — GET /api/meta/health (basit health check), GET /api/meta/info (API versiyon bilgisi)
+- [x] `BaseApiController.cs` — abstract, route "api/v1/[controller]", IMediator property (lazy resolve from HttpContext)
+- [x] `MetaController.cs` — GET /api/meta/health (basit health check), GET /api/meta/info (API versiyon bilgisi)
 
 ---
 
 ### Task 3.7: Application — ServiceExtensions & Behaviours
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Application/ServiceExtensions.cs` — MediatR, AutoMapper, FluentValidation DI registration
-- [ ] `Application/Behaviours/ValidationBehaviour.cs` — MediatR pipeline behaviour, request'i handler'a göndermeden önce FluentValidation çalıştır, hata varsa ValidationException fırlat
-- [ ] `Application/Mappings/GeneralProfile.cs` — boş AutoMapper profil (Phase 2'de mapping'ler eklenecek)
+- [x] `Application/ServiceExtensions.cs` — MediatR, AutoMapper, FluentValidation DI registration
+- [x] `Application/Behaviours/ValidationBehaviour.cs` — MediatR pipeline behaviour, request'i handler'a göndermeden önce FluentValidation çalıştır, hata varsa ValidationException fırlat
+- [x] `Application/Mappings/GeneralProfile.cs` — boş AutoMapper profil (Phase 2'de mapping'ler eklenecek)
+
+**Test Kapsamı (Task 3.7):**
+- [x] `ValidationBehaviourTests` — 8 test: no validators→passes, passing validator→passes, failing validator→throws, error messages aggregated, multiple validators→all failures collected, next never called on failure, null input→correct error, ValidationException message correct
 
 ---
 
@@ -466,26 +474,26 @@ Phase 1 tamamlanmış sayılır eğer:
 
 ### Unit Tests (OmniFlow.UnitTests)
 
-- [ ] **UserEntityTests** — Yeni User default değerleri doğru mu (Role = Traveler, KarmaScore = 0, IsVerified = false, Id != Empty, CreatedAt set edilmiş mi)
-- [ ] **TripEntityTests** — Yeni Trip default Status = Draft mi, counter'lar 0 mı
-- [ ] **StopEntityTests** — Yeni Stop default AddedBy = User mı, IsVisited = false mı
-- [ ] **ExceptionTests** — DuplicateUpvoteException mesajında content type ve ID var mı, SelfFollowException mesajında user ID var mı, SelfForkException mesajında trip ID var mı
+- [x] **UserEntityTests** — Yeni User default değerleri doğru mu (Role = Traveler, KarmaScore = 0, IsVerified = false, Id != Empty, CreatedAt set edilmiş mi)
+- [x] **TripEntityTests** — Yeni Trip default Status = Draft mi, counter'lar 0 mı
+- [x] **StopEntityTests** — Yeni Stop default AddedBy = User mı, IsVisited = false mı
+- [x] **ExceptionTests** — DuplicateUpvoteException mesajında content type ve ID var mı, SelfFollowException mesajında user ID var mı, SelfForkException mesajında trip ID var mı
 
 ### Integration Tests (OmniFlow.Api.IntegrationTests)
 
-- [ ] **Setup** — CustomWebApplicationFactory oluştur (in-memory veya test PostgreSQL), TestDatabaseSeeder ile seed data
-- [ ] **Register_WithValidData_ReturnsAccessToken** — Geçerli register request → 200, response'da accessToken var
-- [ ] **Register_WithDuplicateEmail_Returns400** — Aynı email ile ikinci register → 400
-- [ ] **Register_WithWeakPassword_Returns422** — Zayıf şifre → validation hatası
-- [ ] **Login_WithValidCredentials_ReturnsToken** — Doğru email/şifre → 200, accessToken var
-- [ ] **Login_WithWrongPassword_Returns401** — Yanlış şifre → 401
-- [ ] **Login_WithNonExistentEmail_Returns401** — Olmayan email → 401
-- [ ] **RefreshToken_WithCookie_ReturnsNewAccessToken** — Cookie'den refresh → yeni access token
-- [ ] **RefreshToken_WithBody_MobilePlatform_ReturnsTokenInBody** — X-Platform: mobile + body refresh → response'da hem accessToken hem refreshToken
-- [ ] **RefreshToken_WithExpiredToken_Returns401** — Süresi dolmuş token → 401
-- [ ] **RefreshToken_WithRevokedToken_Returns401** — Revoke edilmiş token → 401
-- [ ] **ProtectedEndpoint_WithoutToken_Returns401** — Token olmadan korumalı endpoint → 401
-- [ ] **ProtectedEndpoint_WithValidToken_Returns200** — Geçerli token ile → 200
+- [x] **Setup** — CustomWebApplicationFactory oluştur (in-memory veya test PostgreSQL), TestDatabaseSeeder ile seed data
+- [x] **Register_WithValidData_ReturnsAccessToken** — Geçerli register request → 200, response'da accessToken var
+- [x] **Register_WithDuplicateEmail_Returns400** — Aynı email ile ikinci register → 400
+- [x] **Register_WithWeakPassword_Returns422** — Zayıf şifre → validation hatası
+- [x] **Login_WithValidCredentials_ReturnsToken** — Doğru email/şifre → 200, accessToken var
+- [x] **Login_WithWrongPassword_Returns401** — Yanlış şifre → 401
+- [x] **Login_WithNonExistentEmail_Returns401** — Olmayan email → 401
+- [x] **RefreshToken_WithCookie_ReturnsNewAccessToken** — Cookie'den refresh → yeni access token
+- [x] **RefreshToken_WithBody_MobilePlatform_ReturnsTokenInBody** — X-Platform: mobile + body refresh → response'da hem accessToken hem refreshToken
+- [x] **RefreshToken_WithExpiredToken_Returns401** — Süresi dolmuş token → 401
+- [x] **RefreshToken_WithRevokedToken_Returns401** — Revoke edilmiş token → 401
+- [x] **ProtectedEndpoint_WithoutToken_Returns401** — Token olmadan korumalı endpoint → 401
+- [x] **ProtectedEndpoint_WithValidToken_Returns200** — Geçerli token ile → 200
 
 ---
 
