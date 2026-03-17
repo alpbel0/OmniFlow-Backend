@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="../Tests/OmniFlow.Api.IntegrationTests/OmniFlow.Api.IntegrationTests.csproj" />
+  <Project Path="../Tests/OmniFlow.UnitTests/OmniFlow.UnitTests.csproj" />
   <Project Path="OmniFlow.Application/OmniFlow.Application.csproj" />
   <Project Path="OmniFlow.Domain/OmniFlow.Domain.csproj" />
   <Project Path="OmniFlow.Infrastructure/OmniFlow.Infrastructure.csproj" />

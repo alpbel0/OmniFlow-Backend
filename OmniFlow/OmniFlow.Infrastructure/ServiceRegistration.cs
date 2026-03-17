@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Application.Interfaces;
+using OmniFlow.Application.Settings;
 using OmniFlow.Infrastructure.Contexts;
 using OmniFlow.Infrastructure.Models;
+using OmniFlow.Infrastructure.Services;
 
 namespace OmniFlow.Infrastructure;
 
@@ -24,6 +26,10 @@ public static class ServiceRegistration
 			.AddIdentityCore<ApplicationUser>()
 			.AddRoles<IdentityRole<Guid>>()
 			.AddEntityFrameworkStores<ApplicationDbContext>();
+
+		services.Configure<JWTSettings>(options =>
+			configuration.GetSection("JWTSettings").Bind(options));
+		services.AddScoped<IAccountService, AccountService>();
 
 		return services;
 	}
