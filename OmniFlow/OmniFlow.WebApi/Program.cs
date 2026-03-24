@@ -132,7 +132,7 @@ app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
-
+//SwaggerUI
 app.UseSwagger();
 app.UseSwaggerUI();
 
