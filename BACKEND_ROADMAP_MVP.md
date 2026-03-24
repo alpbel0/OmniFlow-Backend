@@ -467,6 +467,7 @@ Phase 1 tamamlanmış sayılır eğer:
 
 **Test Kapsamı (Task 3.7):**
 - [x] `ValidationBehaviourTests` — 8 test: no validators→passes, passing validator→passes, failing validator→throws, error messages aggregated, multiple validators→all failures collected, next never called on failure, null input→correct error, ValidationException message correct
+Kontrol edildi bu kısma kadar 
 
 ---
 
@@ -522,7 +523,7 @@ Phase 1 tamamlanmış sayılır eğer:
 ### Scope
 
 **Dahil:**
-- Places CRUD + şehir/kategori filtreleme
+- Places CRUD + şehir/kategori filtreleme.
 - Trips CRUD + Publish/Archive state machine
 - Stops CRUD + LexoRank reorder + time lock + custom stops
 - Fork sistemi (deep copy + karma tetikleme placeholder)
