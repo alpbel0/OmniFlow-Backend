@@ -27,7 +27,7 @@
 
 ## 🎯 Phase 1 Overview
 
-### Scope
+### Scope #24.03.2026
 
 **Dahil:**
 - Solution yapısı (4 proje: Domain, Application, Infrastructure, WebApi)
