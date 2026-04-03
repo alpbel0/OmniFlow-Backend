@@ -24,5 +24,7 @@ public interface IApplicationDbContext
 	DbSet<KarmaEvent> KarmaEvents { get; }
 	DbSet<RefreshToken> RefreshTokens { get; }
 
+	DbSet<T> Set<T>() where T : class;
+
 	Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -562,13 +562,17 @@ Phase 2 tamamlanmış sayılır eğer:
 
 ### Task 4.1: Application — Generic Repository & Wrappers
 
-**Tahmini Süre:** 1.5 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 1.5 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IGenericRepositoryAsync.cs` interface'ini finalize et — GetByIdAsync, GetAllAsync, GetPagedAsync (RequestParameter alır, PagedResponse döner), AddAsync, UpdateAsync, DeleteAsync
-- [ ] `Infrastructure/Repositories/GenericRepositoryAsync.cs` implementasyonu — ApplicationDbContext inject, LINQ ile pagination, total count hesaplama
-- [ ] DI registration (ServiceRegistration.cs)
+- [x] `IGenericRepositoryAsync.cs` interface'ini finalize et — GetByIdAsync, GetAllAsync, GetPagedAsync (RequestParameter alır, PagedResponse döner), AddAsync, UpdateAsync, DeleteAsync
+- [x] `Infrastructure/Repositories/GenericRepositoryAsync.cs` implementasyonu — ApplicationDbContext inject, LINQ ile pagination, total count hesaplama
+- [x] DI registration (ServiceRegistration.cs)
+- [x] `IApplicationDbContext`'e `Set<T>()` metodu eklendi
+- [x] EF Core Global Query Filter (soft-delete için Expression Tree)
+- [x] DeleteAsync soft-delete/hard-delete ayrımı
+- [x] Infrastructure.Tests ile entegrasyon testleri (9 test, omniflow_dev PostgreSQL)
 
 ---
 

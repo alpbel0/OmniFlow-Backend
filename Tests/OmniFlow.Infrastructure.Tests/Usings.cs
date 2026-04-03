@@ -1,0 +1,11 @@
+global using Xunit;
+global using FluentAssertions;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore.Storage;
+global using OmniFlow.Application.Interfaces;
+global using OmniFlow.Infrastructure.Repositories;
+global using OmniFlow.Infrastructure.Contexts;
+global using OmniFlow.Domain.Entities;
+global using OmniFlow.Domain.Common;
+global using OmniFlow.Domain.Enums;
+global using OmniFlow.Application.Parameters;

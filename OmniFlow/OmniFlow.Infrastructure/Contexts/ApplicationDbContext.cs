@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,8 @@ public class ApplicationDbContext
 	public DbSet<KarmaEvent> KarmaEvents => Set<KarmaEvent>();
 	public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+	public new DbSet<T> Set<T>() where T : class => base.Set<T>();
+
 	protected override void OnModelCreating(ModelBuilder builder)
 	{
 		base.OnModelCreating(builder);
@@ -75,6 +78,23 @@ public class ApplicationDbContext
 		builder.Entity<IdentityUserToken<Guid>>().ToTable("user_tokens");
 
 		builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+		// Global query filter for soft-delete using Expression Tree
+		foreach (var entityType in builder.Model.GetEntityTypes())
+		{
+			if (typeof(AuditableBaseEntity).IsAssignableFrom(entityType.ClrType))
+			{
+				// Create parameter expression: e => e.DeletedAt == null
+				var parameter = Expression.Parameter(entityType.ClrType, "e");
+				var deletedAtProperty = Expression.Property(parameter, "DeletedAt");
+				var nullConstant = Expression.Constant(null, typeof(DateTime?));
+				var filter = Expression.Equal(deletedAtProperty, nullConstant);
+				var lambda = Expression.Lambda(filter, parameter);
+
+				// Apply filter
+				builder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+			}
+		}
 	}
 
 	public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
