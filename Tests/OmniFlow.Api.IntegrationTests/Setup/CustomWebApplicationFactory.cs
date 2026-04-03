@@ -13,7 +13,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public CustomWebApplicationFactory()
     {
         _connectionString = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
-            ?? "Host=localhost;Port=5432;Database=omniflow_test;Username=postgres;Password=postgres";
+            ?? "Host=localhost;Port=5432;Database=omniflow_dev;Username=postgres;Password=postgres";
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

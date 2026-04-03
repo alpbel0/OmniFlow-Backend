@@ -51,14 +51,14 @@
 
 Phase 1 tamamlanmış sayılır eğer:
 - [x] 4 proje oluşturuldu ve referans zinciri doğru (Domain → Application → Infrastructure → WebApi)
-- [ ] 18 entity, 20 enum, tüm EF Core configuration'lar yazıldı
-- [ ] Azure PostgreSQL'e migration başarıyla uygulandı, 18 tablo oluştu
-- [ ] Register → Login → Access Token → Refresh Token akışı çalışıyor
-- [ ] Web (cookie) ve Mobile (body) refresh akışı ayrı çalışıyor
-- [ ] Swagger UI'da tüm auth endpoint'leri test edilebiliyor
-- [ ] Seed data ile default admin + traveler roller oluşuyor
-- [ ] Global error handler tüm exception tiplerini yakalıyor
-- [ ] Phase 1 testleri geçiyor
+- [x] 18 entity, 20 enum, tüm EF Core configuration'lar yazıldı
+- [x] Azure PostgreSQL'e migration başarıyla uygulandı, 18 tablo oluştu
+- [x] Register → Login → Access Token → Refresh Token akışı çalışıyor
+- [x] Web (cookie) ve Mobile (body) refresh akışı ayrı çalışıyor
+- [x] Swagger UI'da tüm auth endpoint'leri test edilebiliyor
+- [x] Seed data ile default admin + traveler roller oluşuyor
+- [x] Global error handler tüm exception tiplerini yakalıyor
+- [x] Phase 1 testleri geçiyor
 
 ---
 
@@ -288,19 +288,19 @@ Phase 1 tamamlanmış sayılır eğer:
 
 ---
 
-### Task 2.6: Azure PostgreSQL Connection & Migration (BU KISIM TAMAM ŞU AN LOCAL ORTAMDA ÇALIŞYIORUM BURAYI OKUMA KAFAN KARIŞMASIN)
+### Task 2.6: Azure PostgreSQL Connection & Migration
 
-**Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 2 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] appsettings.Development.json'a Azure PostgreSQL connection string ekle (Host, Database, Username, Password, SSL Mode)
-- [ ] Infrastructure/ServiceRegistration.cs'de DbContext DI registration yap
-- [ ] Initial migration oluştur (InitialCreate)
-- [ ] Migration'ı Azure PostgreSQL'e uygula
-- [ ] pgAdmin veya psql ile 18 tablonun oluştuğunu doğrula
-- [ ] CHECK constraint'lerin uygulandığını kontrol et (information_schema.check_constraints sorgusu)
-- [ ] Index'lerin oluştuğunu kontrol et (pg_indexes sorgusu)
+- [x] appsettings.Development.json'a Azure PostgreSQL connection string ekle (Host, Database, Username, Password, SSL Mode)
+- [x] Infrastructure/ServiceRegistration.cs'de DbContext DI registration yap
+- [x] Initial migration oluştur (InitialCreate)
+- [x] Migration'ı Azure PostgreSQL'e uygula
+- [x] pgAdmin veya psql ile 18 tablonun oluştuğunu doğrula
+- [x] CHECK constraint'lerin uygulandığını kontrol et (information_schema.check_constraints sorgusu)
+- [x] Index'lerin oluştuğunu kontrol et (pg_indexes sorgusu)
 
 ---
 
@@ -502,19 +502,19 @@ Kontrol edildi bu kısma kadar .
 
 ### Technical Metrics
 
-- [ ] Build: 0 error, 0 warning
-- [ ] Migration: 18 tablo Azure PostgreSQL'de oluşturuldu
-- [ ] Auth Flow: Register → Login → Access Token → Refresh → New Token çalışıyor
-- [ ] Dual Platform: Web (cookie) ve Mobile (body) refresh ayrı çalışıyor
-- [ ] Swagger: Tüm auth endpoint'leri test edilebilir durumda
+- [x] Build: 0 error, 0 warning
+- [x] Migration: 18 tablo Azure PostgreSQL'de oluşturuldu
+- [x] Auth Flow: Register → Login → Access Token → Refresh → New Token çalışıyor
+- [x] Dual Platform: Web (cookie) ve Mobile (body) refresh ayrı çalışıyor
+- [x] Swagger: Tüm auth endpoint'leri test edilebilir durumda
 
 ### Quality Metrics
 
-- [ ] Clean Architecture: Domain hiçbir projeye referans vermiyor, referans zinciri doğru
-- [ ] EF Core: Tüm CHECK constraint'ler ve index'ler SQL şemasıyla eşleşiyor
-- [ ] Security: Token hash'leniyor, HttpOnly cookie, Secure flag, ClockSkew = 0, rotation aktif
-- [ ] Error Handling: Global middleware 7 exception tipini yakalıyor, 500'lerde stack trace dışarı sızmıyor
-- [ ] Test: Phase 1 unit + integration testlerinin tamamı geçiyor
+- [x] Clean Architecture: Domain hiçbir projeye referans vermiyor, referans zinciri doğru
+- [x] EF Core: Tüm CHECK constraint'ler ve index'ler SQL şemasıyla eşleşiyor
+- [x] Security: Token hash'leniyor, HttpOnly cookie, Secure flag, ClockSkew = 0, rotation aktif
+- [x] Error Handling: Global middleware 7 exception tipini yakalıyor, 500'lerde stack trace dışarı sızmıyor
+- [x] Test: Phase 1 unit + integration testlerinin tamamı geçiyor
 
 ---
 
