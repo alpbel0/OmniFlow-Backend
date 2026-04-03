@@ -690,18 +690,23 @@ Phase 2 tamamlanmış sayılır eğer:
 ### Task 5.5: Trip Save/Unsave & Upvote
 
 **Tahmini Süre:** 1.5 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `SaveTripCommand.cs` — IApplicationDbContext üzerinden SavedTrip ekler, çift kayıt varsa ignore
-- [ ] `UnsaveTripCommand.cs` — SavedTrip siler
-- [ ] `UpvoteTripCommand.cs` — IApplicationDbContext üzerinden TripUpvote ekler, çift upvote varsa DuplicateUpvoteException, trip'in upvote_count'ını 1 artırır
-- [ ] `GetSavedTripsQuery.cs` — authenticated user'ın kaydettiği trip'ler, pagination
-- [ ] Controller endpoint'leri:
-  - [ ] POST /api/v1/trips/{id}/save
-  - [ ] DELETE /api/v1/trips/{id}/save
-  - [ ] POST /api/v1/trips/{id}/upvote
-  - [ ] GET /api/v1/saved-trips
+- [x] `SaveTripCommand.cs` — IApplicationDbContext üzerinden SavedTrip ekler, çift kayıt varsa ignore
+- [x] `UnsaveTripCommand.cs` — SavedTrip siler
+- [x] `UpvoteTripCommand.cs` — IApplicationDbContext üzerinden TripUpvote ekler, çift upvote varsa DuplicateUpvoteException, trip'in upvote_count'ını 1 artırır
+- [x] `RemoveUpvoteTripCommand.cs` — TripUpvote siler, upvote_count azaltır
+- [x] `GetSavedTripsQuery.cs` — authenticated user'ın kaydettiği trip'ler, pagination
+- [x] `SelfUpvoteException.cs` — Domain exception for self-upvote prevention
+- [x] Controller endpoint'leri:
+  - [x] POST /api/v1/trips/{id}/save
+  - [x] DELETE /api/v1/trips/{id}/save
+  - [x] POST /api/v1/trips/{id}/upvote
+  - [x] DELETE /api/v1/trips/{id}/upvote
+  - [x] GET /api/v1/saved-trips
+- [x] Unit tests: UpvoteTrip, RemoveUpvoteTrip, SaveTrip, UnsaveTrip handlers
+- [x] Integration tests: TripsControllerSaveUpvoteTests
 
 ---
 

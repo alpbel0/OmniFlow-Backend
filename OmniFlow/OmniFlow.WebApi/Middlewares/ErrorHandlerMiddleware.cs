@@ -73,6 +73,11 @@ public class ErrorHandlerMiddleware
 				response = new ErrorResponse(selfForkEx.Message);
 				break;
 
+			case SelfUpvoteException selfUpvoteEx:
+				statusCode = (int)HttpStatusCode.Conflict;
+				response = new ErrorResponse(selfUpvoteEx.Message);
+				break;
+
 			default:
 				_logger.LogError(exception, "Unhandled exception: {Message}", exception.Message);
 				statusCode = (int)HttpStatusCode.InternalServerError;

@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Trips;
+using OmniFlow.Application.Features.SavedTrips.Commands.SaveTrip;
+using OmniFlow.Application.Features.SavedTrips.Commands.UnsaveTrip;
 using OmniFlow.Application.Features.Trips.Commands.ArchiveTrip;
 using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
 using OmniFlow.Application.Features.Trips.Commands.DeleteTrip;
 using OmniFlow.Application.Features.Trips.Commands.PublishTrip;
+using OmniFlow.Application.Features.Trips.Commands.RemoveUpvoteTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
+using OmniFlow.Application.Features.Trips.Commands.UpvoteTrip;
 using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
 using OmniFlow.Application.Features.Trips.Queries.GetTripById;
 using OmniFlow.Domain.Enums;
@@ -143,6 +147,57 @@ public class TripsController : BaseApiController
     public async Task<IActionResult> Archive([FromRoute] Guid id)
     {
         var command = new ArchiveTripCommand { TripId = id };
+        await Mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>Upvote a published trip.</summary>
+    [HttpPost("{id:guid}/upvote")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Upvote([FromRoute] Guid id)
+    {
+        var command = new UpvoteTripCommand { TripId = id };
+        await Mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>Remove upvote from a trip.</summary>
+    [HttpDelete("{id:guid}/upvote")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveUpvote([FromRoute] Guid id)
+    {
+        var command = new RemoveUpvoteTripCommand { TripId = id };
+        await Mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>Save a trip to user's saved list.</summary>
+    [HttpPost("{id:guid}/save")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Save([FromRoute] Guid id)
+    {
+        var command = new SaveTripCommand { TripId = id };
+        await Mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>Remove trip from user's saved list.</summary>
+    [HttpDelete("{id:guid}/save")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Unsave([FromRoute] Guid id)
+    {
+        var command = new UnsaveTripCommand { TripId = id };
         await Mediator.Send(command);
         return NoContent();
     }
