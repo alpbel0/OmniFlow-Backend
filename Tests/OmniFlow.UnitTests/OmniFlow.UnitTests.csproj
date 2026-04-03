@@ -20,11 +20,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="7.1.0" />
+    <PackageReference Include="Moq" Version="4.20.72" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\OmniFlow\OmniFlow.Domain\OmniFlow.Domain.csproj" />
     <ProjectReference Include="..\..\OmniFlow\OmniFlow.Application\OmniFlow.Application.csproj" />
+    <ProjectReference Include="..\..\OmniFlow\OmniFlow.Infrastructure\OmniFlow.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

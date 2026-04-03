@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Application.Interfaces;
+using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Application.Settings;
 using OmniFlow.Infrastructure.Contexts;
 using OmniFlow.Infrastructure.Models;
@@ -34,6 +35,9 @@ public static class ServiceRegistration
 
 		// Open-Generic DI registration for Generic Repository
 		services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
+
+		// Specific Repository registrations
+		services.AddScoped<IPlaceRepositoryAsync, PlaceRepositoryAsync>();
 
 		return services;
 	}

@@ -578,37 +578,39 @@ Phase 2 tamamlanmış sayılır eğer:
 
 ### Task 4.2: Application — Place Feature (CQRS)
 
-**Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 3 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IPlaceRepositoryAsync.cs` — IGenericRepositoryAsync<Place>'den türer, ek metotlar: GetByCityAsync (city, pagination), GetByCategoryAsync (category, pagination)
-- [ ] `PlaceResponse.cs` DTO — Id, Name, Category, Latitude, Longitude, City, Country, Rating, EstimatedPrice, IsFree, BudgetTiers, TravelStyles, DurationMinutes bilgilerini içerir
-- [ ] `CreatePlaceCommand.cs` — MediatR IRequest, tüm place field'larını alır, handler'da repository'ye ekler
-- [ ] `CreatePlaceCommandValidator.cs` — Name boş olamaz (max 255), Category enum'da olmalı, City ve Country zorunlu, Latitude -90/90 arası, Longitude -180/180 arası, Rating 1-5 arası (nullable), EstimatedPrice >= 0, CurrencyCode 3 harf büyük harf regex
-- [ ] `GetAllPlacesQuery.cs` — pagination parametreleri alır, PagedResponse<PlaceResponse> döner
-- [ ] `GetPlaceByIdQuery.cs` — Guid alır, PlaceResponse döner, bulunamazsa EntityNotFoundException
-- [ ] `GetPlacesByCityQuery.cs` — city string + pagination alır, PagedResponse<PlaceResponse> döner
-- [ ] GeneralProfile.cs'ye Place → PlaceResponse AutoMapper mapping ekle
+- [x] `IPlaceRepositoryAsync.cs` — IGenericRepositoryAsync<Place>'den türer, ek metotlar: GetByCityAsync (city, pagination), GetByCategoryAsync (category, pagination)
+- [x] `PlaceResponse.cs` DTO — Id, Name, Category, Latitude, Longitude, City, Country, Rating, EstimatedPrice, IsFree, BudgetTiers, TravelStyles, DurationMinutes bilgilerini içerir
+- [x] `CreatePlaceRequest.cs` DTO — Tüm place field'larını içerir
+- [x] `CreatePlaceCommand.cs` — MediatR IRequest, tüm place field'larını alır, handler'da repository'ye ekler
+- [x] `CreatePlaceCommandValidator.cs` — Name boş olamaz (max 255), Category enum'da olmalı, City ve Country zorunlu, Latitude -90/90 arası, Longitude -180/180 arası, Rating 1-5 arası (nullable), EstimatedPrice >= 0, CurrencyCode 3 harf büyük harf regex
+- [x] `GetAllPlacesQuery.cs` — pagination parametreleri alır, PagedResponse<PlaceResponse> döner
+- [x] `GetPlaceByIdQuery.cs` — Guid alır, PlaceResponse döner, bulunamazsa EntityNotFoundException
+- [x] `GetPlacesByCityQuery.cs` — city string + pagination alır, PagedResponse<PlaceResponse> döner
+- [x] GeneralProfile.cs'ye Place → PlaceResponse AutoMapper mapping ekle
+- [x] Unit tests (18 test - Command, Query, Validator)
 
 ---
 
 ### Task 4.3: Infrastructure — Place Repository
 
-**Tahmini Süre:** 1.5 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 1.5 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `PlaceRepositoryAsync.cs` — GenericRepositoryAsync<Place>'den türer, IPlaceRepositoryAsync implement eder
-- [ ] GetByCityAsync — is_active = true filtreli, case-insensitive city eşleşmesi, name'e göre sıralı, pagination uygulanmış
-- [ ] GetByCategoryAsync — is_active = true filtreli, category eşleşmesi, pagination uygulanmış
-- [ ] DI registration
+- [x] `PlaceRepositoryAsync.cs` — GenericRepositoryAsync<Place>'den türer, IPlaceRepositoryAsync implement eder
+- [x] GetByCityAsync — is_active = true filtreli, case-insensitive city eşleşmesi, name'e göre sıralı, pagination uygulanmış
+- [x] GetByCategoryAsync — is_active = true filtreli, category eşleşmesi, pagination uygulanmış
+- [x] DI registration
 
 ---
 
 ### Task 4.4: WebApi — PlacesController
 
-**Tahmini Süre:** 1 saat  
+**Tahmini Süre:** 1 saat
 **Durum:** ⏳ Bekliyor
 
 **Yapılacaklar:**
