@@ -611,15 +611,15 @@ Phase 2 tamamlanmış sayılır eğer:
 ### Task 4.4: WebApi — PlacesController
 
 **Tahmini Süre:** 1 saat
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `v1/PlacesController.cs` — BaseApiController'dan türer, [Authorize] attribute
-- [ ] GET /api/v1/places — query parametrelerinden filtre alır, GetAllPlacesQuery gönderir
-- [ ] GET /api/v1/places/{id} — Guid alır, GetPlaceByIdQuery gönderir
-- [ ] GET /api/v1/places/city/{city} — şehir adı + pagination, GetPlacesByCityQuery gönderir
-- [ ] POST /api/v1/places — [Authorize(Roles = "Admin")], CreatePlaceCommand body'den alır
-- [ ] Swagger'da 4 endpoint'i test et
+- [x] `v1/PlacesController.cs` — BaseApiController'dan türer, [Authorize] attribute
+- [x] GET /api/v1/places — query parametrelerinden filtre alır, GetAllPlacesQuery gönderir
+- [x] GET /api/v1/places/{id} — Guid alır, GetPlaceByIdQuery gönderir
+- [x] GET /api/v1/places/city/{city} — şehir adı + pagination, GetPlacesByCityQuery gönderir
+- [x] POST /api/v1/places — [Authorize(Roles = "Admin")], CreatePlaceCommand body'den alır
+- [x] Integration tests (13 test) — OmniFlow.Api.IntegrationTests/Controllers/PlacesControllerTests.cs
 
 ---
 
