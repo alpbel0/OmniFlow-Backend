@@ -1,0 +1,214 @@
+using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
+using OmniFlow.Domain.Enums;
+
+namespace OmniFlow.UnitTests.Trips;
+
+public class CreateTripCommandValidatorTests
+{
+    private readonly CreateTripCommandValidator _validator;
+
+    public CreateTripCommandValidatorTests()
+    {
+        _validator = new CreateTripCommandValidator();
+    }
+
+    [Fact]
+    public void Validate_ValidCommand_PassesValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "Test Trip",
+            City = "Antalya",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelStyle = TravelStyle.Adventure
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_EmptyTitle_FailsValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "",
+            City = "Antalya",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 2
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Title");
+    }
+
+    [Fact]
+    public void Validate_TitleExceeds100Characters_FailsValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = new string('a', 101),
+            City = "Antalya",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 2
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Title");
+    }
+
+    [Fact]
+    public void Validate_EmptyCity_FailsValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "Test Trip",
+            City = "",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 2
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "City");
+    }
+
+    [Fact]
+    public void Validate_EmptyCountry_FailsValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "Test Trip",
+            City = "Antalya",
+            Country = "",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 2
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Country");
+    }
+
+    [Fact]
+    public void Validate_EndDateBeforeStartDate_FailsValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "Test Trip",
+            City = "Antalya",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 7),
+            EndDate = new DateOnly(2025, 6, 1),
+            PersonCount = 2
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "EndDate");
+    }
+
+    [Fact]
+    public void Validate_PersonCountZero_FailsValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "Test Trip",
+            City = "Antalya",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 0
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "PersonCount");
+    }
+
+    [Fact]
+    public void Validate_NegativeUserBudget_FailsValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "Test Trip",
+            City = "Antalya",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 2,
+            UserBudget = -100
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "UserBudget");
+    }
+
+    [Fact]
+    public void Validate_NullUserBudget_PassesValidation()
+    {
+        // Arrange
+        var command = new CreateTripCommand
+        {
+            Title = "Test Trip",
+            City = "Antalya",
+            Country = "Turkey",
+            StartDate = new DateOnly(2025, 6, 1),
+            EndDate = new DateOnly(2025, 6, 7),
+            PersonCount = 2,
+            UserBudget = null
+        };
+
+        // Act
+        var result = _validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+}

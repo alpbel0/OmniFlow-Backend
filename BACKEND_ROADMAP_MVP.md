@@ -632,58 +632,58 @@ Phase 2 tamamlanmış sayılır eğer:
 ### Task 5.1: Application — Trip Repository Interface
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `ITripRepositoryAsync.cs` — IGenericRepositoryAsync<Trip>'den türer, ek metotlar: GetByOwnerAsync (userId, pagination), GetPublishedByOwnerAsync (userId), GetWithStopsAsync (tripId, includes: Stops → Place)
-- [ ] `TripResponse.cs` DTO — tüm trip field'ları + owner bilgisi (Id, Username, ProfilePhotoUrl)
-- [ ] `CreateTripRequest.cs` DTO — Title, City, Country, StartDate, EndDate, PersonCount, BudgetTier, TravelStyle, UserBudget (nullable)
+- [x] `ITripRepositoryAsync.cs` — IGenericRepositoryAsync<Trip>'den türer, ek metotlar: GetByOwnerAsync (userId, pagination), GetPublishedByOwnerAsync (userId), GetWithStopsAsync (tripId, includes: Stops → Place), GetByIdWithOwnerAsync (tripId, Owner include)
+- [x] `TripResponse.cs` DTO — tüm trip field'ları + owner bilgisi (Id, Username, ProfilePhotoUrl)
+- [x] `CreateTripRequest.cs` DTO — Title, City, Country, StartDate, EndDate, PersonCount, BudgetTier, TravelStyle, UserBudget (nullable)
 
 ---
 
 ### Task 5.2: Application — Trip Commands
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `CreateTripCommand.cs` — authenticated user'ın Id'sini owner olarak atar, status = Draft, handler repository'ye ekler
-- [ ] `CreateTripCommandValidator.cs` — Title boş olamaz (max 100), City/Country zorunlu, EndDate >= StartDate, PersonCount > 0, UserBudget >= 0 (nullable)
-- [ ] `UpdateTripCommand.cs` — TripId + güncellenebilir alanlar, handler'da owner kontrolü (authenticated user = trip owner, değilse ForbiddenException), sadece Draft trip güncellenebilir
-- [ ] `UpdateTripCommandValidator.cs` — CreateTrip ile aynı validasyon kuralları
-- [ ] `DeleteTripCommand.cs` — soft delete (deleted_at = now), owner kontrolü
-- [ ] `PublishTripCommand.cs` — status Draft → Published geçişi, owner kontrolü, en az 1 stop olmalı (yoksa ApiException)
-- [ ] `ArchiveTripCommand.cs` — status Published → Archived geçişi, owner kontrolü
+- [x] `CreateTripCommand.cs` — authenticated user'ın Id'sini owner olarak atar, status = Draft, handler repository'ye ekler
+- [x] `CreateTripCommandValidator.cs` — Title boş olamaz (max 100), City/Country zorunlu, EndDate >= StartDate, PersonCount > 0, UserBudget >= 0 (nullable)
+- [x] `UpdateTripCommand.cs` — TripId + güncellenebilir alanlar, handler'da owner kontrolü (authenticated user = trip owner, değilse ForbiddenException), sadece Draft trip güncellenebilir
+- [x] `UpdateTripCommandValidator.cs` — CreateTrip ile aynı validasyon kuralları
+- [x] `DeleteTripCommand.cs` — soft delete (deleted_at = now), owner kontrolü
+- [x] `PublishTripCommand.cs` — status Draft → Published geçişi, owner kontrolü, en az 1 stop olmalı (yoksa ApiException)
+- [x] `ArchiveTripCommand.cs` — status Published → Archived geçişi, owner kontrolü
 
 ---
 
 ### Task 5.3: Application — Trip Queries
 
 **Tahmini Süre:** 1.5 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `GetTripByIdQuery.cs` — Trip + Owner bilgisi döner, soft deleted trip için EntityNotFoundException
-- [ ] `GetMyTripsQuery.cs` — authenticated user'ın trip'leri, pagination, status filtresi (opsiyonel)
-- [ ] GeneralProfile.cs'ye Trip → TripResponse mapping ekle
+- [x] `GetTripByIdQuery.cs` — Trip + Owner bilgisi döner, soft deleted trip için EntityNotFoundException
+- [x] `GetMyTripsQuery.cs` — authenticated user'ın trip'leri, pagination, status filtresi (opsiyonel)
+- [x] GeneralProfile.cs'ye Trip → TripResponse mapping ekle
 
 ---
 
 ### Task 5.4: Infrastructure — Trip Repository & Controller
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `TripRepositoryAsync.cs` implementasyonu — soft delete filtresi (deleted_at IS NULL), owner bazlı sorgular, include ile Stop/Flight/Hotel yükleme
-- [ ] `v1/TripsController.cs` oluştur:
-  - [ ] GET /api/v1/trips — GetMyTripsQuery (kendi trip'leri)
-  - [ ] GET /api/v1/trips/{id} — GetTripByIdQuery
-  - [ ] POST /api/v1/trips — CreateTripCommand
-  - [ ] PUT /api/v1/trips/{id} — UpdateTripCommand
-  - [ ] DELETE /api/v1/trips/{id} — DeleteTripCommand
-  - [ ] POST /api/v1/trips/{id}/publish — PublishTripCommand
-  - [ ] POST /api/v1/trips/{id}/archive — ArchiveTripCommand
+- [x] `TripRepositoryAsync.cs` implementasyonu — soft delete filtresi (deleted_at IS NULL), owner bazlı sorgular, include ile Stop/Flight/Hotel yükleme, GetByIdWithOwnerAsync (Owner include)
+- [x] `v1/TripsController.cs` oluştur:
+  - [x] GET /api/v1/trips — GetMyTripsQuery (kendi trip'leri)
+  - [x] GET /api/v1/trips/{id} — GetTripByIdQuery
+  - [x] POST /api/v1/trips — CreateTripCommand
+  - [x] PUT /api/v1/trips/{id} — UpdateTripCommand
+  - [x] DELETE /api/v1/trips/{id} — DeleteTripCommand
+  - [x] POST /api/v1/trips/{id}/publish — PublishTripCommand
+  - [x] POST /api/v1/trips/{id}/archive — ArchiveTripCommand
 
 ---
 
