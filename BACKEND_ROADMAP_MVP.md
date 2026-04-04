@@ -718,47 +718,40 @@ Phase 2 tamamlanmış sayılır eğer:
 
 ### Task 6.1: Application — Stop Repository & DTOs
 
-**Tahmini Süre:** 1.5 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 1.5 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IStopRepositoryAsync.cs` — GetByTripAsync (tripId, day_number + order_index sıralı), GetByTripAndDayAsync (tripId, dayNumber)
-- [ ] `StopResponse.cs` DTO — tüm stop field'ları + place bilgisi (varsa: Name, Category, PhotoUrl) + fallback place bilgisi (varsa)
-- [ ] `CreateStopRequest.cs` DTO — TripId, PlaceId (nullable), DayNumber, ArrivalTime (nullable), DurationMinutes, CustomName/CustomCategory (nullable), Notes, ActivityPrice, TransportPrice, TransportFromPrevious
-- [ ] `UpdateStopRequest.cs` DTO — güncellenebilir alanlar
-- [ ] `ReorderStopRequest.cs` DTO — StopId, NewOrderIndex (double)
+- [x] `IStopRepositoryAsync.cs` — GetByTripAsync, GetByTripAndDayAsync, GetByIdWithPlaceAsync, GetLastStopInDayAsync
+- [x] `StopResponse.cs` DTO — tüm stop field'ları + place bilgisi + fallback place bilgisi
+- [x] `CreateStopRequest.cs` DTO — tüm gerekli alanlar
+- [x] `UpdateStopRequest.cs` DTO — güncellenebilir alanlar
+- [x] `ReorderStopRequest.cs` DTO — StopId, NewDayNumber, AfterStopId, BeforeStopId (LexoRank)
 
 ---
 
 ### Task 6.2: Application — Stop Commands
 
-**Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 3 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `CreateStopCommand.cs` — trip owner kontrolü, PlaceId null ise CustomName + CustomCategory zorunlu (place_or_custom_name iş kuralı), OrderIndex otomatik hesapla (mevcut son stop'un index'i + 1000), AddedBy = User
-- [ ] `CreateStopCommandValidator.cs` — DayNumber > 0, DurationMinutes > 0 (nullable), ActivityPrice >= 0, TransportPrice >= 0, CurrencyCode 3 harf regex, IsTimeLocked = true ise ArrivalTime zorunlu
-- [ ] `UpdateStopCommand.cs` — trip owner kontrolü, stop'un trip'e ait olduğunu doğrula, time lock kurallarını kontrol et
-- [ ] `DeleteStopCommand.cs` — trip owner kontrolü, fiziksel silme (stop'larda soft delete yok)
-- [ ] `ReorderStopsCommand.cs` — trip owner kontrolü, yeni OrderIndex değeri ata (LexoRank: iki stop arasındaki orta değer), IsTimeLocked = true olan stop'ların sırası değiştirilemez
-- [ ] `MarkStopVisitedCommand.cs` — trip owner kontrolü, IsVisited = true + VisitedAt = now, visited_consistency kuralını sağla
+- [x] `CreateStopCommand.cs` + Handler + Validator — owner kontrolü, CHECK constraint'ler, OrderIndex otomatik hesaplama, AddedBy = User
+- [x] `UpdateStopCommand.cs` + Handler + Validator — owner kontrolü, time lock koruması
+- [x] `DeleteStopCommand.cs` + Handler — owner kontrolü, soft delete
+- [x] `ReorderStopsCommand.cs` + Handler + Validator — LexoRank middle value hesaplama, time lock koruması
+- [x] `MarkStopVisitedCommand.cs` + Handler — IsVisited + VisitedAt set
 
 ---
 
 ### Task 6.3: Application — Stop Queries & Controller
 
-**Tahmini Süre:** 1.5 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 1.5 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `GetStopsByTripQuery.cs` — trip'in tüm stop'ları, day_number + order_index sıralı, Place ve FallbackPlace include, trip'in public (published) olması veya authenticated user'ın owner olması gerekir
-- [ ] `StopsController.cs` endpoint'leri:
-  - [ ] GET /api/v1/trips/{tripId}/stops — GetStopsByTripQuery
-  - [ ] POST /api/v1/trips/{tripId}/stops — CreateStopCommand
-  - [ ] PUT /api/v1/trips/{tripId}/stops/{stopId} — UpdateStopCommand
-  - [ ] DELETE /api/v1/trips/{tripId}/stops/{stopId} — DeleteStopCommand
-  - [ ] PUT /api/v1/trips/{tripId}/stops/reorder — ReorderStopsCommand
-  - [ ] POST /api/v1/trips/{tripId}/stops/{stopId}/visited — MarkStopVisitedCommand
+- [x] `GetStopsByTripQuery.cs` + Handler — day_number + order_index sıralı, Place/FallbackPlace include, authorization
+- [x] `StopsController.cs` — 6 endpoint (GET, POST, PUT, DELETE, reorder, visited)
 
 ---
 

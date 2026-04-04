@@ -1,7 +1,10 @@
 using AutoMapper;
 using OmniFlow.Application.DTOs.Places;
+using OmniFlow.Application.DTOs.Stops;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.Places.Commands.CreatePlace;
+using OmniFlow.Application.Features.Stops.Commands.CreateStop;
+using OmniFlow.Application.Features.Stops.Commands.UpdateStop;
 using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 using OmniFlow.Domain.Entities;
@@ -35,5 +38,16 @@ public class GeneralProfile : Profile
 
         CreateMap<CreateTripCommand, Trip>();
         CreateMap<UpdateTripCommand, Trip>();
+
+        // Stop mappings
+        CreateMap<Stop, StopResponse>()
+            .ForMember(dest => dest.PlaceName, opt => opt.MapFrom(src => src.Place!.Name))
+            .ForMember(dest => dest.PlaceCategory, opt => opt.MapFrom(src => src.Place != null ? src.Place.Category : (Domain.Enums.PlaceCategory?)null))
+            .ForMember(dest => dest.PlacePhotoUrl, opt => opt.MapFrom(src => src.Place!.PhotoUrl))
+            .ForMember(dest => dest.FallbackPlaceName, opt => opt.MapFrom(src => src.FallbackPlace!.Name))
+            .ForMember(dest => dest.FallbackPlaceCategory, opt => opt.MapFrom(src => src.FallbackPlace != null ? src.FallbackPlace.Category : (Domain.Enums.PlaceCategory?)null));
+
+        CreateMap<CreateStopCommand, Stop>();
+        CreateMap<UpdateStopCommand, Stop>();
     }
 }
