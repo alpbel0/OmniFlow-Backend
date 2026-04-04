@@ -21,15 +21,21 @@ public class UpvoteTripCommandHandler : IRequestHandler<UpvoteTripCommand, Unit>
     private readonly ITripRepositoryAsync _tripRepository;
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
+    private readonly IKarmaService _karmaService;
+    private readonly INotificationService _notificationService;
 
     public UpvoteTripCommandHandler(
         ITripRepositoryAsync tripRepository,
         IApplicationDbContext context,
-        IAuthenticatedUserService authenticatedUserService)
+        IAuthenticatedUserService authenticatedUserService,
+        IKarmaService karmaService,
+        INotificationService notificationService)
     {
         _tripRepository = tripRepository;
         _context = context;
         _authenticatedUserService = authenticatedUserService;
+        _karmaService = karmaService;
+        _notificationService = notificationService;
     }
 
     public async Task<Unit> Handle(UpvoteTripCommand request, CancellationToken cancellationToken)
@@ -82,6 +88,19 @@ public class UpvoteTripCommandHandler : IRequestHandler<UpvoteTripCommand, Unit>
 
         // 9. Save changes
         await _context.SaveChangesAsync(cancellationToken);
+        await _karmaService.AwardKarmaAsync(
+            trip.OwnerId,
+            userId,
+            KarmaEventType.TripUpvoted,
+            1,
+            trip.Id,
+            KarmaSourceType.Trip);
+        await _notificationService.CreateNotificationAsync(
+            trip.OwnerId,
+            userId,
+            NotificationType.TripUpvote,
+            trip.Id,
+            NotificationTargetType.Trip);
 
         return Unit.Value;
     }

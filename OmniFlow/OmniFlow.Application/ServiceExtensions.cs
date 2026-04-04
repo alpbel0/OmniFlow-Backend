@@ -3,7 +3,9 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Application.Behaviours;
+using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Mappings;
+using OmniFlow.Application.Services;
 
 namespace OmniFlow.Application;
 
@@ -22,6 +24,8 @@ public static class ServiceExtensions
         services.AddAutoMapper(cfg => cfg.AddMaps(assembly));
 
         services.AddValidatorsFromAssembly(assembly);
+        services.AddScoped<IKarmaService, KarmaService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

@@ -13,15 +13,18 @@ public class PublishTripCommandTests
 {
     private readonly Mock<ITripRepositoryAsync> _tripRepositoryMock;
     private readonly Mock<IAuthenticatedUserService> _authenticatedUserServiceMock;
+    private readonly Mock<IKarmaService> _karmaServiceMock;
     private readonly PublishTripCommandHandler _handler;
 
     public PublishTripCommandTests()
     {
         _tripRepositoryMock = new Mock<ITripRepositoryAsync>();
         _authenticatedUserServiceMock = new Mock<IAuthenticatedUserService>();
+        _karmaServiceMock = new Mock<IKarmaService>();
         _handler = new PublishTripCommandHandler(
             _tripRepositoryMock.Object,
-            _authenticatedUserServiceMock.Object);
+            _authenticatedUserServiceMock.Object,
+            _karmaServiceMock.Object);
     }
 
     [Fact]
@@ -54,6 +57,13 @@ public class PublishTripCommandTests
         // Assert
         result.Should().Be(Unit.Value);
         trip.Status.Should().Be(TripStatus.Published);
+        _karmaServiceMock.Verify(x => x.AwardKarmaAsync(
+            userId,
+            null,
+            KarmaEventType.TripPublished,
+            10,
+            tripId,
+            KarmaSourceType.Trip), Times.Once);
     }
 
     [Fact]

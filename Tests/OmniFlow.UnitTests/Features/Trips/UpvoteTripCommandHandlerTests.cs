@@ -17,6 +17,8 @@ public class UpvoteTripCommandHandlerTests
     private readonly Mock<ITripRepositoryAsync> _tripRepositoryMock;
     private readonly Mock<IApplicationDbContext> _contextMock;
     private readonly Mock<IAuthenticatedUserService> _authenticatedUserServiceMock;
+    private readonly Mock<IKarmaService> _karmaServiceMock;
+    private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly UpvoteTripCommandHandler _handler;
 
     public UpvoteTripCommandHandlerTests()
@@ -24,10 +26,14 @@ public class UpvoteTripCommandHandlerTests
         _tripRepositoryMock = new Mock<ITripRepositoryAsync>();
         _contextMock = new Mock<IApplicationDbContext>();
         _authenticatedUserServiceMock = new Mock<IAuthenticatedUserService>();
+        _karmaServiceMock = new Mock<IKarmaService>();
+        _notificationServiceMock = new Mock<INotificationService>();
         _handler = new UpvoteTripCommandHandler(
             _tripRepositoryMock.Object,
             _contextMock.Object,
-            _authenticatedUserServiceMock.Object);
+            _authenticatedUserServiceMock.Object,
+            _karmaServiceMock.Object,
+            _notificationServiceMock.Object);
     }
 
     [Fact]
@@ -67,6 +73,19 @@ public class UpvoteTripCommandHandlerTests
         result.Should().Be(Unit.Value);
         trip.UpvoteCount.Should().Be(1);
         _contextMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _karmaServiceMock.Verify(x => x.AwardKarmaAsync(
+            ownerId,
+            userId,
+            KarmaEventType.TripUpvoted,
+            1,
+            tripId,
+            KarmaSourceType.Trip), Times.Once);
+        _notificationServiceMock.Verify(x => x.CreateNotificationAsync(
+            ownerId,
+            userId,
+            NotificationType.TripUpvote,
+            tripId,
+            NotificationTargetType.Trip), Times.Once);
     }
 
     [Fact]

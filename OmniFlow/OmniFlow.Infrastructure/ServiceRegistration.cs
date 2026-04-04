@@ -42,6 +42,12 @@ public static class ServiceRegistration
 		services.AddScoped<IStopRepositoryAsync, StopRepositoryAsync>();
 		services.AddScoped<IFlightRepositoryAsync, FlightRepositoryAsync>();
 		services.AddScoped<IHotelRepositoryAsync, HotelRepositoryAsync>();
+		services.AddScoped<IUserRepositoryAsync, UserRepositoryAsync>();
+		services.AddScoped<IFollowRepositoryAsync, FollowRepositoryAsync>();
+		services.AddScoped<IPostRepositoryAsync, PostRepositoryAsync>();
+		services.AddScoped<ICommentRepositoryAsync, CommentRepositoryAsync>();
+		services.AddScoped<ICommunityTipRepositoryAsync, CommunityTipRepositoryAsync>();
+		services.AddScoped<INotificationRepositoryAsync, NotificationRepositoryAsync>();
 
 		return services;
 	}
