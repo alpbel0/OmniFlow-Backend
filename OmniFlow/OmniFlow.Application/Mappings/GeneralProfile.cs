@@ -1,5 +1,6 @@
 using AutoMapper;
 using OmniFlow.Application.DTOs.Flights;
+using OmniFlow.Application.DTOs.Hotels;
 using OmniFlow.Application.DTOs.Places;
 using OmniFlow.Application.DTOs.Stops;
 using OmniFlow.Application.DTOs.Trips;
@@ -66,5 +67,8 @@ public class GeneralProfile : Profile
 
         // Flight mappings
         CreateMap<Flight, FlightResponse>();
+
+        // Hotel mappings
+        CreateMap<Hotel, HotelResponse>();
     }
 }

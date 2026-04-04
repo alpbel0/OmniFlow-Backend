@@ -917,27 +917,27 @@ Phase 2 tamamlanmış sayılır eğer:
 ### Task 9.1: Application — Hotel Feature
 
 **Tahmini Süre:** 2.5 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IHotelRepositoryAsync.cs` — GetByTripAsync (tripId, check-in sıralı)
-- [ ] `HotelResponse.cs` DTO — tüm hotel field'ları, formatlı check-in/out, gece sayısı hesaplı
-- [ ] `SelectHotelRequest.cs` DTO — HotelId
-- [ ] `SelectHotelCommand.cs` — trip owner kontrolü, seçilen hotel'in bu trip'e ait olduğunu doğrula, is_booked = true + booked_at = now set et, önceki seçimi iptal et
-- [ ] `GetHotelsByTripQuery.cs` — trip'in tüm otel seçenekleri, check-in sıralı
+- [x] `IHotelRepositoryAsync.cs` — GetByTripAsync (tripId, check-in sıralı)
+- [x] `HotelResponse.cs` DTO — tüm hotel field'ları, formatlı check-in/out, gece sayısı hesaplı
+- [x] `SelectHotelRequest.cs` DTO — HotelId
+- [x] `SelectHotelCommand.cs` — trip owner kontrolü, seçilen hotel'in bu trip'e ait olduğunu doğrula, is_booked = true + booked_at = now set et, önceki seçimi iptal et
+- [x] `GetHotelsByTripQuery.cs` — trip'in tüm otel seçenekleri, check-in sıralı
 
 ---
 
 ### Task 9.2: WebApi — HotelsController
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `v1/HotelsController.cs`:
-  - [ ] GET /api/v1/trips/{tripId}/hotels — GetHotelsByTripQuery
-  - [ ] POST /api/v1/trips/{tripId}/hotels/select — SelectHotelCommand
-- [ ] Swagger'da test et
+- [x] `v1/HotelsController.cs`:
+  - [x] GET /api/v1/trips/{tripId}/hotels — GetHotelsByTripQuery
+  - [x] POST /api/v1/trips/{tripId}/hotels/select — SelectHotelCommand
+- [x] Swagger'da test et
 
 ---
 
@@ -945,27 +945,27 @@ Phase 2 tamamlanmış sayılır eğer:
 
 ### Unit Tests
 
-- [ ] **SelectFlightCommand** — başka kullanıcının trip'indeki flight seçme → ForbiddenException
-- [ ] **SelectFlightCommand** — trip'e ait olmayan flight seçme → EntityNotFoundException
-- [ ] **SelectHotelCommand** — aynı validasyonlar
+- [x] **SelectFlightCommand** — başka kullanıcının trip'indeki flight seçme → ForbiddenException
+- [x] **SelectFlightCommand** — trip'e ait olmayan flight seçme → EntityNotFoundException
+- [x] **SelectHotelCommand** — aynı validasyonlar
 
 ### Integration Tests
 
-- [ ] **Flights_GetByTrip** — trip'e ait flight'lar dönmeli, başka trip'in flight'ları dönmemeli
-- [ ] **Flights_Select** — select → is_booked = true, önceki seçim iptal oldu
-- [ ] **Hotels_GetByTrip** — check-in sıralı listeleme
-- [ ] **Hotels_Select** — select → is_booked = true, booking_reference opsiyonel
-- [ ] **BookingConsistency** — is_booked = true olan kayıtta booked_at dolu olmalı
+- [x] **Flights_GetByTrip** — trip'e ait flight'lar dönmeli, başka trip'in flight'ları dönmemeli
+- [x] **Flights_Select** — select → is_booked = true, önceki seçim iptal oldu
+- [x] **Hotels_GetByTrip** — check-in sıralı listeleme
+- [x] **Hotels_Select** — select → is_booked = true, booking_reference opsiyonel
+- [x] **BookingConsistency** — is_booked = true olan kayıtta booked_at dolu olmalı
 
 ---
 
 ## ✅ Phase 3 Success Metrics
 
-- [ ] Flight seçimi çalışıyor, gidiş-dönüş itinerary gruplama var
-- [ ] Hotel seçimi çalışıyor, check-in/out validation doğru
-- [ ] Booking consistency: is_booked ve booked_at her zaman senkron
-- [ ] data_source = 'mock' ile seeded veriler sorgulanabiliyor
-- [ ] Phase 3 testlerinin tamamı geçiyor
+- [x] Flight seçimi çalışıyor, gidiş-dönüş itinerary gruplama var
+- [x] Hotel seçimi çalışıyor, check-in/out validation doğru
+- [x] Booking consistency: is_booked ve booked_at her zaman senkron
+- [x] data_source = 'mock' ile seeded veriler sorgulanabiliyor
+- [x] Phase 3 testlerinin tamamı geçiyor
 
 ---
 

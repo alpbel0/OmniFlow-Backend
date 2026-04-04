@@ -41,6 +41,7 @@ public static class ServiceRegistration
 		services.AddScoped<ITripRepositoryAsync, TripRepositoryAsync>();
 		services.AddScoped<IStopRepositoryAsync, StopRepositoryAsync>();
 		services.AddScoped<IFlightRepositoryAsync, FlightRepositoryAsync>();
+		services.AddScoped<IHotelRepositoryAsync, HotelRepositoryAsync>();
 
 		return services;
 	}
