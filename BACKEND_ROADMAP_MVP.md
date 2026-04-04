@@ -884,27 +884,27 @@ Phase 2 tamamlanmış sayılır eğer:
 ### Task 8.1: Application — Flight Feature
 
 **Tahmini Süre:** 2.5 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IFlightRepositoryAsync.cs` — GetByTripAsync (tripId, direction filtresi opsiyonel), GetByGroupAsync (itineraryGroupId)
-- [ ] `FlightResponse.cs` DTO — tüm flight field'ları, formatlı departure/arrival bilgisi
-- [ ] `SelectFlightRequest.cs` DTO — FlightId
-- [ ] `SelectFlightCommand.cs` — trip owner kontrolü, seçilen flight'ın bu trip'e ait olduğunu doğrula, is_booked = true + booked_at = now set et, aynı direction'daki önceki seçimi iptal et (is_booked = false)
-- [ ] `GetFlightsByTripQuery.cs` — trip'in tüm flight seçenekleri, direction bazlı gruplama
+- [x] `IFlightRepositoryAsync.cs` — GetByTripAsync (tripId, direction filtresi opsiyonel), GetByGroupAsync (itineraryGroupId)
+- [x] `FlightResponse.cs` DTO — tüm flight field'ları, formatlı departure/arrival bilgisi
+- [x] `SelectFlightRequest.cs` DTO — FlightId
+- [x] `SelectFlightCommand.cs` — trip owner kontrolü, seçilen flight'ın bu trip'e ait olduğunu doğrula, is_booked = true + booked_at = now set et, aynı direction'daki önceki seçimi iptal et (is_booked = false)
+- [x] `GetFlightsByTripQuery.cs` — trip'in tüm flight seçenekleri, direction bazlı gruplama
 
 ---
 
 ### Task 8.2: WebApi — FlightsController
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `v1/FlightsController.cs`:
-  - [ ] GET /api/v1/trips/{tripId}/flights — GetFlightsByTripQuery
-  - [ ] POST /api/v1/trips/{tripId}/flights/select — SelectFlightCommand
-- [ ] Swagger'da test et
+- [x] `v1/FlightsController.cs`:
+  - [x] GET /api/v1/trips/{tripId}/flights — GetFlightsByTripQuery
+  - [x] POST /api/v1/trips/{tripId}/flights/select — SelectFlightCommand
+- [x] Swagger'da test et
 
 ---
 
