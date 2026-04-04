@@ -10,13 +10,16 @@ public class PublishTripCommandHandler : IRequestHandler<PublishTripCommand, Uni
 {
     private readonly ITripRepositoryAsync _tripRepository;
     private readonly IAuthenticatedUserService _authenticatedUserService;
+    private readonly IKarmaService _karmaService;
 
     public PublishTripCommandHandler(
         ITripRepositoryAsync tripRepository,
-        IAuthenticatedUserService authenticatedUserService)
+        IAuthenticatedUserService authenticatedUserService,
+        IKarmaService karmaService)
     {
         _tripRepository = tripRepository;
         _authenticatedUserService = authenticatedUserService;
+        _karmaService = karmaService;
     }
 
     public async Task<Unit> Handle(PublishTripCommand request, CancellationToken cancellationToken)
@@ -46,6 +49,13 @@ public class PublishTripCommandHandler : IRequestHandler<PublishTripCommand, Uni
 
         trip.Status = TripStatus.Published;
         await _tripRepository.UpdateAsync(trip);
+        await _karmaService.AwardKarmaAsync(
+            trip.OwnerId,
+            null,
+            KarmaEventType.TripPublished,
+            10,
+            trip.Id,
+            KarmaSourceType.Trip);
 
         return Unit.Value;
     }

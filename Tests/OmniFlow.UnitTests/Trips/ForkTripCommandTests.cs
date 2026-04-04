@@ -16,6 +16,8 @@ public class ForkTripCommandTests
     private readonly Mock<ITripRepositoryAsync> _tripRepositoryMock;
     private readonly Mock<IApplicationDbContext> _contextMock;
     private readonly Mock<IAuthenticatedUserService> _authenticatedUserServiceMock;
+    private readonly Mock<IKarmaService> _karmaServiceMock;
+    private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly ForkTripCommandHandler _handler;
 
     public ForkTripCommandTests()
@@ -23,10 +25,14 @@ public class ForkTripCommandTests
         _tripRepositoryMock = new Mock<ITripRepositoryAsync>();
         _contextMock = new Mock<IApplicationDbContext>();
         _authenticatedUserServiceMock = new Mock<IAuthenticatedUserService>();
+        _karmaServiceMock = new Mock<IKarmaService>();
+        _notificationServiceMock = new Mock<INotificationService>();
         _handler = new ForkTripCommandHandler(
             _tripRepositoryMock.Object,
             _contextMock.Object,
-            _authenticatedUserServiceMock.Object);
+            _authenticatedUserServiceMock.Object,
+            _karmaServiceMock.Object,
+            _notificationServiceMock.Object);
     }
 
     [Fact]
@@ -98,6 +104,19 @@ public class ForkTripCommandTests
         // Assert
         result.Should().NotBe(Guid.Empty);
         _contextMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _karmaServiceMock.Verify(x => x.AwardKarmaAsync(
+            ownerId,
+            userId,
+            KarmaEventType.TripForked,
+            5,
+            tripId,
+            KarmaSourceType.Trip), Times.Once);
+        _notificationServiceMock.Verify(x => x.CreateNotificationAsync(
+            ownerId,
+            userId,
+            NotificationType.Fork,
+            tripId,
+            NotificationTargetType.Trip), Times.Once);
     }
 
     [Fact]

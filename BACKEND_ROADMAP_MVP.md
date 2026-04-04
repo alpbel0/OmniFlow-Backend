@@ -989,12 +989,12 @@ Phase 2 tamamlanmış sayılır eğer:
 ### Definition of Done
 
 Phase 4 tamamlanmış sayılır eğer:
-- [ ] 3 tip post oluşturulabiliyor, route tipi trip gerektiriyor
-- [ ] Comment + reply (1 seviye) çalışıyor, cross-post koruması aktif
-- [ ] Feed 3 tab ile cursor pagination çalışıyor
-- [ ] Follow/unfollow counter cache doğru güncelleniyor
-- [ ] User profile + update çalışıyor
-- [ ] Phase 4 testleri geçiyor
+- [x] 3 tip post oluşturulabiliyor, route tipi trip gerektiriyor
+- [x] Comment + reply (1 seviye) çalışıyor, cross-post koruması aktif
+- [x] Feed 3 tab ile cursor pagination çalışıyor
+- [x] Follow/unfollow counter cache doğru güncelleniyor
+- [x] User profile + update çalışıyor
+- [x] Phase 4 testleri geçiyor
 
 ---
 
@@ -1007,32 +1007,43 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 10.1: Application — Post Feature
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IPostRepositoryAsync.cs` — GetByIdWithUserAsync, GetByUserAsync (userId, pagination), GetVisibleAsync (soft delete + is_visible filtreli)
-- [ ] `PostResponse.cs` DTO — tüm post field'ları + user bilgisi (Username, ProfilePhotoUrl, KarmaScore) + isUpvoted (authenticated user)
-- [ ] `CreatePostCommand.cs` — UserId authenticated user'dan alınır, PostType = Route ise TripId zorunlu (route_requires_trip), Content veya Photos'dan en az biri dolu olmalı (content_or_photo), Tags opsiyonel
-- [ ] `CreatePostCommandValidator.cs` — PostType enum'da olmalı, content ve photos ikisi de boşsa hata
-- [ ] `UpdatePostCommand.cs` — post owner kontrolü, Content ve Tags güncellenebilir
-- [ ] `DeletePostCommand.cs` — soft delete (deleted_at = now), post owner kontrolü
-- [ ] `UpvotePostCommand.cs` — IApplicationDbContext üzerinden PostUpvote ekle, duplicate → DuplicateUpvoteException, post upvote_count 1 artır
-- [ ] `GetPostByIdQuery.cs` — post + user bilgisi, soft deleted → EntityNotFoundException
+- [x] `IPostRepositoryAsync.cs` — GetByIdWithUserAsync, GetByUserAsync (userId, pagination), GetVisibleAsync (soft delete + is_visible filtreli)
+- [x] `PostResponse.cs` DTO — tüm post field'ları + user bilgisi (Username, ProfilePhotoUrl, KarmaScore) + isUpvoted (authenticated user)
+- [x] `CreatePostCommand.cs` — UserId authenticated user'dan alınır, PostType = Route ise TripId zorunlu (route_requires_trip), Content veya Photos'dan en az biri dolu olmalı (content_or_photo), Tags opsiyonel
+- [x] `CreatePostCommandValidator.cs` — PostType enum'da olmalı, content ve photos ikisi de boşsa hata
+- [x] `UpdatePostCommand.cs` — post owner kontrolü, Content ve Tags güncellenebilir
+- [x] `DeletePostCommand.cs` — soft delete (deleted_at = now), post owner kontrolü
+- [x] `UpvotePostCommand.cs` — IApplicationDbContext üzerinden PostUpvote ekle, duplicate → DuplicateUpvoteException, post upvote_count 1 artır
+- [x] `GetPostByIdQuery.cs` — post + user bilgisi, soft deleted → EntityNotFoundException
+
+**Ekstra Test Kapsamı (Task 10.1):**
+- [x] `CreatePostCommandValidatorTests` — valid post geçer, content+photos boşsa hata, route post + TripId null ise hata
+- [x] `CreatePostCommandHandlerTests` — authenticated user ID post'a set edilir, oluşturulan post ID döner
+- [x] `UpdatePostCommandHandlerTests` — post bulunamazsa 404 exception, owner değilse 403 exception, owner ise update çalışır
+- [x] `DeletePostCommandHandlerTests` — post bulunamazsa 404 exception, owner değilse 403 exception, owner ise soft-delete çağrılır
+- [x] `UpvotePostCommandHandlerTests` — post bulunamazsa 404 exception, duplicate upvote 409 exception, başarılı upvote count artırır
+- [x] `GetPostByIdQueryHandlerTests` — post bulunamazsa 404 exception, başarılı durumda `isUpvoted` doğru hesaplanır
 
 ---
 
 ### Task 10.2: WebApi — PostsController
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `v1/PostsController.cs`:
-  - [ ] GET /api/v1/posts/{id} — GetPostByIdQuery
-  - [ ] POST /api/v1/posts — CreatePostCommand
-  - [ ] PUT /api/v1/posts/{id} — UpdatePostCommand
-  - [ ] DELETE /api/v1/posts/{id} — DeletePostCommand
-  - [ ] POST /api/v1/posts/{id}/upvote — UpvotePostCommand
+- [x] `v1/PostsController.cs`:
+  - [x] GET /api/v1/posts/{id} — GetPostByIdQuery
+  - [x] POST /api/v1/posts — CreatePostCommand
+  - [x] PUT /api/v1/posts/{id} — UpdatePostCommand
+  - [x] DELETE /api/v1/posts/{id} — DeletePostCommand
+  - [x] POST /api/v1/posts/{id}/upvote — UpvotePostCommand
+
+**Ekstra Test Kapsamı:**
+- [x] `PostsControllerTests.cs` — 11 integration test: auth guard, create, get by id, update, delete, upvote, not found senaryoları
 
 ---
 
@@ -1045,30 +1056,39 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 11.1: Application — Comment Feature
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `ICommentRepositoryAsync.cs` — GetByPostAsync (postId, created_at sıralı, replies include), GetByIdWithRepliesAsync
-- [ ] `CommentResponse.cs` DTO — comment field'ları + user bilgisi + replies listesi (1 seviye) + isUpvoted
-- [ ] `CreateCommentCommand.cs` — PostId zorunlu, ParentCommentId opsiyonel (reply), Content zorunlu, Mentions opsiyonel. Handler'da: post var mı kontrolü, ParentCommentId varsa parent'ın aynı post'a ait olduğunu doğrula (cross-post koruması), post comment_count 1 artır
-- [ ] `CreateCommentCommandValidator.cs` — Content boş olamaz
-- [ ] `DeleteCommentCommand.cs` — soft delete, comment owner kontrolü, post comment_count 1 azalt
-- [ ] `UpvoteCommentCommand.cs` — duplicate engeli, comment upvote_count artır
-- [ ] `GetCommentsByPostQuery.cs` — post'un tüm comment'leri (soft deleted ve invisible hariç), reply'ler include, pagination
+- [x] `ICommentRepositoryAsync.cs` — GetByPostAsync (postId, created_at sıralı, replies include), GetByIdWithRepliesAsync
+- [x] `CommentResponse.cs` DTO — comment field'ları + user bilgisi + replies listesi (1 seviye) + isUpvoted
+- [x] `CreateCommentCommand.cs` — PostId zorunlu, ParentCommentId opsiyonel (reply), Content zorunlu, Mentions opsiyonel. Handler'da: post var mı kontrolü, ParentCommentId varsa parent'ın aynı post'a ait olduğunu doğrula (cross-post koruması), post comment_count 1 artır
+- [x] `CreateCommentCommandValidator.cs` — Content boş olamaz
+- [x] `DeleteCommentCommand.cs` — soft delete, comment owner kontrolü, post comment_count 1 azalt
+- [x] `UpvoteCommentCommand.cs` — duplicate engeli, comment upvote_count artır
+- [x] `GetCommentsByPostQuery.cs` — post'un tüm comment'leri (soft deleted ve invisible hariç), reply'ler include, pagination
+
+**Ekstra Test Kapsamı:**
+- [x] `CreateCommentCommandTests.cs` — validator + create handler testleri
+- [x] `DeleteCommentCommandTests.cs` — not found, forbidden, successful delete
+- [x] `UpvoteCommentCommandTests.cs` — not found, duplicate, successful upvote
+- [x] `GetCommentsByPostQueryTests.cs` — post not found, paged response + reply tree + upvote flag
 
 ---
 
 ### Task 11.2: WebApi — CommentsController
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `v1/CommentsController.cs`:
-  - [ ] GET /api/v1/posts/{postId}/comments — GetCommentsByPostQuery
-  - [ ] POST /api/v1/posts/{postId}/comments — CreateCommentCommand
-  - [ ] DELETE /api/v1/comments/{id} — DeleteCommentCommand
-  - [ ] POST /api/v1/comments/{id}/upvote — UpvoteCommentCommand
+- [x] `v1/CommentsController.cs`:
+  - [x] GET /api/v1/posts/{postId}/comments — GetCommentsByPostQuery
+  - [x] POST /api/v1/posts/{postId}/comments — CreateCommentCommand
+  - [x] DELETE /api/v1/comments/{id} — DeleteCommentCommand
+  - [x] POST /api/v1/comments/{id}/upvote — UpvoteCommentCommand
+
+**Ekstra Test Kapsamı:**
+- [x] `CommentsControllerTests.cs` — 8 integration test: auth guard, create, get by post, delete, upvote, not found olmayan akışlar
 
 ---
 
@@ -1081,27 +1101,33 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 12.1: Application — Feed Query
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `GetFeedQuery.cs` — tab parametresi (ForYou / Following / Latest):
-  - [ ] **Latest**: tüm visible + non-deleted post'lar, created_at DESC, cursor pagination
-  - [ ] **Following**: authenticated user'ın takip ettiği kullanıcıların post'ları, created_at DESC
-  - [ ] **ForYou**: başlangıçta Latest ile aynı (ileride recommendation algoritması eklenebilir)
-  - [ ] Her post'ta: user bilgisi, isUpvoted, comment_count
-- [ ] `GetFeedParameter.cs` — Tab (enum: ForYou, Following, Latest), Cursor (nullable string), PageSize (default 20)
-- [ ] `GetFeedViewModel.cs` — PostResponse listesi + NextCursor + HasMore boolean
+- [x] `GetFeedQuery.cs` — tab parametresi (ForYou / Following / Latest):
+  - [x] **Latest**: tüm visible + non-deleted post'lar, created_at DESC, cursor pagination
+  - [x] **Following**: authenticated user'ın takip ettiği kullanıcıların post'ları, created_at DESC
+  - [x] **ForYou**: başlangıçta Latest ile aynı (ileride recommendation algoritması eklenebilir)
+  - [x] Her post'ta: user bilgisi, isUpvoted, comment_count
+- [x] `GetFeedParameter.cs` — Tab (enum: ForYou, Following, Latest), Cursor (nullable string), PageSize (default 20)
+- [x] `GetFeedViewModel.cs` — PostResponse listesi + NextCursor + HasMore boolean
+
+**Ekstra Test Kapsamı:**
+- [x] `GetFeedQueryTests.cs` — latest order/filter, following tab, cursor pagination, invalid cursor, isUpvoted flag
 
 ---
 
 ### Task 12.2: WebApi — Feed Endpoint
 
 **Tahmini Süre:** 30 dakika  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] GET /api/v1/feed — query parametrelerinden tab, cursor, pageSize alır, GetFeedQuery gönderir
-- [ ] Swagger'da 3 tab ile test et
+- [x] GET /api/v1/feed — query parametrelerinden tab, cursor, pageSize alır, GetFeedQuery gönderir
+- [x] Swagger'da 3 tab ile test et
+
+**Ekstra Test Kapsamı:**
+- [x] `FeedControllerTests.cs` — auth guard, Latest tab, Following tab, query binding ve feed response doğrulama
 
 ---
 
@@ -1114,46 +1140,61 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 13.1: Application — Follow Feature
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IFollowRepositoryAsync.cs` — GetFollowersAsync (userId, pagination), GetFollowingAsync (userId, pagination), IsFollowingAsync (followerId, followingId)
-- [ ] `FollowUserCommand.cs` — self-follow kontrolü (SelfFollowException), zaten takip ediyorsa ignore, following user'ın followers_count ve follower user'ın following_count'ını 1 artır
-- [ ] `UnfollowUserCommand.cs` — takip ilişkisi yoksa ignore, counter'ları 1 azalt
-- [ ] `GetFollowersQuery.cs` — userId'nin follower'ları, pagination, her kullanıcıda isFollowing bilgisi
-- [ ] `GetFollowingQuery.cs` — userId'nin takip ettikleri, pagination
+- [x] `IFollowRepositoryAsync.cs` — GetFollowersAsync (userId, pagination), GetFollowingAsync (userId, pagination), IsFollowingAsync (followerId, followingId)
+- [x] `FollowUserCommand.cs` — self-follow kontrolü (SelfFollowException), zaten takip ediyorsa ignore, following user'ın followers_count ve follower user'ın following_count'ını 1 artır
+- [x] `UnfollowUserCommand.cs` — takip ilişkisi yoksa ignore, counter'ları 1 azalt
+- [x] `GetFollowersQuery.cs` — userId'nin follower'ları, pagination, her kullanıcıda isFollowing bilgisi
+- [x] `GetFollowingQuery.cs` — userId'nin takip ettikleri, pagination
+
+**Ekstra Test Kapsamı:**
+- [x] `FollowUserCommandTests.cs` — self-follow, duplicate follow ignore, valid follow counter update
+- [x] `UnfollowUserCommandTests.cs` — missing follow ignore, valid unfollow counter update
+- [x] `GetFollowersQueryTests.cs` — missing user error, followers list + isFollowing flag
+- [x] `GetFollowingQueryTests.cs` — missing user error, following list + isFollowing flag
 
 ---
 
 ### Task 13.2: Application — User Profile Feature
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `IUserRepositoryAsync.cs` — GetByIdAsync, GetByUsernameAsync, UpdateAsync
-- [ ] `UserProfileResponse.cs` DTO — Id, Username, Email, Bio, ProfilePhotoUrl, KarmaScore, FollowersCount, FollowingCount, IsVerified, isFollowing (authenticated user), tripCount, postCount
-- [ ] `GetUserProfileQuery.cs` — username veya id ile kullanıcı profili
-- [ ] `UpdateProfileCommand.cs` — sadece kendi profilini güncelleyebilir, Bio (max 300), ProfilePhotoUrl güncellenebilir
-- [ ] `UpdateProfileCommandValidator.cs` — Bio max 300 karakter
+- [x] `IUserRepositoryAsync.cs` — GetByIdAsync, GetByUsernameAsync, UpdateAsync
+- [x] `UserProfileResponse.cs` DTO — Id, Username, Email, Bio, ProfilePhotoUrl, KarmaScore, FollowersCount, FollowingCount, IsVerified, isFollowing (authenticated user), tripCount, postCount
+- [x] `GetUserProfileQuery.cs` — username veya id ile kullanıcı profili
+- [x] `UpdateProfileCommand.cs` — sadece kendi profilini güncelleyebilir, Bio (max 300), ProfilePhotoUrl güncellenebilir
+- [x] `UpdateProfileCommandValidator.cs` — Bio max 300 karakter
+
+**Ekstra Test Kapsamı:**
+- [x] `GetUserProfileQueryHandlerTests.cs` — id/username lookup, profile counts, isFollowing flag, not found
+- [x] `UpdateProfileCommandHandlerTests.cs` — not found, successful profile update
+- [x] `UpdateProfileCommandValidatorTests.cs` — valid update, bio length validation
 
 ---
 
 ### Task 13.3: WebApi — Follows & Users Controllers
 
 **Tahmini Süre:** 1.5 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `v1/FollowsController.cs`:
-  - [ ] POST /api/v1/users/{userId}/follow — FollowUserCommand
-  - [ ] DELETE /api/v1/users/{userId}/follow — UnfollowUserCommand
-  - [ ] GET /api/v1/users/{userId}/followers — GetFollowersQuery
-  - [ ] GET /api/v1/users/{userId}/following — GetFollowingQuery
-- [ ] `v1/UsersController.cs`:
-  - [ ] GET /api/v1/users/{username} — GetUserProfileQuery
-  - [ ] GET /api/v1/users/me — GetUserProfileQuery (authenticated user)
-  - [ ] PUT /api/v1/users/me — UpdateProfileCommand
+- [x] `v1/FollowsController.cs`:
+  - [x] POST /api/v1/users/{userId}/follow — FollowUserCommand
+  - [x] DELETE /api/v1/users/{userId}/follow — UnfollowUserCommand
+  - [x] GET /api/v1/users/{userId}/followers — GetFollowersQuery
+  - [x] GET /api/v1/users/{userId}/following — GetFollowingQuery
+- [x] `v1/UsersController.cs`:
+  - [x] GET /api/v1/users/{username} — GetUserProfileQuery
+  - [x] GET /api/v1/users/me — GetUserProfileQuery (authenticated user)
+  - [x] PUT /api/v1/users/me — UpdateProfileCommand
+
+**Ekstra Test Kapsamı:**
+- [x] `FollowsControllerTests.cs` — auth guard, follow/unfollow, followers/following response ve counter updates
+- [x] `UsersControllerTests.cs` — auth guard, get by username, get me, update me ve persisted profile changes
 
 ---
 
@@ -1161,36 +1202,36 @@ Phase 4 tamamlanmış sayılır eğer:
 
 ### Unit Tests
 
-- [ ] **CreatePostCommandValidator** — content ve photos ikisi de boş → hata, PostType = Route + TripId = null → hata
-- [ ] **CreateCommentCommandValidator** — boş content → hata
-- [ ] **FollowUserCommand** — self-follow → SelfFollowException
-- [ ] **UpdateProfileCommandValidator** — Bio 301 karakter → hata
+- [x] **CreatePostCommandValidator** — content ve photos ikisi de boş → hata, PostType = Route + TripId = null → hata
+- [x] **CreateCommentCommandValidator** — boş content → hata
+- [x] **FollowUserCommand** — self-follow → SelfFollowException
+- [x] **UpdateProfileCommandValidator** — Bio 301 karakter → hata
 
 ### Integration Tests
 
-- [ ] **Posts_CRUD** — Create (photo tip) → GetById → Update → Delete (soft), her adım doğru
-- [ ] **Posts_RouteRequiresTrip** — PostType = Route, TripId = null → 422
-- [ ] **Posts_Upvote** — upvote → count arttı, duplicate → 409
-- [ ] **Comments_Reply** — post'a comment → comment'e reply → doğru parent ilişkisi
-- [ ] **Comments_CrossPostProtection** — A post'unun comment'ine B post'undan reply → hata
-- [ ] **Feed_Latest** — 5 post oluştur → feed latest tab → 5 post created_at DESC sıralı
-- [ ] **Feed_Following** — A, B'yi takip ediyor, C'yi takip etmiyor → following tab'da sadece B'nin post'ları
-- [ ] **Follow_Success** — follow → followers_count arttı, following_count arttı
-- [ ] **Follow_SelfFollow_Returns409** — kendini takip → 409
-- [ ] **Follow_Unfollow** — unfollow → counter'lar azaldı
-- [ ] **UserProfile_GetByUsername** — profil bilgileri doğru, isFollowing bilgisi doğru
-- [ ] **UserProfile_Update** — bio güncelle → yeni bio doğru
+- [x] **Posts_CRUD** — Create (photo tip) → GetById → Update → Delete (soft), her adım doğru
+- [x] **Posts_RouteRequiresTrip** — PostType = Route, TripId = null → 422
+- [x] **Posts_Upvote** — upvote → count arttı, duplicate → 409
+- [x] **Comments_Reply** — post'a comment → comment'e reply → doğru parent ilişkisi
+- [x] **Comments_CrossPostProtection** — A post'unun comment'ine B post'undan reply → hata
+- [x] **Feed_Latest** — 5 post oluştur → feed latest tab → 5 post created_at DESC sıralı
+- [x] **Feed_Following** — A, B'yi takip ediyor, C'yi takip etmiyor → following tab'da sadece B'nin post'ları
+- [x] **Follow_Success** — follow → followers_count arttı, following_count arttı
+- [x] **Follow_SelfFollow_Returns409** — kendini takip → 409
+- [x] **Follow_Unfollow** — unfollow → counter'lar azaldı
+- [x] **UserProfile_GetByUsername** — profil bilgileri doğru, isFollowing bilgisi doğru
+- [x] **UserProfile_Update** — bio güncelle → yeni bio doğru
 
 ---
 
 ## ✅ Phase 4 Success Metrics
 
-- [ ] 3 tip post oluşturulabiliyor, route tipi trip gerektiriyor
-- [ ] Comment + reply (1 seviye) çalışıyor, cross-post koruması aktif
-- [ ] Feed 3 tab ile cursor pagination çalışıyor
-- [ ] Follow/unfollow counter cache doğru güncelleniyor
-- [ ] User profile + update çalışıyor
-- [ ] Phase 4 testlerinin tamamı geçiyor
+- [x] 3 tip post oluşturulabiliyor, route tipi trip gerektiriyor
+- [x] Comment + reply (1 seviye) çalışıyor, cross-post koruması aktif
+- [x] Feed 3 tab ile cursor pagination çalışıyor
+- [x] Follow/unfollow counter cache doğru güncelleniyor
+- [x] User profile + update çalışıyor
+- [x] Phase 4 testlerinin tamamı geçiyor
 
 ---
 
@@ -1217,30 +1258,40 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 14.1: Application — CommunityTip Feature
 
 **Tahmini Süre:** 2.5 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `ICommunityTipRepositoryAsync.cs` — GetByTripAsync (tripId, upvote_count DESC sıralı, pagination), GetByPlaceInTripAsync (tripId, placeId)
-- [ ] `TipResponse.cs` DTO — tip field'ları + user bilgisi + isUpvoted
-- [ ] `CreateTipCommand.cs` — TripId zorunlu, PlaceId opsiyonel (null = rotanın geneli, dolu = mekana özel), Content zorunlu (trim boş olamaz)
-- [ ] `CreateTipCommandValidator.cs` — Content boş olamaz
-- [ ] `DeleteTipCommand.cs` — soft delete, tip owner kontrolü
-- [ ] `UpvoteTipCommand.cs` — duplicate engeli, tip upvote_count artır
-- [ ] `GetTipsByTripQuery.cs` — trip'in tüm tip'leri, place bilgisi include (varsa), upvote_count DESC sıralı
+- [x] `ICommunityTipRepositoryAsync.cs` — GetByTripAsync (tripId, upvote_count DESC sıralı, pagination), GetByPlaceInTripAsync (tripId, placeId)
+- [x] `TipResponse.cs` DTO — tip field'ları + user bilgisi + isUpvoted
+- [x] `CreateTipCommand.cs` — TripId zorunlu, PlaceId opsiyonel (null = rotanın geneli, dolu = mekana özel), Content zorunlu (trim boş olamaz)
+- [x] `CreateTipCommandValidator.cs` — Content boş olamaz
+- [x] `DeleteTipCommand.cs` — soft delete, tip owner kontrolü
+- [x] `UpvoteTipCommand.cs` — duplicate engeli, tip upvote_count artır
+- [x] `GetTipsByTripQuery.cs` — trip'in tüm tip'leri, place bilgisi include (varsa), upvote_count DESC sıralı
+
+**Ekstra Testler:**
+- `Tests/OmniFlow.UnitTests/CommunityTips/CreateTipCommandValidatorTests.cs`
+- `Tests/OmniFlow.UnitTests/CommunityTips/CreateTipCommandHandlerTests.cs`
+- `Tests/OmniFlow.UnitTests/CommunityTips/DeleteTipCommandHandlerTests.cs`
+- `Tests/OmniFlow.UnitTests/CommunityTips/UpvoteTipCommandHandlerTests.cs`
+- `Tests/OmniFlow.UnitTests/CommunityTips/GetTipsByTripQueryHandlerTests.cs`
 
 ---
 
 ### Task 14.2: WebApi — CommunityTipsController
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `v1/CommunityTipsController.cs`:
-  - [ ] GET /api/v1/trips/{tripId}/tips — GetTipsByTripQuery
-  - [ ] POST /api/v1/trips/{tripId}/tips — CreateTipCommand
-  - [ ] DELETE /api/v1/tips/{id} — DeleteTipCommand
-  - [ ] POST /api/v1/tips/{id}/upvote — UpvoteTipCommand
+- [x] `v1/CommunityTipsController.cs`:
+  - [x] GET /api/v1/trips/{tripId}/tips — GetTipsByTripQuery
+  - [x] POST /api/v1/trips/{tripId}/tips — CreateTipCommand
+  - [x] DELETE /api/v1/tips/{id} — DeleteTipCommand
+  - [x] POST /api/v1/tips/{id}/upvote — UpvoteTipCommand
+
+**Ekstra Test Kapsamı:**
+- [x] `CommunityTipsControllerTests.cs` — auth guard, create, place-specific get, upvote, delete, tip list response
 
 ---
 
@@ -1253,43 +1304,56 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 15.1: Application — KarmaService
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Application/Interfaces/IKarmaService.cs` — AwardKarmaAsync(userId, actorId, eventType, points, sourceId, sourceType)
-- [ ] `Application/Services/KarmaService.cs` implementasyonu:
-  - [ ] IApplicationDbContext inject et
-  - [ ] AwardKarmaAsync: KarmaEvent entity oluştur, DB'ye ekle
-  - [ ] Farming koruması: aynı (userId, sourceId, eventType, actorId) kombinasyonu varsa sessizce skip
-  - [ ] users tablosundaki karma_score cache'ini güncelle (+ points)
-  - [ ] Puan tablosu: TripPublished = +10, TripForked = +5, TipUpvoted = +2, PostUpvoted = +1, TripUpvoted = +1
+- [x] `Application/Interfaces/IKarmaService.cs` — AwardKarmaAsync(userId, actorId, eventType, points, sourceId, sourceType)
+- [x] `Application/Services/KarmaService.cs` implementasyonu:
+  - [x] IApplicationDbContext inject edildi
+  - [x] AwardKarmaAsync: KarmaEvent entity oluşturup DB'ye ekliyor
+  - [x] Farming koruması: aynı (userId, sourceId, eventType, actorId) kombinasyonu varsa sessizce skip ediyor
+  - [x] users tablosundaki karma_score cache'ini güncelliyor (+ points)
+  - [x] Puan tablosu: TripPublished = +10, TripForked = +5, TipUpvoted = +2, PostUpvoted = +1, TripUpvoted = +1
+
+**Ekstra Test Kapsamı:**
+- [x] `Tests/OmniFlow.UnitTests/Karma/KarmaServiceTests.cs` — valid award, duplicate skip, user not found
 
 ---
 
 ### Task 15.2: Karma Entegrasyonu — Önceki Handler'lar
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `PublishTripCommand` handler'ına ekle: KarmaService.AwardKarmaAsync (trip owner'a +10, source = trip)
-- [ ] `ForkTripCommand` handler'ına ekle: KarmaService.AwardKarmaAsync (orijinal trip owner'a +5, actor = fork yapan, source = trip)
-- [ ] `UpvotePostCommand` handler'ına ekle: KarmaService.AwardKarmaAsync (post owner'a +1, actor = upvote yapan, source = post)
-- [ ] `UpvoteTipCommand` handler'ına ekle: KarmaService.AwardKarmaAsync (tip owner'a +2, actor = upvote yapan, source = tip)
-- [ ] `UpvoteTripCommand` handler'ına ekle: KarmaService.AwardKarmaAsync (trip owner'a +1, actor = upvote yapan, source = trip)
+- [x] `PublishTripCommand` handler'ına eklendi: KarmaService.AwardKarmaAsync (trip owner'a +10, source = trip)
+- [x] `ForkTripCommand` handler'ına eklendi: KarmaService.AwardKarmaAsync (orijinal trip owner'a +5, actor = fork yapan, source = trip)
+- [x] `UpvotePostCommand` handler'ına eklendi: KarmaService.AwardKarmaAsync (post owner'a +1, actor = upvote yapan, source = post)
+- [x] `UpvoteTipCommand` handler'ına eklendi: KarmaService.AwardKarmaAsync (tip owner'a +2, actor = upvote yapan, source = tip)
+- [x] `UpvoteTripCommand` handler'ına eklendi: KarmaService.AwardKarmaAsync (trip owner'a +1, actor = upvote yapan, source = trip)
+
+**Ekstra Test Kapsamı:**
+- [x] `PublishTripCommandTests.cs` — publish sonrası `TripPublished (+10)` karma çağrısı doğrulandı
+- [x] `ForkTripCommandTests.cs` — fork sonrası orijinal owner için `TripForked (+5)` karma çağrısı doğrulandı
+- [x] `UpvotePostCommandTests.cs` — upvote sonrası post owner için `PostUpvoted (+1)` karma çağrısı doğrulandı
+- [x] `UpvoteTipCommandHandlerTests.cs` — upvote sonrası tip owner için `TipUpvoted (+2)` karma çağrısı doğrulandı
+- [x] `UpvoteTripCommandHandlerTests.cs` — upvote sonrası trip owner için `TripUpvoted (+1)` karma çağrısı doğrulandı
 
 ---
 
 ### Task 15.3: Application — Karma Query & Controller
 
 **Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `GetKarmaHistoryQuery.cs` — authenticated user'ın karma event geçmişi, created_at DESC, pagination
-- [ ] `KarmaEventResponse.cs` DTO — EventType, Points, SourceType, CreatedAt, ActorUsername (nullable)
-- [ ] `v1/KarmaController.cs`:
-  - [ ] GET /api/v1/karma/history — GetKarmaHistoryQuery
+- [x] `GetKarmaHistoryQuery.cs` — authenticated user'ın karma event geçmişi, created_at DESC, pagination
+- [x] `KarmaEventResponse.cs` DTO — EventType, Points, SourceType, CreatedAt, ActorUsername (nullable)
+- [x] `v1/KarmaController.cs`:
+  - [x] GET /api/v1/karma/history — GetKarmaHistoryQuery
+
+**Ekstra Test Kapsamı:**
+- [x] `Tests/OmniFlow.UnitTests/Karma/GetKarmaHistoryQueryHandlerTests.cs` — authenticated user filtreleme, created_at DESC + pagination, ActorUsername (nullable) mapping
 
 ---
 
@@ -1302,55 +1366,63 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 16.1: Application — NotificationService
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `Application/Interfaces/INotificationService.cs` — CreateNotificationAsync(userId, actorId, type, targetId, targetType)
-- [ ] `Application/Services/NotificationService.cs` implementasyonu:
-  - [ ] IApplicationDbContext inject et
-  - [ ] CreateNotificationAsync: Notification entity oluştur, DB'ye ekle
-  - [ ] Follow bildirimi: target null (follow_has_no_target kuralı)
-  - [ ] Upvote bildirimleri: target = ilgili içerik (post, comment, tip, trip)
-  - [ ] Comment bildirimi: target = post
-  - [ ] Mention bildirimi: target = post veya comment
-  - [ ] Fork bildirimi: target = trip
-  - [ ] Self-notification engeli: actor = user ise bildirim oluşturma
+- [x] `Application/Interfaces/INotificationService.cs` — CreateNotificationAsync(userId, actorId, type, targetId, targetType)
+- [x] `Application/Services/NotificationService.cs` implementasyonu:
+  - [x] IApplicationDbContext inject et
+  - [x] CreateNotificationAsync: Notification entity oluştur, DB'ye ekle
+  - [x] Follow bildirimi: target null (follow_has_no_target kuralı)
+  - [x] Upvote bildirimleri: target = ilgili içerik (post, comment, tip, trip)
+  - [x] Comment bildirimi: target = post
+  - [x] Mention bildirimi: target = post veya comment
+  - [x] Fork bildirimi: target = trip
+  - [x] Self-notification engeli: actor = user ise bildirim oluşturma
+
+**Ekstra Test Kapsamı:**
+- [x] `Tests/OmniFlow.UnitTests/Notifications/NotificationServiceTests.cs` — self-notification skip, follow type target null normalization
 
 ---
 
 ### Task 16.2: Notification Entegrasyonu — Önceki Handler'lar
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `FollowUserCommand` handler'ına ekle: NotificationService → follow bildirimi
-- [ ] `UpvotePostCommand` handler'ına ekle: NotificationService → post_upvote bildirimi (self değilse)
-- [ ] `UpvoteCommentCommand` handler'ına ekle: NotificationService → comment_upvote bildirimi
-- [ ] `UpvoteTipCommand` handler'ına ekle: NotificationService → tip_upvote bildirimi
-- [ ] `UpvoteTripCommand` handler'ına ekle: NotificationService → trip_upvote bildirimi
-- [ ] `CreateCommentCommand` handler'ına ekle: NotificationService → comment bildirimi (post owner'a) + mention bildirim'leri (mentions listesindeki user'lara)
-- [ ] `ForkTripCommand` handler'ına ekle: NotificationService → fork bildirimi
+- [x] `FollowUserCommand` handler'ına ekle: NotificationService → follow bildirimi
+- [x] `UpvotePostCommand` handler'ına ekle: NotificationService → post_upvote bildirimi (self değilse)
+- [x] `UpvoteCommentCommand` handler'ına ekle: NotificationService → comment_upvote bildirimi
+- [x] `UpvoteTipCommand` handler'ına ekle: NotificationService → tip_upvote bildirimi
+- [x] `UpvoteTripCommand` handler'ına ekle: NotificationService → trip_upvote bildirimi
+- [x] `CreateCommentCommand` handler'ına ekle: NotificationService → comment bildirimi (post owner'a) + mention bildirim'leri (mentions listesindeki user'lara)
+- [x] `ForkTripCommand` handler'ına ekle: NotificationService → fork bildirimi
 
 ---
 
 ### Task 16.3: Application — Notification Queries & Commands
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `INotificationRepositoryAsync.cs` — GetByUserAsync (userId, is_read filtresi opsiyonel, created_at DESC, pagination), GetUnreadCountAsync (userId)
-- [ ] `NotificationResponse.cs` DTO — Id, Type, TargetId, TargetType, IsRead, ReadAt, CreatedAt, Actor bilgisi (Username, ProfilePhotoUrl)
-- [ ] `GetNotificationsQuery.cs` — authenticated user'ın bildirimleri, pagination
-- [ ] `GetUnreadCountQuery.cs` — authenticated user'ın okunmamış bildirim sayısı
-- [ ] `MarkAsReadCommand.cs` — notification owner kontrolü, is_read = true + read_at = now
-- [ ] `MarkAllAsReadCommand.cs` — authenticated user'ın tüm okunmamış bildirimlerini okundu yap
-- [ ] `v1/NotificationsController.cs`:
-  - [ ] GET /api/v1/notifications — GetNotificationsQuery
-  - [ ] GET /api/v1/notifications/unread-count — GetUnreadCountQuery
-  - [ ] POST /api/v1/notifications/{id}/read — MarkAsReadCommand
-  - [ ] POST /api/v1/notifications/read-all — MarkAllAsReadCommand
+- [x] `INotificationRepositoryAsync.cs` — GetByUserAsync (userId, is_read filtresi opsiyonel, created_at DESC, pagination), GetUnreadCountAsync (userId)
+- [x] `NotificationResponse.cs` DTO — Id, Type, TargetId, TargetType, IsRead, ReadAt, CreatedAt, Actor bilgisi (Username, ProfilePhotoUrl)
+- [x] `GetNotificationsQuery.cs` — authenticated user'ın bildirimleri, pagination
+- [x] `GetUnreadCountQuery.cs` — authenticated user'ın okunmamış bildirim sayısı
+- [x] `MarkAsReadCommand.cs` — notification owner kontrolü, is_read = true + read_at = now
+- [x] `MarkAllAsReadCommand.cs` — authenticated user'ın tüm okunmamış bildirimlerini okundu yap
+- [x] `v1/NotificationsController.cs`:
+  - [x] GET /api/v1/notifications — GetNotificationsQuery
+  - [x] GET /api/v1/notifications/unread-count — GetUnreadCountQuery
+  - [x] POST /api/v1/notifications/{id}/read — MarkAsReadCommand
+  - [x] POST /api/v1/notifications/read-all — MarkAllAsReadCommand
+
+**Ekstra Test Kapsamı (Task 16.3):**
+- [x] `Tests/OmniFlow.UnitTests/Notifications/NotificationFeatureTests.cs` — GetNotifications, GetUnreadCount, MarkAsRead, MarkAllAsRead handler testleri
+- [x] `Tests/OmniFlow.Api.IntegrationTests/Controllers/NotificationsControllerTests.cs` — follow/upvote/self-upvote/comment/mention + mark-read + unread-count uçtan uca senaryolar
+- [x] `Tests/OmniFlow.Api.IntegrationTests/Controllers/KarmaIntegrationTests.cs` — publish/fork/farming/duplicate-upvote karma event ve score doğrulamaları
 
 ---
 
@@ -1358,37 +1430,38 @@ Phase 4 tamamlanmış sayılır eğer:
 
 ### Unit Tests
 
-- [ ] **CreateTipCommandValidator** — boş content → hata
-- [ ] **KarmaService** — AwardKarmaAsync doğru event oluşturuyor, puan tablosu doğru, farming koruması çift puan engelliyor
-- [ ] **NotificationService** — self-notification oluşturmuyor, follow bildirimi target null
+- [x] **CreateTipCommandValidator** — boş content → hata
+- [x] **KarmaService** — AwardKarmaAsync doğru event oluşturuyor, puan tablosu doğru, farming koruması çift puan engelliyor
+- [x] **NotificationService** — self-notification oluşturmuyor, follow bildirimi target null
+- [x] **Notification Handler Integrations** — Follow/Upvote/Comment/Mention/Fork handler'ları doğru notification type/target ile NotificationService çağırıyor
 
 ### Integration Tests
 
-- [ ] **Tips_CRUD** — tip oluştur → trip'in tip listesinde görünüyor → sil → görünmüyor
-- [ ] **Tips_PlaceSpecific** — place_id ile tip → GetTipsByTrip'te place bilgisi dolu
-- [ ] **Karma_PublishTrip** — trip publish → karma_events'te +10, user karma_score güncellendi
-- [ ] **Karma_ForkTrip** — fork → orijinal owner'a +5
-- [ ] **Karma_Farming** — aynı trip'i publish-unpublish-publish → sadece 1 kez +10
-- [ ] **Karma_DuplicateUpvote** — aynı post'a 2 kez upvote → sadece 1 kez +1 karma
-- [ ] **Notifications_Follow** — A, B'yi takip etti → B'nin bildirimlerinde "A seni takip etti"
-- [ ] **Notifications_Upvote** — A, B'nin post'unu upvote etti → B'ye bildirim
-- [ ] **Notifications_SelfUpvote** — A, kendi post'unu upvote etti → bildirim oluşmadı
-- [ ] **Notifications_Comment** — A, B'nin post'una yorum yaptı → B'ye bildirim
-- [ ] **Notifications_Mention** — A, C'yi mention etti → C'ye bildirim
-- [ ] **Notifications_MarkRead** — bildirim okundu → is_read = true, read_at dolu
-- [ ] **Notifications_UnreadCount** — 3 okunmamış → count = 3, 1 okundu → count = 2
+- [x] **Tips_CRUD** — tip oluştur → trip'in tip listesinde görünüyor → sil → görünmüyor
+- [x] **Tips_PlaceSpecific** — place_id ile tip → GetTipsByTrip'te place bilgisi dolu
+- [x] **Karma_PublishTrip** — trip publish → karma_events'te +10, user karma_score güncellendi
+- [x] **Karma_ForkTrip** — fork → orijinal owner'a +5
+- [x] **Karma_Farming** — aynı trip'i publish-unpublish-publish → sadece 1 kez +10
+- [x] **Karma_DuplicateUpvote** — aynı post'a 2 kez upvote → sadece 1 kez +1 karma
+- [x] **Notifications_Follow** — A, B'yi takip etti → B'nin bildirimlerinde "A seni takip etti"
+- [x] **Notifications_Upvote** — A, B'nin post'unu upvote etti → B'ye bildirim
+- [x] **Notifications_SelfUpvote** — A, kendi post'unu upvote etti → bildirim oluşmadı
+- [x] **Notifications_Comment** — A, B'nin post'una yorum yaptı → B'ye bildirim
+- [x] **Notifications_Mention** — A, C'yi mention etti → C'ye bildirim
+- [x] **Notifications_MarkRead** — bildirim okundu → is_read = true, read_at dolu
+- [x] **Notifications_UnreadCount** — 3 okunmamış → count = 3, 1 okundu → count = 2
 
 ---
 
 ## ✅ Phase 5 Success Metrics
 
-- [ ] Community tip: rota geneli + mekana özel oluşturma, upvote, listeleme çalışıyor
-- [ ] Karma: publish +10, fork +5, upvote +1/+2 doğru hesaplanıyor
-- [ ] Farming koruması: unique index + uygulama kontrolü çift puan engelliyor
-- [ ] Bildirim: 8 tip (follow, post_upvote, comment_upvote, tip_upvote, trip_upvote, comment, mention, fork) oluşuyor
-- [ ] Self-notification engelleniyor
-- [ ] Unread count doğru, mark read çalışıyor
-- [ ] Phase 5 testlerinin tamamı geçiyor
+- [x] Community tip: rota geneli + mekana özel oluşturma, upvote, listeleme çalışıyor
+- [x] Karma: publish +10, fork +5, upvote +1/+2 doğru hesaplanıyor
+- [x] Farming koruması: unique index + uygulama kontrolü çift puan engelliyor
+- [x] Bildirim: 8 tip (follow, post_upvote, comment_upvote, tip_upvote, trip_upvote, comment, mention, fork) oluşuyor
+- [x] Self-notification engelleniyor
+- [x] Unread count doğru, mark read çalışıyor
+- [x] Phase 5 testlerinin tamamı geçiyor
 
 ---
 

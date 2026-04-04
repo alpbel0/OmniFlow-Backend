@@ -14,15 +14,21 @@ public class ForkTripCommandHandler : IRequestHandler<ForkTripCommand, Guid>
     private readonly ITripRepositoryAsync _tripRepository;
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
+    private readonly IKarmaService _karmaService;
+    private readonly INotificationService _notificationService;
 
     public ForkTripCommandHandler(
         ITripRepositoryAsync tripRepository,
         IApplicationDbContext context,
-        IAuthenticatedUserService authenticatedUserService)
+        IAuthenticatedUserService authenticatedUserService,
+        IKarmaService karmaService,
+        INotificationService notificationService)
     {
         _tripRepository = tripRepository;
         _context = context;
         _authenticatedUserService = authenticatedUserService;
+        _karmaService = karmaService;
+        _notificationService = notificationService;
     }
 
     public async Task<Guid> Handle(ForkTripCommand request, CancellationToken cancellationToken)
@@ -185,8 +191,20 @@ public class ForkTripCommandHandler : IRequestHandler<ForkTripCommand, Guid>
         // 12. CRITICAL: Single SaveChangesAsync for atomic operation
         await _context.SaveChangesAsync(cancellationToken);
 
-        // 13. Karma placeholder (Phase 5 - KarmaService integration)
-        // TODO: Create KarmaEvent for TripForked
+        await _karmaService.AwardKarmaAsync(
+            originalTrip.OwnerId,
+            currentUserId,
+            KarmaEventType.TripForked,
+            5,
+            originalTrip.Id,
+            KarmaSourceType.Trip);
+
+        await _notificationService.CreateNotificationAsync(
+            originalTrip.OwnerId,
+            currentUserId,
+            NotificationType.Fork,
+            originalTrip.Id,
+            NotificationTargetType.Trip);
 
         // 14. Return new trip ID
         return forkedTrip.Id;

@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Moq;
@@ -76,9 +77,21 @@ internal class TestAsyncQueryProvider<T> : IAsyncQueryProvider
 
     TResult IAsyncQueryProvider.ExecuteAsync<TResult>(Expression expression, CancellationToken cancellationToken)
     {
-        // For ToListAsync, the result type is List<T>
-        // We execute the query synchronously and wrap the result
+        // Wrap synchronous query results in Task<T> when EF asks for async execution.
         var result = _inner.Execute(expression);
+
+        var resultType = typeof(TResult);
+        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            var taskResultType = resultType.GenericTypeArguments[0];
+            var fromResultMethod = typeof(Task)
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .Single(method => method.Name == nameof(Task.FromResult))
+                .MakeGenericMethod(taskResultType);
+
+            return (TResult)fromResultMethod.Invoke(null, [result])!;
+        }
+
         return (TResult)result!;
     }
 }
