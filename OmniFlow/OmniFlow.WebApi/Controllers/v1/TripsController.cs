@@ -5,6 +5,7 @@ using OmniFlow.Application.Features.SavedTrips.Commands.UnsaveTrip;
 using OmniFlow.Application.Features.Trips.Commands.ArchiveTrip;
 using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
 using OmniFlow.Application.Features.Trips.Commands.DeleteTrip;
+using OmniFlow.Application.Features.Trips.Commands.ForkTrip;
 using OmniFlow.Application.Features.Trips.Commands.PublishTrip;
 using OmniFlow.Application.Features.Trips.Commands.RemoveUpvoteTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
@@ -200,5 +201,19 @@ public class TripsController : BaseApiController
         var command = new UnsaveTripCommand { TripId = id };
         await Mediator.Send(command);
         return NoContent();
+    }
+
+    /// <summary>Fork a published trip (create a copy as Draft).</summary>
+    [HttpPost("{id:guid}/fork")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Fork([FromRoute] Guid id)
+    {
+        var command = new ForkTripCommand { TripId = id };
+        var forkedTripId = await Mediator.Send(command);
+        return CreatedAtAction(nameof(GetById), new { id = forkedTripId }, forkedTripId);
     }
 }

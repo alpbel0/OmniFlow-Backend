@@ -229,7 +229,7 @@ public class StopsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Notes = "Updated notes"
         };
 
-        var response = await authClient.PutAsJsonAsync($"/api/v1/trips/{tripId}/stops/{stopId}`, updateRequest);
+        var response = await authClient.PutAsJsonAsync($"/api/v1/trips/{tripId}/stops/{stopId}", updateRequest);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -332,7 +332,7 @@ public class StopsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Notes = "Added some notes"
         };
 
-        var updateResponse = await authClient.PutAsJsonAsync($"/api/v1/trips/{tripId}/stops/{stopId}`, updateRequest);
+        var updateResponse = await authClient.PutAsJsonAsync($"/api/v1/trips/{tripId}/stops/{stopId}", updateRequest);
         updateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Mark visited
@@ -340,7 +340,7 @@ public class StopsControllerTests : IClassFixture<CustomWebApplicationFactory>
         visitedResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Delete stop
-        var deleteResponse = await authClient.DeleteAsync($"/api/v1/trips/{tripId}/stops/{stopId}`);
+        var deleteResponse = await authClient.DeleteAsync($"/api/v1/trips/{tripId}/stops/{stopId}");
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify deleted

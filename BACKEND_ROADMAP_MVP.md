@@ -751,7 +751,13 @@ Phase 2 tamamlanmış sayılır eğer:
 
 **Yapılacaklar:**
 - [x] `GetStopsByTripQuery.cs` + Handler — day_number + order_index sıralı, Place/FallbackPlace include, authorization
-- [x] `StopsController.cs` — 6 endpoint (GET, POST, PUT, DELETE, reorder, visited)
+- [x] `StopsController.cs` endpoint'leri:
+     - [x] GET /api/v1/trips/{tripId}/stops — GetStopsByTripQuery
+     - [x] POST /api/v1/trips/{tripId}/stops — CreateStopCommand
+     - [x] PUT /api/v1/trips/{tripId}/stops/{stopId} — UpdateStopCommand
+     - [x] DELETE /api/v1/trips/{tripId}/stops/{stopId} — DeleteStopCommand
+     - [x] PUT /api/v1/trips/{tripId}/stops/reorder — ReorderStopsCommand
+     - [x] POST /api/v1/trips/{tripId}/stops/{stopId}/visited — MarkStopVisitedCommand
 
 ---
 
@@ -763,49 +769,49 @@ Phase 2 tamamlanmış sayılır eğer:
 
 ### Task 7.1: Application — Fork Command
 
-**Tahmini Süre:** 2.5 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 2.5 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `ForkTripCommand.cs`:
-  - [ ] Orijinal trip'in published olduğunu doğrula
-  - [ ] Self-fork kontrolü: authenticated user = trip owner ise SelfForkException
-  - [ ] Yeni Trip entity oluştur: tüm field'ları kopyala, OwnerId = authenticated user, ForkedFromId = orijinal trip Id, Status = Draft, counter'lar sıfırla
-  - [ ] Orijinal trip'in tüm Stop'larını deep copy et (yeni Id'ler ile, aynı sıra ve ayarlar)
-  - [ ] Orijinal trip'in Flight ve Hotel seçimlerini kopyala (yeni Id'ler ile)
-  - [ ] Orijinal trip'in fork_count'ını 1 artır
-  - [ ] Karma tetikleme: placeholder olarak bırak (Phase 5'te KarmaService entegrasyonu)
-  - [ ] Yeni trip'in Id'sini dön
+- [x] `ForkTripCommand.cs`:
+  - [x] Orijinal trip'in published olduğunu doğrula
+  - [x] Self-fork kontrolü: authenticated user = trip owner ise SelfForkException
+  - [x] Yeni Trip entity oluştur: tüm field'ları kopyala, OwnerId = authenticated user, ForkedFromId = orijinal trip Id, Status = Draft, counter'lar sıfırla
+  - [x] Orijinal trip'in tüm Stop'larını deep copy et (yeni Id'ler ile, aynı sıra ve ayarlar)
+  - [x] Orijinal trip'in Flight ve Hotel seçimlerini kopyala (yeni Id'ler ile)
+  - [x] Orijinal trip'in fork_count'ını 1 artır
+  - [x] Karma tetikleme: placeholder olarak bırak (Phase 5'te KarmaService entegrasyonu)
+  - [x] Yeni trip'in Id'sini dön
 
 ---
 
 ### Task 7.2: Application — Explore Query
 
-**Tahmini Süre:** 2.5 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 2.5 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] `ExploreTripsQuery.cs`:
-  - [ ] Sadece published ve soft deleted olmayan trip'ler
-  - [ ] Opsiyonel filtreler: city, country, budget_tier, travel_style, tags (herhangi biri eşleşirse)
-  - [ ] Sıralama: popularity_score DESC (default), created_at DESC (opsiyonel)
-  - [ ] Cursor-based pagination (offset değil, son trip'in popularity_score + id ile devam)
-  - [ ] Her trip'te owner bilgisi (Username, ProfilePhotoUrl) ve istatistikler (upvote, fork, view)
-  - [ ] Authenticated user'ın bu trip'i upvote/save edip etmediği bilgisi (isUpvoted, isSaved boolean)
-- [ ] `ExploreTripsParameter.cs` — City, BudgetTier, TravelStyle, Tags, SortBy, Cursor, PageSize
-- [ ] `ExploreTripsViewModel.cs` — TripResponse listesi + NextCursor
+- [x] `ExploreTripsQuery.cs`:
+  - [x] Sadece published ve soft deleted olmayan trip'ler
+  - [x] Opsiyonel filtreler: city, country, budget_tier, travel_style, tags (herhangi biri eşleşirse)
+  - [x] Sıralama: popularity_score DESC (default), created_at DESC (opsiyonel)
+  - [x] Cursor-based pagination (offset değil, son trip'in popularity_score + id ile devam)
+  - [x] Her trip'te owner bilgisi (Username, ProfilePhotoUrl) ve istatistikler (upvote, fork, view)
+  - [x] Authenticated user'ın bu trip'i upvote/save edip etmediği bilgisi (isUpvoted, isSaved boolean)
+- [x] `ExploreTripsParameter.cs` — City, BudgetTier, TravelStyle, Tags, SortBy, Cursor, PageSize
+- [x] `ExploreTripsViewModel.cs` — TripResponse listesi + NextCursor
 
 ---
 
 ### Task 7.3: Explore & Fork Controller Endpoints
 
-**Tahmini Süre:** 1 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 1 saat
+**Durum:** ✅ Tamamlandı
 
 **Yapılacaklar:**
-- [ ] GET /api/v1/explore — ExploreTripsQuery, query parametrelerinden filtreler
-- [ ] POST /api/v1/trips/{id}/fork — ForkTripCommand
-- [ ] Swagger'da her iki endpoint'i test et
+- [x] GET /api/v1/explore — ExploreTripsQuery, query parametrelerinden filtreler
+- [x] POST /api/v1/trips/{id}/fork — ForkTripCommand
+- [x] Swagger'da her iki endpoint'i test et
 
 ---
 
@@ -813,43 +819,43 @@ Phase 2 tamamlanmış sayılır eğer:
 
 ### Unit Tests
 
-- [ ] **CreateTripCommandValidator** — boş title reddedilmeli, EndDate < StartDate reddedilmeli, PersonCount = 0 reddedilmeli, geçerli komut kabul edilmeli
-- [ ] **CreateStopCommandValidator** — DayNumber = 0 reddedilmeli, IsTimeLocked = true + ArrivalTime = null reddedilmeli, negatif fiyat reddedilmeli
-- [ ] **CreatePlaceCommandValidator** — boş name reddedilmeli, rating = 6 reddedilmeli, geçersiz koordinat reddedilmeli
-- [ ] **ForkTripCommand** — self-fork SelfForkException fırlatmalı
-- [ ] **PublishTripCommand** — stop'u olmayan trip publish edilememeli
-- [ ] **ReorderStopsCommand** — time-locked stop'un sırası değiştirilemez
+- [x] **CreateTripCommandValidator** — boş title reddedilmeli, EndDate < StartDate reddedilmeli, PersonCount = 0 reddedilmeli, geçerli komut kabul edilmeli
+- [x] **CreateStopCommandValidator** — DayNumber = 0 reddedilmeli, IsTimeLocked = true + ArrivalTime = null reddedilmeli, negatif fiyat reddedilmeli
+- [x] **CreatePlaceCommandValidator** — boş name reddedilmeli, rating = 6 reddedilmeli, geçersiz koordinat reddedilmeli
+- [x] **ForkTripCommand** — self-fork SelfForkException fırlatmalı
+- [x] **PublishTripCommand** — stop'u olmayan trip publish edilememeli
+- [x] **ReorderStopsCommand** — time-locked stop'un sırası değiştirilemez
 
 ### Integration Tests
 
-- [ ] **Places_CRUD** — Create (admin) → GetById → GetByCity → her biri doğru sonuç
-- [ ] **Places_Create_NonAdmin_Returns403** — Traveler rolü ile create deneme → 403
-- [ ] **Trips_FullLifecycle** — Create → Update → AddStop → Publish → Archive, her adımda doğru status
-- [ ] **Trips_OwnerAuthorization** — Başka kullanıcının trip'ini update deneme → 403
-- [ ] **Stops_Reorder** — 3 stop oluştur → reorder → sıranın değiştiğini doğrula
-- [ ] **Stops_TimeLock** — time-locked stop reorder deneme → hata
-- [ ] **Fork_Success** — Published trip fork → yeni trip oluştu, stop'lar kopyalandı, fork_count arttı
-- [ ] **Fork_SelfFork_Returns409** — Kendi trip'ini fork deneme → 409
-- [ ] **Fork_DraftTrip_Returns400** — Draft trip fork deneme → hata
-- [ ] **Explore_Filters** — city + budget_tier filtresi ile doğru sonuçlar
-- [ ] **Explore_Pagination** — cursor-based pagination ile ardışık sayfalar farklı trip'ler dönmeli
-- [ ] **TripUpvote_Success** — upvote → upvote_count 1 arttı
-- [ ] **TripUpvote_Duplicate_Returns409** — aynı trip'e ikinci upvote → 409
-- [ ] **SaveTrip_Success** — save → saved-trips'te görünüyor, unsave → görünmüyor
+- [x] **Places_CRUD** — Create (admin) → GetById → GetByCity → her biri doğru sonuç
+- [x] **Places_Create_NonAdmin_Returns403** — Traveler rolü ile create deneme → 403
+- [x] **Trips_FullLifecycle** — Create → Update → AddStop → Publish → Archive, her adımda doğru status
+- [x] **Trips_OwnerAuthorization** — Başka kullanıcının trip'ini update deneme → 403
+- [x] **Stops_Reorder** — 3 stop oluştur → reorder → sıranın değiştiğini doğrula
+- [x] **Stops_TimeLock** — time-locked stop reorder deneme → hata
+- [x] **Fork_Success** — Published trip fork → yeni trip oluştu, stop'lar kopyalandı, fork_count arttı
+- [x] **Fork_SelfFork_Returns409** — Kendi trip'ini fork deneme → 409
+- [x] **Fork_DraftTrip_Returns400** — Draft trip fork deneme → hata
+- [x] **Explore_Filters** — city + budget_tier filtresi ile doğru sonuçlar
+- [x] **Explore_Pagination** — cursor-based pagination ile ardışık sayfalar farklı trip'ler dönmeli
+- [x] **TripUpvote_Success** — upvote → upvote_count 1 arttı
+- [x] **TripUpvote_Duplicate_Returns409** — aynı trip'e ikinci upvote → 409
+- [x] **SaveTrip_Success** — save → saved-trips'te görünüyor, unsave → görünmüyor
 
 ---
 
 ## ✅ Phase 2 Success Metrics
 
-- [ ] Places CRUD + city/category filtreleme çalışıyor
-- [ ] Trip lifecycle: Draft → Published → Archived, her geçişte doğru validasyon
-- [ ] Owner authorization: başka kullanıcının trip/stop'una erişim engelleniyor
-- [ ] Stop reorder LexoRank ile çalışıyor, time-lock korunuyor
-- [ ] Custom stop (place_id NULL) oluşturulabiliyor
-- [ ] Fork: deep copy + self-fork engeli + fork_count artışı
-- [ ] Explore: filter + sort + cursor pagination çalışıyor
-- [ ] Upvote + Save: çalışıyor, duplicate engeli var
-- [ ] Phase 2 testlerinin tamamı geçiyor
+- [x] Places CRUD + city/category filtreleme çalışıyor
+- [x] Trip lifecycle: Draft → Published → Archived, her geçişte doğru validasyon
+- [x] Owner authorization: başka kullanıcının trip/stop'una erişim engelleniyor
+- [x] Stop reorder LexoRank ile çalışıyor, time-lock korunuyor
+- [x] Custom stop (place_id NULL) oluşturulabiliyor
+- [x] Fork: deep copy + self-fork engeli + fork_count artışı
+- [x] Explore: filter + sort + cursor pagination çalışıyor
+- [x] Upvote + Save: çalışıyor, duplicate engeli var
+- [x] Phase 2 testlerinin tamamı geçiyor
 
 ---
 

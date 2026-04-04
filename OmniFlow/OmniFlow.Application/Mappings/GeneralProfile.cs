@@ -27,7 +27,9 @@ public class GeneralProfile : Profile
         CreateMap<Trip, TripResponse>()
             .ForMember(dest => dest.OwnerId, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Id : Guid.Empty))
             .ForMember(dest => dest.OwnerUsername, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Username : string.Empty))
-            .ForMember(dest => dest.OwnerProfilePhotoUrl, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.ProfilePhotoUrl : null));
+            .ForMember(dest => dest.OwnerProfilePhotoUrl, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.ProfilePhotoUrl : null))
+            .ForMember(dest => dest.IsUpvoted, opt => opt.Ignore())
+            .ForMember(dest => dest.IsSaved, opt => opt.Ignore());
 
         CreateMap<Trip, SavedTripResponse>()
             .ForMember(dest => dest.TripId, opt => opt.MapFrom(src => src.Id))
@@ -48,6 +50,17 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.FallbackPlaceCategory, opt => opt.MapFrom(src => src.FallbackPlace != null ? src.FallbackPlace.Category : (Domain.Enums.PlaceCategory?)null));
 
         CreateMap<CreateStopCommand, Stop>();
-        CreateMap<UpdateStopCommand, Stop>();
+        CreateMap<UpdateStopCommand, Stop>()
+            .ForMember(dest => dest.TripId, opt => opt.Ignore())
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.IsVisited, opt => opt.Ignore())
+            .ForMember(dest => dest.VisitedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.AddedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.AiReasoning, opt => opt.Ignore())
+            .ForMember(dest => dest.OrderIndex, opt => opt.Ignore())
+            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
     }
 }

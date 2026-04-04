@@ -22,10 +22,15 @@ public class TripResponse
     public int UpvoteCount { get; set; }
     public int ViewCount { get; set; }
     public decimal PopularityScore { get; set; }
+    public Guid? ForkedFromId { get; set; }
     public List<string> Tags { get; set; } = new();
 
     // Owner bilgisi
     public Guid OwnerId { get; set; }
     public string OwnerUsername { get; set; } = string.Empty;
     public string? OwnerProfilePhotoUrl { get; set; }
+
+    // User-specific flags (null for unauthenticated users)
+    public bool? IsUpvoted { get; set; }
+    public bool? IsSaved { get; set; }
 }
