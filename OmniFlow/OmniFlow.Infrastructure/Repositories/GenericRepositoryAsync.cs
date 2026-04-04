@@ -6,7 +6,7 @@ using OmniFlow.Domain.Common;
 
 namespace OmniFlow.Infrastructure.Repositories;
 
-public class GenericRepositoryAsync<T> : IGenericRepositoryAsync<T> where T : class
+public class GenericRepositoryAsync<T> : IGenericRepositoryAsync<T> where T : BaseEntity
 {
 	protected readonly IApplicationDbContext _context;
 	protected readonly DbSet<T> _dbSet;
@@ -19,7 +19,7 @@ public class GenericRepositoryAsync<T> : IGenericRepositoryAsync<T> where T : cl
 
 	public virtual async Task<T?> GetByIdAsync(Guid id)
 	{
-		return await _dbSet.FindAsync(id);
+		return await _dbSet.FirstOrDefaultAsync(e => e.Id == id);
 	}
 
 	public virtual async Task<IReadOnlyList<T>> GetAllAsync()
