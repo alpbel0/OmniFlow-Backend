@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Hotels;
 using OmniFlow.Application.Features.Hotels.Commands.SelectHotel;
@@ -14,7 +15,14 @@ namespace OmniFlow.WebApi.Controllers.v1;
 [Route("api/v1/trips/{tripId:guid}/hotels")]
 public class HotelsController : BaseApiController
 {
-    /// <summary>Get all hotels for a trip, sorted by check-in date.</summary>
+	private readonly IValidator<SelectHotelRequest> _selectValidator;
+
+	public HotelsController(IValidator<SelectHotelRequest> selectValidator)
+	{
+		_selectValidator = selectValidator;
+	}
+
+	/// <summary>Get all hotels for a trip, sorted by check-in date.</summary>
     /// <remarks>
     /// Authorization: Published trips are public, Draft/Archived are owner-only.
     /// </remarks>

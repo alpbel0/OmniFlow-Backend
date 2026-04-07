@@ -15,15 +15,18 @@ public class AccountController : ControllerBase
 	private readonly IAccountService _accountService;
 	private readonly JWTSettings _jwtSettings;
 	private readonly IValidator<RegisterRequest> _registerValidator;
+	private readonly IValidator<AuthenticationRequest> _loginValidator;
 
 	public AccountController(
 		IAccountService accountService,
 		IOptions<JWTSettings> jwtSettings,
-		IValidator<RegisterRequest> registerValidator)
+		IValidator<RegisterRequest> registerValidator,
+		IValidator<AuthenticationRequest> loginValidator)
 	{
 		_accountService = accountService;
 		_jwtSettings = jwtSettings.Value;
 		_registerValidator = registerValidator;
+		_loginValidator = loginValidator;
 	}
 
 	/// <summary>Register a new user account.</summary>

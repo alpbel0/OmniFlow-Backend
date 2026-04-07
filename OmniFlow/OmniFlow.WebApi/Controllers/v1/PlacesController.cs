@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Places;
@@ -16,7 +17,14 @@ namespace OmniFlow.WebApi.Controllers.v1;
 /// </summary>
 public class PlacesController : BaseApiController
 {
-    /// <summary>Get all places with pagination.</summary>
+	private readonly IValidator<CreatePlaceRequest> _createValidator;
+
+	public PlacesController(IValidator<CreatePlaceRequest> createValidator)
+	{
+		_createValidator = createValidator;
+	}
+
+	/// <summary>Get all places with pagination.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<PlaceResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

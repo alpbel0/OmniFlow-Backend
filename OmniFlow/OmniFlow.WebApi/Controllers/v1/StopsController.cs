@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Stops;
 using OmniFlow.Application.Features.Stops.Commands.CreateStop;
@@ -18,7 +19,21 @@ namespace OmniFlow.WebApi.Controllers.v1;
 [Route("api/v1/trips/{tripId:guid}/stops")]
 public class StopsController : BaseApiController
 {
-    /// <summary>Get all stops for a trip.</summary>
+	private readonly IValidator<CreateStopRequest> _createValidator;
+	private readonly IValidator<UpdateStopRequest> _updateValidator;
+	private readonly IValidator<ReorderStopRequest> _reorderValidator;
+
+	public StopsController(
+		IValidator<CreateStopRequest> createValidator,
+		IValidator<UpdateStopRequest> updateValidator,
+		IValidator<ReorderStopRequest> reorderValidator)
+	{
+		_createValidator = createValidator;
+		_updateValidator = updateValidator;
+		_reorderValidator = reorderValidator;
+	}
+
+	/// <summary>Get all stops for a trip.</summary>
     /// <remarks>
     /// Authorization: Published trips are public, Draft/Archived are owner-only.
     /// </remarks>

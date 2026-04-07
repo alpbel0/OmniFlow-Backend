@@ -3,7 +3,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.OpenApi.Models;
+using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Settings;
@@ -67,6 +71,8 @@ builder.Services.AddCors(options =>
 
 // ── MVC / Controllers / Swagger ──────────────────────────────────────────────
 builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -93,6 +99,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+builder.Services.AddFluentValidationRulesToSwagger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();

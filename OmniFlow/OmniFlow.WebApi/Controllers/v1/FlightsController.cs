@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Flights;
 using OmniFlow.Application.Features.Flights.Commands.SelectFlight;
@@ -14,7 +15,14 @@ namespace OmniFlow.WebApi.Controllers.v1;
 [Route("api/v1/trips/{tripId:guid}/flights")]
 public class FlightsController : BaseApiController
 {
-    /// <summary>Get all flights for a trip, grouped by direction (Outbound/Return).</summary>
+	private readonly IValidator<SelectFlightRequest> _selectValidator;
+
+	public FlightsController(IValidator<SelectFlightRequest> selectValidator)
+	{
+		_selectValidator = selectValidator;
+	}
+
+	/// <summary>Get all flights for a trip, grouped by direction (Outbound/Return).</summary>
     /// <remarks>
     /// Authorization: Published trips are public, Draft/Archived are owner-only.
     /// </remarks>

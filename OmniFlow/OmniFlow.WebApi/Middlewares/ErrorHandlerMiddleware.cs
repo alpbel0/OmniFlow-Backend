@@ -40,7 +40,13 @@ public class ErrorHandlerMiddleware
 		{
 			case Application.Exceptions.ValidationException validationEx:
 				statusCode = (int)HttpStatusCode.UnprocessableEntity;
-				response = new ErrorResponse(validationEx.Message, validationEx.Errors);
+				var errorDetails = validationEx.Errors.Select(e => new ValidationErrorDetail(
+					e.Field,
+					e.Message,
+					e.Code,
+					e.AttemptedValue
+				)).ToList();
+				response = new ErrorResponse(validationEx.Message, errorDetails);
 				break;
 
 			case ApiException apiEx:

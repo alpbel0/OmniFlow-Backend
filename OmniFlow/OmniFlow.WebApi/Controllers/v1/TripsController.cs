@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.SavedTrips.Commands.SaveTrip;
@@ -22,7 +23,18 @@ namespace OmniFlow.WebApi.Controllers.v1;
 /// </summary>
 public class TripsController : BaseApiController
 {
-    /// <summary>Get authenticated user's trips with pagination.</summary>
+	private readonly IValidator<CreateTripRequest> _createValidator;
+	private readonly IValidator<UpdateTripRequest> _updateValidator;
+
+	public TripsController(
+		IValidator<CreateTripRequest> createValidator,
+		IValidator<UpdateTripRequest> updateValidator)
+	{
+		_createValidator = createValidator;
+		_updateValidator = updateValidator;
+	}
+
+	/// <summary>Get authenticated user's trips with pagination.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(GetMyTripsViewModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
