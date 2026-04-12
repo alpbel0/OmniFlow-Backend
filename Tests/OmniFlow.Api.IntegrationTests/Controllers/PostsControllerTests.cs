@@ -223,4 +223,49 @@ public class PostsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		result!.UpvoteCount.Should().Be(1);
 		result.IsUpvoted.Should().BeTrue();
 	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithoutToken_Returns401()
+	{
+		var response = await _client.DeleteAsync($"/api/v1/posts/{Guid.NewGuid()}/upvote");
+
+		response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithValidToken_Returns204AndDecrementsCount()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+
+		var postId = await CreatePostAsync(authClient);
+
+		// First upvote
+		await authClient.PostAsync($"/api/v1/posts/{postId}/upvote", null);
+
+		// Then remove upvote
+		var removeResponse = await authClient.DeleteAsync($"/api/v1/posts/{postId}/upvote");
+		removeResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+		var getResponse = await authClient.GetAsync($"/api/v1/posts/{postId}");
+		getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await getResponse.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<PostResponse>(body, _json);
+
+		result!.UpvoteCount.Should().Be(0);
+		result.IsUpvoted.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithoutExistingUpvote_Returns404()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+
+		var postId = await CreatePostAsync(authClient);
+
+		var removeResponse = await authClient.DeleteAsync($"/api/v1/posts/{postId}/upvote");
+		removeResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+	}
 }

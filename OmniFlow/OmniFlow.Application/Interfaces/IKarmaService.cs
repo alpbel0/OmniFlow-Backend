@@ -11,4 +11,11 @@ public interface IKarmaService
 		int points,
 		Guid? sourceId,
 		KarmaSourceType? sourceType);
+
+	Task RevokeKarmaAsync(
+		Guid userId,
+		Guid? actorId,
+		KarmaEventType eventType,
+		Guid? sourceId,
+		KarmaSourceType? sourceType);
 }

@@ -6,8 +6,7 @@ public class UpdateTripRequestValidator : AbstractValidator<UpdateTripRequest>
 {
     public UpdateTripRequestValidator()
     {
-        RuleFor(x => x.TripId)
-            .NotEmpty().WithMessage("TripId is required.");
+        // TripId comes from route parameter, not request body - skip validation
 
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Title is required.")

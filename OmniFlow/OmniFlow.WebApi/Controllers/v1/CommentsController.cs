@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Comments;
 using OmniFlow.Application.Features.Comments.Commands.CreateComment;
 using OmniFlow.Application.Features.Comments.Commands.DeleteComment;
+using OmniFlow.Application.Features.Comments.Commands.RemoveUpvoteComment;
 using OmniFlow.Application.Features.Comments.Commands.UpvoteComment;
 using OmniFlow.Application.Features.Comments.Queries.GetCommentsByPost;
 
@@ -78,6 +79,22 @@ public class CommentsController : BaseApiController
 	public async Task<IActionResult> Upvote([FromRoute] Guid id)
 	{
 		var command = new UpvoteCommentCommand
+		{
+			CommentId = id
+		};
+
+		await Mediator.Send(command);
+		return NoContent();
+	}
+
+	/// <summary>Remove upvote from a comment.</summary>
+	[HttpDelete("/api/v1/comments/{id:guid}/upvote")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> RemoveUpvote([FromRoute] Guid id)
+	{
+		var command = new RemoveUpvoteCommentCommand
 		{
 			CommentId = id
 		};

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.CommunityTips;
 using OmniFlow.Application.Features.CommunityTips.Commands.CreateTip;
 using OmniFlow.Application.Features.CommunityTips.Commands.DeleteTip;
+using OmniFlow.Application.Features.CommunityTips.Commands.RemoveUpvoteTip;
 using OmniFlow.Application.Features.CommunityTips.Commands.UpvoteTip;
 using OmniFlow.Application.Features.CommunityTips.Queries.GetTipsByTrip;
 
@@ -72,6 +73,21 @@ public class CommunityTipsController : BaseApiController
 	public async Task<IActionResult> Upvote([FromRoute] Guid id)
 	{
 		await Mediator.Send(new UpvoteTipCommand
+		{
+			TipId = id
+		});
+
+		return NoContent();
+	}
+
+	/// <summary>Remove upvote from a community tip.</summary>
+	[HttpDelete("/api/v1/tips/{id:guid}/upvote")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> RemoveUpvote([FromRoute] Guid id)
+	{
+		await Mediator.Send(new RemoveUpvoteTipCommand
 		{
 			TipId = id
 		});

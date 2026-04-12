@@ -26,6 +26,16 @@ public class KarmaService : IKarmaService
 		return AwardKarmaInternalAsync(userId, actorId, eventType, points, sourceId, sourceType);
 	}
 
+	public Task RevokeKarmaAsync(
+		Guid userId,
+		Guid? actorId,
+		KarmaEventType eventType,
+		Guid? sourceId,
+		KarmaSourceType? sourceType)
+	{
+		return RevokeKarmaInternalAsync(userId, actorId, eventType, sourceId, sourceType);
+	}
+
 	private async Task AwardKarmaInternalAsync(
 		Guid userId,
 		Guid? actorId,
@@ -63,6 +73,35 @@ public class KarmaService : IKarmaService
 
 		await _context.KarmaEvents.AddAsync(karmaEvent);
 		user.KarmaScore += points;
+		await _context.SaveChangesAsync();
+	}
+
+	private async Task RevokeKarmaInternalAsync(
+		Guid userId,
+		Guid? actorId,
+		KarmaEventType eventType,
+		Guid? sourceId,
+		KarmaSourceType? sourceType)
+	{
+		var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+		if (user == null)
+		{
+			throw new EntityNotFoundException("User", userId);
+		}
+
+		var karmaEvent = await _context.KarmaEvents.FirstOrDefaultAsync(x =>
+			x.UserId == userId &&
+			x.SourceId == sourceId &&
+			x.EventType == eventType &&
+			x.ActorId == actorId);
+
+		if (karmaEvent == null)
+		{
+			return;
+		}
+
+		_context.KarmaEvents.Remove(karmaEvent);
+		user.KarmaScore -= karmaEvent.Points;
 		await _context.SaveChangesAsync();
 	}
 }

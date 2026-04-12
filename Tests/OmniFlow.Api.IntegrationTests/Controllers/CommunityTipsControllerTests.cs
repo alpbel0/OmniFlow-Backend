@@ -197,6 +197,52 @@ public class CommunityTipsControllerTests : IClassFixture<CustomWebApplicationFa
 	}
 
 	[Fact]
+	public async Task RemoveUpvote_WithoutToken_Returns401()
+	{
+		var response = await _client.DeleteAsync($"/api/v1/tips/{Guid.NewGuid()}/upvote");
+
+		response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithValidToken_Returns204AndDecrementsCount()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+		var (tripId, placeId) = await SeedTripAndPlaceAsync();
+		var tipId = await CreateTipAsync(authClient, tripId, placeId, "Try the house bread");
+
+		// First upvote
+		await authClient.PostAsync($"/api/v1/tips/{tipId}/upvote", null);
+
+		// Then remove upvote
+		var removeResponse = await authClient.DeleteAsync($"/api/v1/tips/{tipId}/upvote");
+		removeResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+		var response = await authClient.GetAsync($"/api/v1/trips/{tripId}/tips");
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<OmniFlow.Application.Wrappers.PagedResponse<TipResponse>>(body, _json);
+
+		result!.Data.Single(x => x.Id == tipId).UpvoteCount.Should().Be(0);
+		result.Data.Single(x => x.Id == tipId).IsUpvoted.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithoutExistingUpvote_Returns404()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+		var (tripId, placeId) = await SeedTripAndPlaceAsync();
+		var tipId = await CreateTipAsync(authClient, tripId, placeId, "Try the house bread");
+
+		var removeResponse = await authClient.DeleteAsync($"/api/v1/tips/{tipId}/upvote");
+
+		removeResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+	}
+
+	[Fact]
 	public async Task Delete_WithValidToken_Returns204AndHidesTip()
 	{
 		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);

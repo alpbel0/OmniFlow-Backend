@@ -186,4 +186,42 @@ public class CommentsControllerTests : IClassFixture<CustomWebApplicationFactory
 
 		upvoteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithoutToken_Returns401()
+	{
+		var response = await _client.DeleteAsync($"/api/v1/comments/{Guid.NewGuid()}/upvote");
+
+		response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithValidToken_Returns204()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+		var postId = await CreatePostAsync(authClient);
+		var commentId = await CreateCommentAsync(authClient, postId);
+
+		// First upvote
+		await authClient.PostAsync($"/api/v1/comments/{commentId}/upvote", null);
+
+		// Then remove upvote
+		var removeResponse = await authClient.DeleteAsync($"/api/v1/comments/{commentId}/upvote");
+
+		removeResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+	}
+
+	[Fact]
+	public async Task RemoveUpvote_WithoutExistingUpvote_Returns404()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+		var postId = await CreatePostAsync(authClient);
+		var commentId = await CreateCommentAsync(authClient, postId);
+
+		var removeResponse = await authClient.DeleteAsync($"/api/v1/comments/{commentId}/upvote");
+
+		removeResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+	}
 }

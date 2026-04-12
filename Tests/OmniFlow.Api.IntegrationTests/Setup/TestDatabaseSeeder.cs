@@ -78,6 +78,24 @@ public static class TestDatabaseSeeder
         }
     }
 
+    /// <summary>
+    /// Clears feed-related tables for test isolation.
+    /// Use before tests that depend on specific feed state.
+    /// </summary>
+    public static async Task ClearFeedDataAsync(IServiceProvider serviceProvider)
+    {
+        var dbContext = serviceProvider.GetRequiredService<IApplicationDbContext>();
+
+        // Clear in correct order to avoid foreign key violations
+        dbContext.CommentUpvotes.RemoveRange(dbContext.CommentUpvotes);
+        dbContext.PostUpvotes.RemoveRange(dbContext.PostUpvotes);
+        dbContext.Comments.RemoveRange(dbContext.Comments);
+        dbContext.Posts.RemoveRange(dbContext.Posts);
+        dbContext.Follows.RemoveRange(dbContext.Follows);
+
+        await dbContext.SaveChangesAsync();
+    }
+
     public static async Task CleanRefreshTokensAsync(IServiceProvider serviceProvider, Guid userId)
     {
         var dbContext = serviceProvider.GetRequiredService<IApplicationDbContext>();

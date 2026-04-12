@@ -6,11 +6,13 @@ using Microsoft.IdentityModel.Tokens;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Settings;
+using OmniFlow.Application.Wrappers;
 using OmniFlow.Infrastructure;
 using OmniFlow.Infrastructure.Contexts;
 using OmniFlow.Infrastructure.Models;
@@ -62,7 +64,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000", "https://omniflow.app")
+            .WithOrigins("http://localhost:3000", "https://omniflow.app","omniflow-frontend1-cae8cgcxdbeea7bb.westeurope-01.azurewebsites.net")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -70,7 +72,26 @@ builder.Services.AddCors(options =>
 });
 
 // ── MVC / Controllers / Swagger ──────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errorDetails = context.ModelState
+                .Where(e => e.Value!.Errors.Count > 0)
+                .Select(e => new ValidationErrorDetail(
+                    e.Key,
+                    e.Value!.Errors.First().ErrorMessage,
+                    "VALIDATION_ERROR",
+                    e.Value!.AttemptedValue?.ToString()
+                ))
+                .ToList();
+
+            return new UnprocessableEntityObjectResult(
+                new ErrorResponse("One or more validation failures have occurred.", errorDetails)
+            );
+        };
+    });
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddEndpointsApiExplorer();

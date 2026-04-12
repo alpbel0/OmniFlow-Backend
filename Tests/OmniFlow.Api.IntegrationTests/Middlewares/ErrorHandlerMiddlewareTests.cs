@@ -20,6 +20,14 @@ namespace OmniFlow.Api.IntegrationTests.Middlewares;
 /// </summary>
 public class ErrorHandlerMiddlewareTests
 {
+    // ── helper record for parsing validation error details ────────────────────────────────
+    private record ValidationErrorDetailResponse(
+        string Field,
+        string Message,
+        string Code,
+        string? AttemptedValue
+    );
+
     // ── helpers ────────────────────────────────────────────────────────────────
 
     private static HttpClient BuildClient(RequestDelegate throwingEndpoint)
@@ -41,7 +49,7 @@ public class ErrorHandlerMiddlewareTests
         return host.GetTestClient();
     }
 
-    private static async Task<(int StatusCode, string Message, IReadOnlyList<string>? Errors)>
+    private static async Task<(int StatusCode, string Message, IReadOnlyList<ValidationErrorDetailResponse>? Errors)>
         ParseResponse(HttpResponseMessage response)
     {
         var json = await response.Content.ReadAsStringAsync();
@@ -50,12 +58,17 @@ public class ErrorHandlerMiddlewareTests
 
         var message = root.GetProperty("message").GetString() ?? string.Empty;
 
-        IReadOnlyList<string>? errors = null;
+        IReadOnlyList<ValidationErrorDetailResponse>? errors = null;
         if (root.TryGetProperty("errors", out var errorsEl) &&
             errorsEl.ValueKind == JsonValueKind.Array)
         {
             errors = errorsEl.EnumerateArray()
-                .Select(e => e.GetString() ?? string.Empty)
+                .Select(e => new ValidationErrorDetailResponse(
+                    e.GetProperty("field").GetString() ?? string.Empty,
+                    e.GetProperty("message").GetString() ?? string.Empty,
+                    e.GetProperty("code").GetString() ?? string.Empty,
+                    e.TryGetProperty("attemptedValue", out var av) ? av.GetString() : null
+                ))
                 .ToList();
         }
 
@@ -106,8 +119,8 @@ public class ErrorHandlerMiddlewareTests
     {
         var failures = new List<ValidationFailure>
         {
-            new("Email", "Email is required."),
-            new("Password", "Password must be at least 8 characters.")
+            new("Email", "Email is required.") { ErrorCode = "EMAIL_REQUIRED" },
+            new("Password", "Password must be at least 8 characters.") { ErrorCode = "PASSWORD_TOO_SHORT" }
         };
         var client = BuildClient(_ => throw new Application.Exceptions.ValidationException(failures));
 
@@ -118,8 +131,14 @@ public class ErrorHandlerMiddlewareTests
         message.Should().Be("One or more validation failures have occurred.");
         errors.Should().NotBeNull();
         errors!.Should().HaveCount(2);
-        errors.Should().Contain("Email is required.");
-        errors.Should().Contain("Password must be at least 8 characters.");
+
+        errors[0].Field.Should().Be("Email");
+        errors[0].Message.Should().Be("Email is required.");
+        errors[0].Code.Should().Be("EMAIL_REQUIRED");
+
+        errors[1].Field.Should().Be("Password");
+        errors[1].Message.Should().Be("Password must be at least 8 characters.");
+        errors[1].Code.Should().Be("PASSWORD_TOO_SHORT");
     }
 
     // ── EntityNotFoundException → 404 ─────────────────────────────────────────

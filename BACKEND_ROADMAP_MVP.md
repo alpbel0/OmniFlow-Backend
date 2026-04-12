@@ -1041,9 +1041,10 @@ Phase 4 tamamlanmış sayılır eğer:
   - [x] PUT /api/v1/posts/{id} — UpdatePostCommand
   - [x] DELETE /api/v1/posts/{id} — DeletePostCommand
   - [x] POST /api/v1/posts/{id}/upvote — UpvotePostCommand
+  - [x] DELETE /api/v1/posts/{id}/upvote — RemoveUpvotePostCommand
 
 **Ekstra Test Kapsamı:**
-- [x] `PostsControllerTests.cs` — 11 integration test: auth guard, create, get by id, update, delete, upvote, not found senaryoları
+- [x] `PostsControllerTests.cs` — 14 integration test: auth guard, create, get by id, update, delete, upvote, remove upvote, not found senaryoları
 
 ---
 
@@ -1086,9 +1087,10 @@ Phase 4 tamamlanmış sayılır eğer:
   - [x] POST /api/v1/posts/{postId}/comments — CreateCommentCommand
   - [x] DELETE /api/v1/comments/{id} — DeleteCommentCommand
   - [x] POST /api/v1/comments/{id}/upvote — UpvoteCommentCommand
+  - [x] DELETE /api/v1/comments/{id}/upvote — RemoveUpvoteCommentCommand
 
 **Ekstra Test Kapsamı:**
-- [x] `CommentsControllerTests.cs` — 8 integration test: auth guard, create, get by post, delete, upvote, not found olmayan akışlar
+- [x] `CommentsControllerTests.cs` — 11 integration test: auth guard, create, get by post, delete, upvote, remove upvote, not found olmayan akışlar
 
 ---
 
@@ -1289,9 +1291,10 @@ Phase 4 tamamlanmış sayılır eğer:
   - [x] POST /api/v1/trips/{tripId}/tips — CreateTipCommand
   - [x] DELETE /api/v1/tips/{id} — DeleteTipCommand
   - [x] POST /api/v1/tips/{id}/upvote — UpvoteTipCommand
+  - [x] DELETE /api/v1/tips/{id}/upvote — RemoveUpvoteTipCommand
 
 **Ekstra Test Kapsamı:**
-- [x] `CommunityTipsControllerTests.cs` — auth guard, create, place-specific get, upvote, delete, tip list response
+- [x] `CommunityTipsControllerTests.cs` — auth guard, create, place-specific get, upvote, remove upvote, delete, tip list response
 
 ---
 

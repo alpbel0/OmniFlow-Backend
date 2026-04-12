@@ -92,7 +92,7 @@ public class ValidationBehaviourTests
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
             behaviour.Handle(command, NextReturning("ok"), default));
 
-        ex.Errors.Should().Contain("Always fails.");
+        ex.Errors.Should().Contain(e => e.Message == "Always fails.");
     }
 
     [Fact]
@@ -106,8 +106,8 @@ public class ValidationBehaviourTests
             behaviour.Handle(command, NextReturning("ok"), default));
 
         // Both validators produced errors — exact count may vary by FluentValidation version
-        ex.Errors.Should().Contain("Always fails.");
-        ex.Errors.Should().Contain("Name must be at least 5 chars.");
+        ex.Errors.Should().Contain(e => e.Message == "Always fails.");
+        ex.Errors.Should().Contain(e => e.Message == "Name must be at least 5 chars.");
         ex.Errors.Count.Should().BeGreaterThanOrEqualTo(2);
     }
 
@@ -141,7 +141,7 @@ public class ValidationBehaviourTests
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
             behaviour.Handle(command, NextReturning("ok"), default));
 
-        ex.Errors.Should().Contain("Name is required.");
+        ex.Errors.Should().Contain(e => e.Message == "Name is required.");
     }
 
     [Fact]

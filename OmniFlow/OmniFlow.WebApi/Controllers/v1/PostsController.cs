@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Posts;
 using OmniFlow.Application.Features.Posts.Commands.CreatePost;
 using OmniFlow.Application.Features.Posts.Commands.DeletePost;
+using OmniFlow.Application.Features.Posts.Commands.RemoveUpvotePost;
 using OmniFlow.Application.Features.Posts.Commands.UpdatePost;
 using OmniFlow.Application.Features.Posts.Commands.UpvotePost;
 using OmniFlow.Application.Features.Posts.Queries.GetPostById;
@@ -105,6 +106,22 @@ public class PostsController : BaseApiController
 	public async Task<IActionResult> Upvote([FromRoute] Guid id)
 	{
 		var command = new UpvotePostCommand
+		{
+			PostId = id
+		};
+
+		await Mediator.Send(command);
+		return NoContent();
+	}
+
+	/// <summary>Remove upvote from a post.</summary>
+	[HttpDelete("{id:guid}/upvote")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> RemoveUpvote([FromRoute] Guid id)
+	{
+		var command = new RemoveUpvotePostCommand
 		{
 			PostId = id
 		};

@@ -118,6 +118,12 @@ public class FeedControllerTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Get_LatestTab_ReturnsLatestPost()
     {
+        // Clear feed data for test isolation
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await TestDatabaseSeeder.ClearFeedDataAsync(scope.ServiceProvider);
+        }
+
         var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var authClient = CreateAuthenticatedClient(token);
 
@@ -144,6 +150,12 @@ public class FeedControllerTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Get_FollowingTab_ReturnsOnlyFollowedUsersPosts()
     {
+        // Clear feed data for test isolation
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await TestDatabaseSeeder.ClearFeedDataAsync(scope.ServiceProvider);
+        }
+
         var testUserToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
 
