@@ -35,12 +35,14 @@ steps:
     command: 'publish'
     publishWebProjects: false
     projects: '$(projectPath)'
+    # --output $(Build.ArtifactStagingDirectory) kısmını koruyoruz
     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
     zipAfterPublish: true
 
 - task: AzureRmWebAppDeployment@4
   displayName: 'Deploy to Azure Web App'
   inputs:
-    azureSubscription: 'OmniFlow-Azure-Conn' # Azure Service Connection adın
-    WebAppName: 'omniflow-backend' # Azure'daki App Service adın
-    packageForLinux: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+    azureSubscription: 'OmniFlow-Azure-Conn' 
+    WebAppName: 'omniflow-backend1'
+    # Burayı daha spesifik hale getirelim kanka:
+    packageForLinux: '$(Build.ArtifactStagingDirectory)/*.zip'
