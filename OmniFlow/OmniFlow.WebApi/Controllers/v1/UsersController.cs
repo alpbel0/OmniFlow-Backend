@@ -9,11 +9,17 @@ namespace OmniFlow.WebApi.Controllers.v1;
 [Route("api/v1/users")]
 public class UsersController : BaseApiController
 {
-	private readonly IAuthenticatedUserService _authenticatedUserService;
+	private const long MaxProfilePhotoBytes = 5 * 1024 * 1024;
 
-	public UsersController(IAuthenticatedUserService authenticatedUserService)
+	private readonly IAuthenticatedUserService _authenticatedUserService;
+	private readonly IBlobService _blobService;
+
+	public UsersController(
+		IAuthenticatedUserService authenticatedUserService,
+		IBlobService blobService)
 	{
 		_authenticatedUserService = authenticatedUserService;
+		_blobService = blobService;
 	}
 
 	[HttpGet("me")]
@@ -59,5 +65,36 @@ public class UsersController : BaseApiController
 
 		await Mediator.Send(command);
 		return NoContent();
+	}
+
+	/// <summary>Yüklenen profil fotoğrafını blob'a alır ve <c>User.ProfilePhotoUrl</c> alanını günceller.</summary>
+	[HttpPost("me/profile-photo")]
+	[RequestSizeLimit(MaxProfilePhotoBytes)]
+	[Consumes("multipart/form-data")]
+	[ProducesResponseType(typeof(UploadProfilePhotoResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	public async Task<IActionResult> UploadProfilePhoto(
+		IFormFile file,
+		CancellationToken cancellationToken)
+	{
+		if (file is null || file.Length == 0)
+			return BadRequest(new { message = "Dosya gerekli." });
+
+		if (file.Length > MaxProfilePhotoBytes)
+			return BadRequest(new { message = $"Dosya en fazla {MaxProfilePhotoBytes / (1024 * 1024)} MB olabilir." });
+
+		var contentType = file.ContentType ?? string.Empty;
+		if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+			return BadRequest(new { message = "Yalnızca resim dosyaları kabul edilir." });
+
+		await using var stream = file.OpenReadStream();
+		var url = await _blobService.UploadAsync(stream, contentType, file.FileName, cancellationToken);
+
+		await Mediator.Send(
+			new UpdateProfileCommand { ProfilePhotoUrl = url },
+			cancellationToken);
+
+		return Ok(new UploadProfilePhotoResponse { ProfilePhotoUrl = url });
 	}
 }

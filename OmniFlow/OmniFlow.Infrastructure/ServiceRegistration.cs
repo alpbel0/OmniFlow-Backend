@@ -1,7 +1,9 @@
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Application.Settings;
@@ -31,7 +33,17 @@ public static class ServiceRegistration
 
 		services.Configure<JWTSettings>(options =>
 			configuration.GetSection("JWTSettings").Bind(options));
+		services.Configure<AzureStorageSettings>(options =>
+			configuration.GetSection("AzureStorageSettings").Bind(options));
+		services.AddSingleton(sp =>
+		{
+			var opts = sp.GetRequiredService<IOptions<AzureStorageSettings>>().Value;
+			if (string.IsNullOrWhiteSpace(opts.ConnectionString))
+				throw new InvalidOperationException("AzureStorageSettings:ConnectionString is missing.");
+			return new BlobServiceClient(opts.ConnectionString);
+		});
 		services.AddScoped<IAccountService, AccountService>();
+		services.AddScoped<IBlobService, BlobService>();
 
 		// Open-Generic DI registration for Generic Repository
 		services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
