@@ -15,6 +15,7 @@ public interface IApplicationDbContext
 	DbSet<Comment> Comments { get; }
 	DbSet<CommunityTip> CommunityTips { get; }
 	DbSet<Follow> Follows { get; }
+	DbSet<Block> Blocks { get; }
 	DbSet<PostUpvote> PostUpvotes { get; }
 	DbSet<CommentUpvote> CommentUpvotes { get; }
 	DbSet<TipUpvote> TipUpvotes { get; }

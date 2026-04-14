@@ -74,6 +74,11 @@ public class ErrorHandlerMiddleware
 				response = new ErrorResponse(selfFollowEx.Message);
 				break;
 
+			case SelfBlockException selfBlockEx:
+				statusCode = (int)HttpStatusCode.Conflict;
+				response = new ErrorResponse(selfBlockEx.Message);
+				break;
+
 			case SelfForkException selfForkEx:
 				statusCode = (int)HttpStatusCode.Conflict;
 				response = new ErrorResponse(selfForkEx.Message);

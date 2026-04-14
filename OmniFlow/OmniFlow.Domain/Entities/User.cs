@@ -32,4 +32,8 @@ public class User : AuditableBaseEntity
 	public ICollection<Follow> Followers { get; set; } = new List<Follow>();
 
 	public ICollection<Follow> Following { get; set; } = new List<Follow>();
+
+	public ICollection<Block> BlockedUsers { get; set; } = new List<Block>();
+
+	public ICollection<Block> BlockedByUsers { get; set; } = new List<Block>();
 }

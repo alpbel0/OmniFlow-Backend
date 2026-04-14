@@ -29,6 +29,7 @@ public class ApplicationDbContext
 	public DbSet<Comment> Comments => Set<Comment>();
 	public DbSet<CommunityTip> CommunityTips => Set<CommunityTip>();
 	public DbSet<Follow> Follows => Set<Follow>();
+	public DbSet<Block> Blocks => Set<Block>();
 	public DbSet<PostUpvote> PostUpvotes => Set<PostUpvote>();
 	public DbSet<CommentUpvote> CommentUpvotes => Set<CommentUpvote>();
 	public DbSet<TipUpvote> TipUpvotes => Set<TipUpvote>();

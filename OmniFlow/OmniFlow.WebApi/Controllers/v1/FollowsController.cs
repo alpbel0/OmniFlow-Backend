@@ -12,6 +12,7 @@ public class FollowsController : BaseApiController
 	[HttpPost("{userId:guid}/follow")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
 	[ProducesResponseType(StatusCodes.Status409Conflict)]
 	public async Task<IActionResult> Follow([FromRoute] Guid userId)
 	{

@@ -131,14 +131,15 @@ public class ErrorHandlerMiddlewareTests
         message.Should().Be("One or more validation failures have occurred.");
         errors.Should().NotBeNull();
         errors!.Should().HaveCount(2);
+        var validationErrors = errors!;
 
-        errors[0].Field.Should().Be("Email");
-        errors[0].Message.Should().Be("Email is required.");
-        errors[0].Code.Should().Be("EMAIL_REQUIRED");
+        validationErrors[0].Field.Should().Be("Email");
+        validationErrors[0].Message.Should().Be("Email is required.");
+        validationErrors[0].Code.Should().Be("EMAIL_REQUIRED");
 
-        errors[1].Field.Should().Be("Password");
-        errors[1].Message.Should().Be("Password must be at least 8 characters.");
-        errors[1].Code.Should().Be("PASSWORD_TOO_SHORT");
+        validationErrors[1].Field.Should().Be("Password");
+        validationErrors[1].Message.Should().Be("Password must be at least 8 characters.");
+        validationErrors[1].Code.Should().Be("PASSWORD_TOO_SHORT");
     }
 
     // ── EntityNotFoundException → 404 ─────────────────────────────────────────

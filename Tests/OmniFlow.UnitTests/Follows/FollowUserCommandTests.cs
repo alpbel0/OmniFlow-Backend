@@ -46,6 +46,7 @@ public class FollowUserCommandTests
 
         _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(followerId.ToString());
         _followRepositoryMock.Setup(x => x.IsFollowingAsync(followerId, followingId)).ReturnsAsync(true);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         var handler = new FollowUserCommandHandler(
             _followRepositoryMock.Object,
@@ -76,6 +77,7 @@ public class FollowUserCommandTests
             following
         }).Object);
         _contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
         _contextMock.Setup(x => x.SaveChangesAsync(default)).ReturnsAsync(1);
 
         var handler = new FollowUserCommandHandler(
@@ -96,5 +98,35 @@ public class FollowUserCommandTests
             NotificationType.Follow,
             null,
             null), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUsersAreBlocked_ShouldThrowForbiddenException()
+    {
+        var followerId = Guid.NewGuid();
+        var followingId = Guid.NewGuid();
+
+        _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(followerId.ToString());
+        _followRepositoryMock.Setup(x => x.IsFollowingAsync(followerId, followingId)).ReturnsAsync(false);
+        _contextMock.Setup(x => x.Users).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<User>
+        {
+            new() { Id = followerId, Username = "follower", Email = "follower@example.com" },
+            new() { Id = followingId, Username = "following", Email = "following@example.com" }
+        }).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>
+        {
+            new() { BlockerId = followerId, BlockedUserId = followingId }
+        }).Object);
+
+        var handler = new FollowUserCommandHandler(
+            _followRepositoryMock.Object,
+            _contextMock.Object,
+            _authenticatedUserServiceMock.Object,
+            _notificationServiceMock.Object);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            handler.Handle(new FollowUserCommand { UserId = followingId }, CancellationToken.None));
+
+        _contextMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 }

@@ -49,6 +49,15 @@ public class FollowUserCommandHandler : IRequestHandler<FollowUserCommand, Unit>
 			return Unit.Value;
 		}
 
+		var hasBlockRelationship = _context.Blocks.Any(block =>
+			(block.BlockerId == currentUserId && block.BlockedUserId == request.UserId) ||
+			(block.BlockerId == request.UserId && block.BlockedUserId == currentUserId));
+
+		if (hasBlockRelationship)
+		{
+			throw new ForbiddenException("You cannot follow this user while a block relationship exists.");
+		}
+
 		_context.Follows.Add(new Follow
 		{
 			FollowerId = currentUserId,

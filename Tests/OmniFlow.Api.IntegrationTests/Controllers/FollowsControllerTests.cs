@@ -57,14 +57,34 @@ public class FollowsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		var currentUser = db.Users.Single(x => x.Email == TestDatabaseSeeder.TestUserEmail);
 		var targetUser = db.Users.Single(x => x.Id == targetUserId);
 		var existingFollow = db.Follows.FirstOrDefault(x => x.FollowerId == currentUser.Id && x.FollowingId == targetUserId);
+		var reverseFollow = db.Follows.FirstOrDefault(x => x.FollowerId == targetUserId && x.FollowingId == currentUser.Id);
+		var outboundBlock = db.Blocks.FirstOrDefault(x => x.BlockerId == currentUser.Id && x.BlockedUserId == targetUserId);
+		var inboundBlock = db.Blocks.FirstOrDefault(x => x.BlockerId == targetUserId && x.BlockedUserId == currentUser.Id);
 
 		if (existingFollow != null)
 		{
 			db.Follows.Remove(existingFollow);
 		}
 
+		if (reverseFollow != null)
+		{
+			db.Follows.Remove(reverseFollow);
+		}
+
+		if (outboundBlock != null)
+		{
+			db.Blocks.Remove(outboundBlock);
+		}
+
+		if (inboundBlock != null)
+		{
+			db.Blocks.Remove(inboundBlock);
+		}
+
 		currentUser.FollowingCount = 0;
+		currentUser.FollowersCount = 0;
 		targetUser.FollowersCount = 0;
+		targetUser.FollowingCount = 0;
 		db.SaveChangesAsync().GetAwaiter().GetResult();
 	}
 
@@ -157,5 +177,38 @@ public class FollowsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		var following = JsonSerializer.Deserialize<PagedResponse<FollowUserResponse>>(followingBody, _json);
 		following.Should().NotBeNull();
 		following!.Data.Should().ContainSingle(user => user.Id == targetUserId && user.IsFollowing == true);
+	}
+
+	[Fact]
+	public async Task Follow_WhenBlockRelationshipExists_Returns403()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+
+		using var scope = _factory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<OmniFlow.Application.Interfaces.IApplicationDbContext>();
+		var currentUserId = db.Users.Single(x => x.Email == TestDatabaseSeeder.TestUserEmail).Id;
+		var targetUserId = db.Users.Single(x => x.Email == TestDatabaseSeeder.AdminEmail).Id;
+
+		ResetTestFollowState(targetUserId);
+
+		var existingBlock = db.Blocks.FirstOrDefault(x => x.BlockerId == targetUserId && x.BlockedUserId == currentUserId);
+		if (existingBlock != null)
+		{
+			db.Blocks.Remove(existingBlock);
+		}
+
+		db.Blocks.Add(new OmniFlow.Domain.Entities.Block
+		{
+			BlockerId = targetUserId,
+			BlockedUserId = currentUserId
+		});
+		await db.SaveChangesAsync();
+
+		var response = await authClient.PostAsync($"/api/v1/users/{targetUserId}/follow", null);
+		response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+		var followExists = db.Follows.Any(x => x.FollowerId == currentUserId && x.FollowingId == targetUserId);
+		followExists.Should().BeFalse();
 	}
 }
