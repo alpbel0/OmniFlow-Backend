@@ -64,6 +64,18 @@ public class ExploreTripsQueryHandler : IRequestHandler<ExploreTripsQuery, Explo
         if (!string.IsNullOrEmpty(parameter.Country))
             query = query.Where(t => t.Country.ToLower() == parameter.Country.ToLower());
 
+        if (!string.IsNullOrWhiteSpace(parameter.SearchTerm))
+        {
+            var searchTerm = parameter.SearchTerm.Trim().ToLower();
+            query = query.Where(t =>
+                t.Title.ToLower().Contains(searchTerm) ||
+                (t.Description != null && t.Description.ToLower().Contains(searchTerm)) ||
+                t.City.ToLower().Contains(searchTerm) ||
+                t.Country.ToLower().Contains(searchTerm) ||
+                (t.Owner != null && t.Owner.Username.ToLower().Contains(searchTerm)) ||
+                t.Tags.Any(tag => tag.ToLower().Contains(searchTerm)));
+        }
+
         if (parameter.BudgetTier.HasValue)
             query = query.Where(t => t.BudgetTier == parameter.BudgetTier.Value);
 
@@ -189,6 +201,7 @@ public class ExploreTripsQueryHandler : IRequestHandler<ExploreTripsQuery, Explo
         var bytes = Convert.FromBase64String(base64Text);
         return Encoding.UTF8.GetString(bytes);
     }
+
 }
 
 internal class CursorInfo

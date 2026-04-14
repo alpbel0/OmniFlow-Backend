@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
+using OmniFlow.Application.Features.Users.Queries.GetTopContributors;
 using OmniFlow.Application.Features.Users.Queries.GetUserProfile;
 using OmniFlow.Application.Interfaces;
 
@@ -33,6 +35,15 @@ public class UsersController : BaseApiController
 		};
 
 		var result = await Mediator.Send(query);
+		return Ok(result);
+	}
+
+	[HttpGet("top-contributors")]
+	[AllowAnonymous]
+	[ProducesResponseType(typeof(IReadOnlyList<TopContributorResponse>), StatusCodes.Status200OK)]
+	public async Task<IActionResult> GetTopContributors([FromQuery] int limit = 10)
+	{
+		var result = await Mediator.Send(new GetTopContributorsQuery { Limit = limit });
 		return Ok(result);
 	}
 

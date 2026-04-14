@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.Trips.Queries.ExploreTrips;
+using OmniFlow.Application.Features.Trips.Queries.GetFeaturedTrips;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.WebApi.Controllers.v1;
@@ -19,6 +21,7 @@ public class ExploreController : BaseApiController
     [AllowAnonymous]
     [ProducesResponseType(typeof(ExploreTripsViewModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> Explore(
+        [FromQuery] string? searchTerm,
         [FromQuery] string? city,
         [FromQuery] string? country,
         [FromQuery] BudgetTier? budgetTier,
@@ -32,6 +35,7 @@ public class ExploreController : BaseApiController
 
         var parameter = new ExploreTripsParameter
         {
+            SearchTerm = searchTerm,
             City = city,
             Country = country,
             BudgetTier = budgetTier,
@@ -44,6 +48,16 @@ public class ExploreController : BaseApiController
 
         var query = new ExploreTripsQuery(parameter);
         var result = await Mediator.Send(query);
+        return Ok(result);
+    }
+
+    /// <summary>Son 7 günde oluşturulmuş yayınlanmış gezilerden etkileşim skoruna göre öne çıkanlar.</summary>
+    [HttpGet("featured")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(IReadOnlyList<FeaturedTripResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetFeatured([FromQuery] int limit = 6)
+    {
+        var result = await Mediator.Send(new GetFeaturedTripsQuery { Limit = limit });
         return Ok(result);
     }
 }

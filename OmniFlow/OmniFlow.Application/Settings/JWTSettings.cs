@@ -5,6 +5,6 @@ public class JWTSettings
 	public string Key { get; set; } = default!;
 	public string Issuer { get; set; } = default!;
 	public string Audience { get; set; } = default!;
-	public int AccessTokenExpirationMinutes { get; set; } = 15;
+	public int AccessTokenExpirationMinutes { get; set; } = 300;
 	public int RefreshTokenExpirationDays { get; set; } = 7;
 }

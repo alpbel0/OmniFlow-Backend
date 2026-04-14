@@ -64,7 +64,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000", "https://omniflow.app","https://omniflow-frontend1-cae8cgcxdbeea7bb.westeurope-01.azurewebsites.net")
+            .WithOrigins("http://localhost:3000", "https://omniflow.app","https://omniflow-frontend1-cae8cgcxdbeea7bb.westeurope-01.azurewebsites.net","http://localhost:3001","http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

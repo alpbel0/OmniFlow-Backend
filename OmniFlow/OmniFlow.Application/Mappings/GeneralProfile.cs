@@ -42,6 +42,11 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.IsUpvoted, opt => opt.Ignore())
             .ForMember(dest => dest.IsSaved, opt => opt.Ignore());
 
+        CreateMap<Trip, FeaturedTripResponse>()
+            .ForMember(dest => dest.OwnerId, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Id : Guid.Empty))
+            .ForMember(dest => dest.OwnerUsername, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Username : string.Empty))
+            .ForMember(dest => dest.OwnerProfilePhotoUrl, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.ProfilePhotoUrl : null));
+
         CreateMap<Trip, SavedTripResponse>()
             .ForMember(dest => dest.TripId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.SavedAt, opt => opt.Ignore()) // Set manually in handler

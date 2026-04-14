@@ -7,6 +7,7 @@ public class ExploreTripsParameter
     // Filters
     public string? City { get; set; }
     public string? Country { get; set; }
+    public string? SearchTerm { get; set; }
     public BudgetTier? BudgetTier { get; set; }
     public TravelStyle? TravelStyle { get; set; }
     public List<string>? Tags { get; set; }

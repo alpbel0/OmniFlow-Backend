@@ -494,5 +494,8 @@ $RECYCLE.BIN/
 # Claude Code context file
 CLAUDE.md
 
+# Cursor / agent instructions (local)
+AGENTS.md
+
 # Maestro internal state files
 .maestro/
