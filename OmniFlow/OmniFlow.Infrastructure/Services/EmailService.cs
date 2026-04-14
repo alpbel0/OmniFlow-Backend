@@ -28,18 +28,23 @@ public class EmailService : IEmailService
 			return;
 		}
 
+		var smtpUsername = _mailSettings.SmtpUsername?.Trim();
+		var smtpPassword = string.IsNullOrWhiteSpace(_mailSettings.SmtpPassword)
+			? string.Empty
+			: string.Concat(_mailSettings.SmtpPassword.Where(c => !char.IsWhiteSpace(c)));
+
 		try
 		{
 			using var message = new MailMessage
 			{
-				From = new MailAddress(_mailSettings.SenderEmail, _mailSettings.SenderName),
+				From = new MailAddress(_mailSettings.SenderEmail.Trim(), _mailSettings.SenderName),
 				Subject = "Verify your OmniFlow email address",
 				Body = $"<p>Please verify your email address by clicking the link below:</p><p><a href=\"{verificationUrl}\">Verify email</a></p>",
 				IsBodyHtml = true
 			};
 			message.To.Add(email);
 
-			using var client = new SmtpClient(_mailSettings.SmtpHost, _mailSettings.SmtpPort)
+			using var client = new SmtpClient(_mailSettings.SmtpHost, 587)
 			{
 				EnableSsl = _mailSettings.EnableSsl,
 				DeliveryMethod = SmtpDeliveryMethod.Network,
@@ -47,12 +52,18 @@ public class EmailService : IEmailService
 				Timeout = 10000  // 10 second timeout
 			};
 
-			if (!string.IsNullOrWhiteSpace(_mailSettings.SmtpUsername))
+			if (!string.IsNullOrWhiteSpace(smtpUsername))
 			{
 				client.Credentials = new NetworkCredential(
-					_mailSettings.SmtpUsername,
-					_mailSettings.SmtpPassword ?? string.Empty);
+					smtpUsername,
+					smtpPassword);
 			}
+
+			_logger.LogInformation(
+				"Sending verification email to {Email} via {SmtpHost}:{SmtpPort}.",
+				email,
+				_mailSettings.SmtpHost,
+				587);
 
 			await client.SendMailAsync(message);
 			_logger.LogInformation("Verification email sent to {Email}.", email);
