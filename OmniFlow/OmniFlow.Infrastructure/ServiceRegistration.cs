@@ -29,10 +29,17 @@ public static class ServiceRegistration
 		services
 			.AddIdentityCore<ApplicationUser>()
 			.AddRoles<IdentityRole<Guid>>()
-			.AddEntityFrameworkStores<ApplicationDbContext>();
+			.AddEntityFrameworkStores<ApplicationDbContext>()
+			.AddDefaultTokenProviders();
 
 		services.Configure<JWTSettings>(options =>
 			configuration.GetSection("JWTSettings").Bind(options));
+		services.Configure<MailSettings>(options =>
+			configuration.GetSection("MailSettings").Bind(options));
+		services.Configure<DataProtectionTokenProviderOptions>(options =>
+		{
+			options.TokenLifespan = TimeSpan.FromHours(24);
+		});
 		services.Configure<AzureStorageSettings>(options =>
 			configuration.GetSection("AzureStorageSettings").Bind(options));
 		services.AddSingleton(sp =>
@@ -43,6 +50,7 @@ public static class ServiceRegistration
 			return new BlobServiceClient(opts.ConnectionString);
 		});
 		services.AddScoped<IAccountService, AccountService>();
+		services.AddScoped<IEmailService, EmailService>();
 		services.AddScoped<IBlobService, BlobService>();
 
 		// Open-Generic DI registration for Generic Repository

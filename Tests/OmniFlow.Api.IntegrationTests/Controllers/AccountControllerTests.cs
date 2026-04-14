@@ -29,7 +29,7 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
     // ── Register ───────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Register_WithValidData_ReturnsAccessToken()
+    public async Task Register_WithValidData_ReturnsVerificationPendingResponse()
     {
         var request = new RegisterRequest
         {
@@ -41,14 +41,14 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         var response = await _client.PostAsJsonAsync("/api/account/register", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var body = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<AuthenticationResponse>(body, _json);
+        var result = JsonSerializer.Deserialize<RegistrationVerificationResponse>(body, _json);
 
         result.Should().NotBeNull();
-        result!.AccessToken.Should().NotBeNullOrWhiteSpace();
-        result.Id.Should().NotBe(Guid.Empty);
+        result!.RequiresEmailVerification.Should().BeTrue();
+        result.Message.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -92,6 +92,31 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
         var response = await _client.PostAsJsonAsync("/api/account/register", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task Login_WithNewlyRegisteredUser_Returns403UntilVerified()
+    {
+        var email = $"pending_{Guid.NewGuid():N}@test.com";
+        var password = "ValidPass1!";
+
+        var registerResponse = await _client.PostAsJsonAsync("/api/account/register", new RegisterRequest
+        {
+            Username = $"pending_{Guid.NewGuid():N}".Substring(0, 20),
+            Email = email,
+            Password = password,
+            ConfirmPassword = password
+        });
+
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/account/login", new AuthenticationRequest
+        {
+            Email = email,
+            Password = password
+        });
+
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     // ── Login ──────────────────────────────────────────────────────────────────

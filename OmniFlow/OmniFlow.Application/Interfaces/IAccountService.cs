@@ -4,8 +4,10 @@ namespace OmniFlow.Application.Interfaces;
 
 public interface IAccountService
 {
-	Task<AuthenticationResponse> RegisterAsync(RegisterRequest request);
+	Task<RegistrationVerificationResponse> RegisterAsync(RegisterRequest request);
 	Task<AuthenticationResponse> LoginAsync(AuthenticationRequest request);
 	Task<AuthenticationResponse> RefreshTokenAsync(string token);
+	Task VerifyEmailAsync(VerifyEmailRequest request);
+	Task ResendVerificationEmailAsync(ResendVerificationEmailRequest request);
 	Task ForgotPasswordAsync(string email);
 }

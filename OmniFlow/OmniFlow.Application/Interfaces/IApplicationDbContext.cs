@@ -23,6 +23,7 @@ public interface IApplicationDbContext
 	DbSet<Notification> Notifications { get; }
 	DbSet<KarmaEvent> KarmaEvents { get; }
 	DbSet<RefreshToken> RefreshTokens { get; }
+	DbSet<EmailVerificationDispatch> EmailVerificationDispatches { get; }
 
 	DbSet<T> Set<T>() where T : class;
 

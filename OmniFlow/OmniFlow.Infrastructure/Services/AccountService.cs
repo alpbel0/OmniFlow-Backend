@@ -21,18 +21,24 @@ public class AccountService : IAccountService
 	private readonly UserManager<ApplicationUser> _userManager;
 	private readonly IApplicationDbContext _context;
 	private readonly JWTSettings _jwtSettings;
+	private readonly IEmailService _emailService;
+	private readonly MailSettings _mailSettings;
 
 	public AccountService(
 		UserManager<ApplicationUser> userManager,
 		IApplicationDbContext context,
-		IOptions<JWTSettings> jwtSettings)
+		IOptions<JWTSettings> jwtSettings,
+		IOptions<MailSettings> mailSettings,
+		IEmailService emailService)
 	{
 		_userManager = userManager;
 		_context = context;
 		_jwtSettings = jwtSettings.Value;
+		_mailSettings = mailSettings.Value;
+		_emailService = emailService;
 	}
 
-	public async Task<AuthenticationResponse> RegisterAsync(RegisterRequest request)
+	public async Task<RegistrationVerificationResponse> RegisterAsync(RegisterRequest request)
 	{
 		var existingByEmail = await _userManager.FindByEmailAsync(request.Email);
 		if (existingByEmail is not null)
@@ -47,7 +53,7 @@ public class AccountService : IAccountService
 			Id = Guid.NewGuid(),
 			UserName = request.Username,
 			Email = request.Email,
-			EmailConfirmed = true
+			EmailConfirmed = false
 		};
 
 		var createResult = await _userManager.CreateAsync(applicationUser, request.Password);
@@ -69,27 +75,18 @@ public class AccountService : IAccountService
 			IsVerified = false
 		});
 
-		var accessToken = GenerateJwtToken(applicationUser, Roles.Traveler.ToString());
-		var (rawRefreshToken, hashedRefreshToken) = GenerateRefreshToken();
+		var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(applicationUser);
+		var encodedToken = ToBase64Url(Encoding.UTF8.GetBytes(confirmationToken));
+		var verificationUrl = $"{_mailSettings.FrontendVerifyUrl}?email={Uri.EscapeDataString(request.Email)}&token={Uri.EscapeDataString(encodedToken)}";
 
-		_context.RefreshTokens.Add(new RefreshToken
-		{
-			UserId = applicationUser.Id,
-			TokenHash = hashedRefreshToken,
-			ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
-			CreatedAt = DateTime.UtcNow
-		});
+		await _emailService.SendVerificationEmailAsync(request.Email, verificationUrl);
 
 		await _context.SaveChangesAsync();
 
-		return new AuthenticationResponse
+		return new RegistrationVerificationResponse
 		{
-			AccessToken = accessToken,
-			RefreshToken = rawRefreshToken,
-			Id = applicationUser.Id,
-			Username = request.Username,
-			Email = request.Email,
-			Role = Roles.Traveler.ToString()
+			Message = "Registration successful. Please verify your email address.",
+			RequiresEmailVerification = true
 		};
 	}
 
@@ -102,6 +99,9 @@ public class AccountService : IAccountService
 		var passwordValid = await _userManager.CheckPasswordAsync(applicationUser, request.Password);
 		if (!passwordValid)
 			throw new ApiException("Invalid email or password.", 401);
+
+		if (!applicationUser.EmailConfirmed)
+			throw new ApiException("Email address is not verified.", 403);
 
 		var domainUser = await _context.Users
 			.FirstOrDefaultAsync(u => u.Id == applicationUser.Id);
@@ -137,6 +137,76 @@ public class AccountService : IAccountService
 			Email = applicationUser.Email ?? string.Empty,
 			Role = role
 		};
+	}
+
+	public async Task VerifyEmailAsync(VerifyEmailRequest request)
+	{
+		var applicationUser = await _userManager.FindByEmailAsync(request.Email);
+		if (applicationUser is null)
+			throw new ApiException("Invalid verification link.");
+
+		string token;
+		try
+		{
+			var tokenBytes = FromBase64Url(request.Token);
+			token = Encoding.UTF8.GetString(tokenBytes);
+		}
+		catch (Exception)
+		{
+			throw new ApiException("Invalid verification link.");
+		}
+
+		var result = await _userManager.ConfirmEmailAsync(applicationUser, token);
+		if (!result.Succeeded)
+		{
+			var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+			throw new ApiException(string.IsNullOrWhiteSpace(errors) ? "Email verification failed." : errors);
+		}
+	}
+
+	public async Task ResendVerificationEmailAsync(ResendVerificationEmailRequest request)
+	{
+		var applicationUser = await _userManager.FindByEmailAsync(request.Email);
+		if (applicationUser is null)
+			return;
+
+		if (applicationUser.EmailConfirmed)
+			return;
+
+		var now = DateTime.UtcNow;
+		var lastDispatch = await _context.Set<EmailVerificationDispatch>()
+			.Where(x => x.Email == request.Email && x.Purpose == "email-verification")
+			.OrderByDescending(x => x.SentAt)
+			.FirstOrDefaultAsync();
+
+		if (lastDispatch is not null && now - lastDispatch.SentAt < TimeSpan.FromSeconds(60))
+			throw new ApiException("Please wait before requesting another verification email.", 429);
+
+		var today = now.Date;
+		var dispatchCountToday = await _context.Set<EmailVerificationDispatch>()
+			.CountAsync(x => x.Email == request.Email
+				&& x.Purpose == "email-verification"
+				&& x.SentAt >= today
+				&& x.SentAt < today.AddDays(1));
+
+		if (dispatchCountToday >= 5)
+			throw new ApiException("You have reached the daily verification email limit.", 429);
+
+		var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(applicationUser);
+		var encodedToken = ToBase64Url(Encoding.UTF8.GetBytes(confirmationToken));
+		var verificationUrl = $"{_mailSettings.FrontendVerifyUrl}?email={Uri.EscapeDataString(request.Email)}&token={Uri.EscapeDataString(encodedToken)}";
+
+		await _emailService.SendVerificationEmailAsync(request.Email, verificationUrl);
+
+		_context.Set<EmailVerificationDispatch>().Add(new EmailVerificationDispatch
+		{
+			UserId = applicationUser.Id,
+			Email = request.Email,
+			Purpose = "email-verification",
+			SentAt = now
+		});
+
+		await _context.SaveChangesAsync();
 	}
 
 	public async Task<AuthenticationResponse> RefreshTokenAsync(string token)
@@ -230,5 +300,30 @@ public class AccountService : IAccountService
 	{
 		var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
 		return Convert.ToBase64String(bytes);
+	}
+
+	private static string ToBase64Url(byte[] bytes)
+	{
+		return Convert.ToBase64String(bytes)
+			.Replace('+', '-')
+			.Replace('/', '_')
+			.TrimEnd('=');
+	}
+
+	private static byte[] FromBase64Url(string value)
+	{
+		var base64 = value.Replace('-', '+').Replace('_', '/');
+
+		switch (base64.Length % 4)
+		{
+			case 2:
+				base64 += "==";
+				break;
+			case 3:
+				base64 += "=";
+				break;
+		}
+
+		return Convert.FromBase64String(base64);
 	}
 }

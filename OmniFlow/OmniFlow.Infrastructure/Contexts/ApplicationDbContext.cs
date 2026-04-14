@@ -37,6 +37,7 @@ public class ApplicationDbContext
 	public DbSet<Notification> Notifications => Set<Notification>();
 	public DbSet<KarmaEvent> KarmaEvents => Set<KarmaEvent>();
 	public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+	public DbSet<EmailVerificationDispatch> EmailVerificationDispatches => Set<EmailVerificationDispatch>();
 
 	public new DbSet<T> Set<T>() where T : class => base.Set<T>();
 
@@ -76,6 +77,7 @@ public class ApplicationDbContext
 		builder.Entity<IdentityUserLogin<Guid>>().ToTable("user_logins");
 		builder.Entity<IdentityRoleClaim<Guid>>().ToTable("role_claims");
 		builder.Entity<IdentityUserToken<Guid>>().ToTable("user_tokens");
+		builder.Entity<EmailVerificationDispatch>().ToTable("email_verification_dispatches");
 
 		builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 

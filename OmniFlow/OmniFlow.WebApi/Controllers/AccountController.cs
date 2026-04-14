@@ -16,22 +16,28 @@ public class AccountController : ControllerBase
 	private readonly JWTSettings _jwtSettings;
 	private readonly IValidator<RegisterRequest> _registerValidator;
 	private readonly IValidator<AuthenticationRequest> _loginValidator;
+	private readonly IValidator<VerifyEmailRequest> _verifyEmailValidator;
+	private readonly IValidator<ResendVerificationEmailRequest> _resendVerificationEmailValidator;
 
 	public AccountController(
 		IAccountService accountService,
 		IOptions<JWTSettings> jwtSettings,
 		IValidator<RegisterRequest> registerValidator,
-		IValidator<AuthenticationRequest> loginValidator)
+		IValidator<AuthenticationRequest> loginValidator,
+		IValidator<VerifyEmailRequest> verifyEmailValidator,
+		IValidator<ResendVerificationEmailRequest> resendVerificationEmailValidator)
 	{
 		_accountService = accountService;
 		_jwtSettings = jwtSettings.Value;
 		_registerValidator = registerValidator;
 		_loginValidator = loginValidator;
+		_verifyEmailValidator = verifyEmailValidator;
+		_resendVerificationEmailValidator = resendVerificationEmailValidator;
 	}
 
 	/// <summary>Register a new user account.</summary>
 	[HttpPost("register")]
-	[ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(typeof(RegistrationVerificationResponse), StatusCodes.Status202Accepted)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]
 	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
 	public async Task<IActionResult> Register([FromBody] RegisterRequest request)
@@ -41,12 +47,7 @@ public class AccountController : ControllerBase
 			throw new ValidationException(validation.Errors);
 
 		var result = await _accountService.RegisterAsync(request);
-		SetRefreshTokenCookie(result.RefreshToken!);
-
-		if (!IsMobileRequest())
-			result.RefreshToken = null;
-
-		return Ok(result);
+		return Accepted(result);
 	}
 
 	/// <summary>Authenticate with email and password.</summary>
@@ -55,6 +56,10 @@ public class AccountController : ControllerBase
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
 	public async Task<IActionResult> Login([FromBody] AuthenticationRequest request)
 	{
+		var validation = await _loginValidator.ValidateAsync(request);
+		if (!validation.IsValid)
+			throw new ValidationException(validation.Errors);
+
 		var result = await _accountService.LoginAsync(request);
 		SetRefreshTokenCookie(result.RefreshToken!);
 
@@ -62,6 +67,36 @@ public class AccountController : ControllerBase
 			result.RefreshToken = null;
 
 		return Ok(result);
+	}
+
+	/// <summary>Verify email confirmation token.</summary>
+	[HttpPost("verify-email")]
+	[ProducesResponseType(typeof(MessageResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+	public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
+	{
+		var validation = await _verifyEmailValidator.ValidateAsync(request);
+		if (!validation.IsValid)
+			throw new ValidationException(validation.Errors);
+
+		await _accountService.VerifyEmailAsync(request);
+		return Ok(new MessageResponse { Message = "Email verified successfully." });
+	}
+
+	/// <summary>Resend email verification link.</summary>
+	[HttpPost("resend-verification")]
+	[ProducesResponseType(typeof(MessageResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+	public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationEmailRequest request)
+	{
+		var validation = await _resendVerificationEmailValidator.ValidateAsync(request);
+		if (!validation.IsValid)
+			throw new ValidationException(validation.Errors);
+
+		await _accountService.ResendVerificationEmailAsync(request);
+		return Ok(new MessageResponse { Message = "If the account exists, a new verification email has been sent." });
 	}
 
 	/// <summary>
