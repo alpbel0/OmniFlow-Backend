@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OmniFlow.Infrastructure.Contexts;
@@ -12,9 +13,11 @@ using OmniFlow.Infrastructure.Contexts;
 namespace OmniFlow.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260414223328_AddProviderTables")]
+    partial class AddProviderTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -153,31 +156,6 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("user_tokens", (string)null);
-                });
-
-            modelBuilder.Entity("OmniFlow.Domain.Entities.Block", b =>
-                {
-                    b.Property<Guid>("BlockerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("blocker_id");
-
-                    b.Property<Guid>("BlockedUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("blocked_user_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.HasKey("BlockerId", "BlockedUserId");
-
-                    b.HasIndex("BlockedUserId")
-                        .HasDatabaseName("idx_blocks_blocked_user_id");
-
-                    b.ToTable("blocks", null, t =>
-                        {
-                            t.HasCheckConstraint("no_self_block", "blocker_id != blocked_user_id");
-                        });
                 });
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.Comment", b =>
@@ -339,40 +317,6 @@ namespace OmniFlow.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("valid_content", "length(content) > 0");
                         });
-                });
-
-            modelBuilder.Entity("OmniFlow.Domain.Entities.EmailVerificationDispatch", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Purpose")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("SentAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("email_verification_dispatches", (string)null);
                 });
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.Flight", b =>
@@ -1913,25 +1857,6 @@ namespace OmniFlow.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("OmniFlow.Domain.Entities.Block", b =>
-                {
-                    b.HasOne("OmniFlow.Domain.Entities.User", "BlockedUser")
-                        .WithMany("BlockedByUsers")
-                        .HasForeignKey("BlockedUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OmniFlow.Domain.Entities.User", "Blocker")
-                        .WithMany("BlockedUsers")
-                        .HasForeignKey("BlockerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BlockedUser");
-
-                    b.Navigation("Blocker");
-                });
-
             modelBuilder.Entity("OmniFlow.Domain.Entities.Comment", b =>
                 {
                     b.HasOne("OmniFlow.Domain.Entities.Post", "Post")
@@ -2249,10 +2174,6 @@ namespace OmniFlow.Infrastructure.Migrations
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.User", b =>
                 {
-                    b.Navigation("BlockedByUsers");
-
-                    b.Navigation("BlockedUsers");
-
                     b.Navigation("Followers");
 
                     b.Navigation("Following");

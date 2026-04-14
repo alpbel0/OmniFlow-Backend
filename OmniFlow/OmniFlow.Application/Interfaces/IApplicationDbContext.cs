@@ -11,6 +11,8 @@ public interface IApplicationDbContext
 	DbSet<Stop> Stops { get; }
 	DbSet<Flight> Flights { get; }
 	DbSet<Hotel> Hotels { get; }
+	DbSet<ProviderFlight> ProviderFlights { get; }
+	DbSet<ProviderHotel> ProviderHotels { get; }
 	DbSet<Post> Posts { get; }
 	DbSet<Comment> Comments { get; }
 	DbSet<CommunityTip> CommunityTips { get; }
