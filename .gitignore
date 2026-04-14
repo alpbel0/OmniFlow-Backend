@@ -8,6 +8,7 @@
 
 # ASP.NET Core sensitive config overrides — never commit production secrets
 appsettings.Production.json
+appsettings.Development.json
 appsettings.Staging.json
 appsettings.Secrets.json
 appsettings.*.local.json
