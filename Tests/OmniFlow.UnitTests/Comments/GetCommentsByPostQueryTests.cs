@@ -30,8 +30,9 @@ public class GetCommentsByPostQueryHandlerStandaloneTests
 		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
 		_contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Post>
 		{
-			new() { Id = postId }
+			new() { Id = postId, UserId = Guid.NewGuid() }
 		}).Object);
+		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
 		var rootComment = new Comment
 		{
@@ -44,7 +45,7 @@ public class GetCommentsByPostQueryHandlerStandaloneTests
 			Replies = new List<Comment>()
 		};
 
-		_commentRepositoryMock.Setup(x => x.GetByPostAsync(postId, It.IsAny<RequestParameter>()))
+		_commentRepositoryMock.Setup(x => x.GetByPostAsync(postId, It.IsAny<RequestParameter>(), It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(new PagedResponse<Comment>(new List<Comment> { rootComment }, 1, 10, 1));
 
 		_contextMock.Setup(x => x.CommentUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<CommentUpvote>
@@ -91,5 +92,101 @@ public class GetCommentsByPostQueryHandlerStandaloneTests
 			PageNumber = 1,
 			PageSize = 10
 		}, CancellationToken.None));
+	}
+
+	[Fact]
+	public async Task Handle_WhenPostOwnerIsBlocked_ShouldThrowEntityNotFoundException()
+	{
+		var postId = Guid.NewGuid();
+		var currentUserId = Guid.NewGuid();
+		var postOwnerId = Guid.NewGuid();
+
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+		_contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Post>
+		{
+			new() { Id = postId, UserId = postOwnerId }
+		}).Object);
+		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>
+		{
+			new() { BlockerId = currentUserId, BlockedUserId = postOwnerId }
+		}).Object);
+
+		var handler = new GetCommentsByPostQueryHandler(
+			_commentRepositoryMock.Object,
+			_contextMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_mapper);
+
+		await Assert.ThrowsAsync<EntityNotFoundException>(() => handler.Handle(new GetCommentsByPostQuery
+		{
+			PostId = postId,
+			PageNumber = 1,
+			PageSize = 10
+		}, CancellationToken.None));
+	}
+
+	[Fact]
+	public async Task Handle_WhenReplyAuthorIsBlocked_ShouldFilterOutReplyAndKeepFilteredTotalCount()
+	{
+		var postId = Guid.NewGuid();
+		var currentUserId = Guid.NewGuid();
+		var postOwnerId = Guid.NewGuid();
+		var blockedReplyUserId = Guid.NewGuid();
+		var rootCommentId = Guid.NewGuid();
+
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+		_contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Post>
+		{
+			new() { Id = postId, UserId = postOwnerId }
+		}).Object);
+		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>
+		{
+			new() { BlockerId = currentUserId, BlockedUserId = blockedReplyUserId }
+		}).Object);
+
+		var rootComment = new Comment
+		{
+			Id = rootCommentId,
+			PostId = postId,
+			UserId = Guid.NewGuid(),
+			Content = "Root",
+			CreatedAt = DateTime.UtcNow,
+			User = new User { Id = Guid.NewGuid(), Username = "root", Email = "root@example.com" },
+			Replies = new List<Comment>
+			{
+				new()
+				{
+					Id = Guid.NewGuid(),
+					PostId = postId,
+					ParentCommentId = rootCommentId,
+					UserId = blockedReplyUserId,
+					Content = "Blocked reply",
+					CreatedAt = DateTime.UtcNow,
+					User = new User { Id = blockedReplyUserId, Username = "blocked", Email = "blocked@example.com" }
+				}
+			}
+		};
+
+		_commentRepositoryMock.Setup(x => x.GetByPostAsync(postId, It.IsAny<RequestParameter>(), It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(new PagedResponse<Comment>(new List<Comment> { rootComment }, 1, 10, 1));
+
+		_contextMock.Setup(x => x.CommentUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<CommentUpvote>()).Object);
+
+		var handler = new GetCommentsByPostQueryHandler(
+			_commentRepositoryMock.Object,
+			_contextMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_mapper);
+
+		var result = await handler.Handle(new GetCommentsByPostQuery
+		{
+			PostId = postId,
+			PageNumber = 1,
+			PageSize = 10
+		}, CancellationToken.None);
+
+		result.TotalCount.Should().Be(1);
+		result.Data.Should().ContainSingle();
+		result.Data[0].Replies.Should().BeEmpty();
 	}
 }

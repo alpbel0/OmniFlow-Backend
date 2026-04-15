@@ -96,6 +96,7 @@ public class GetUserProfileQueryHandlerTests
 		{
 			new() { FollowerId = currentUserId, FollowingId = targetUserId }
 		}).Object);
+		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
 		var handler = new GetUserProfileQueryHandler(
 			_userRepositoryMock.Object,
@@ -148,6 +149,7 @@ public class GetUserProfileQueryHandlerTests
 		{
 			new() { FollowerId = currentUserId, FollowingId = targetUserId }
 		}).Object);
+		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
 		var handler = new GetUserProfileQueryHandler(
 			_userRepositoryMock.Object,
@@ -162,5 +164,36 @@ public class GetUserProfileQueryHandlerTests
 		result.IsFollowing.Should().BeTrue();
 		result.TripCount.Should().Be(1);
 		result.PostCount.Should().Be(1);
+	}
+
+	[Fact]
+	public async Task Handle_WhenViewerAndTargetAreBlocked_ShouldThrowEntityNotFoundException()
+	{
+		var currentUserId = Guid.NewGuid();
+		var targetUserId = Guid.NewGuid();
+
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+
+		var targetUser = new User
+		{
+			Id = targetUserId,
+			Username = "blocked-target",
+			Email = "blocked-target@example.com"
+		};
+
+		_userRepositoryMock.Setup(x => x.GetByUsernameAsync("blocked-target")).ReturnsAsync(targetUser);
+		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>
+		{
+			new() { BlockerId = currentUserId, BlockedUserId = targetUserId }
+		}).Object);
+
+		var handler = new GetUserProfileQueryHandler(
+			_userRepositoryMock.Object,
+			_contextMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_mapper);
+
+		await Assert.ThrowsAsync<EntityNotFoundException>(() =>
+			handler.Handle(new GetUserProfileQuery { UserKey = "blocked-target" }, CancellationToken.None));
 	}
 }

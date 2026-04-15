@@ -99,6 +99,47 @@ public class FeedControllerTests : IClassFixture<CustomWebApplicationFactory>
         }
     }
 
+    private async Task EnsureBlockRelationAsync(Guid blockerId, Guid blockedUserId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        if (!dbContext.Blocks.Any(x => x.BlockerId == blockerId && x.BlockedUserId == blockedUserId))
+        {
+            dbContext.Blocks.Add(new Block
+            {
+                BlockerId = blockerId,
+                BlockedUserId = blockedUserId
+            });
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private async Task RemoveBlockRelationAsync(Guid firstUserId, Guid secondUserId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        var outbound = dbContext.Blocks.FirstOrDefault(x => x.BlockerId == firstUserId && x.BlockedUserId == secondUserId);
+        var inbound = dbContext.Blocks.FirstOrDefault(x => x.BlockerId == secondUserId && x.BlockedUserId == firstUserId);
+
+        if (outbound != null)
+        {
+            dbContext.Blocks.Remove(outbound);
+        }
+
+        if (inbound != null)
+        {
+            dbContext.Blocks.Remove(inbound);
+        }
+
+        if (outbound != null || inbound != null)
+        {
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
     private async Task<Guid> GetUserIdAsync(string email)
     {
         using var scope = _factory.Services.CreateScope();
@@ -165,6 +206,7 @@ public class FeedControllerTests : IClassFixture<CustomWebApplicationFactory>
         var testUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
         var adminId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
 
+        await RemoveBlockRelationAsync(testUserId, adminId);
         await EnsureFollowRelationAsync(testUserId, adminId);
 
         await CreatePostAsync(testUserClient, "Test user post");
@@ -183,5 +225,39 @@ public class FeedControllerTests : IClassFixture<CustomWebApplicationFactory>
         result!.Data.Should().ContainSingle();
         result.Data[0].UserId.Should().Be(adminId);
         result.Data[0].Content.Should().Be("Admin feed post");
+    }
+
+    [Fact]
+    public async Task Get_WhenAuthorIsBlocked_ShouldExcludeBlockedUsersPosts()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await TestDatabaseSeeder.ClearFeedDataAsync(scope.ServiceProvider);
+        }
+
+        var testUserToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+
+        var testUserClient = CreateAuthenticatedClient(testUserToken);
+        var adminClient = CreateAuthenticatedClient(adminToken);
+
+        var testUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
+        var adminId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
+
+        await RemoveBlockRelationAsync(testUserId, adminId);
+        await EnsureBlockRelationAsync(testUserId, adminId);
+
+        await CreatePostAsync(adminClient, "Blocked admin post");
+        await CreatePostAsync(testUserClient, "Visible self post");
+
+        var response = await testUserClient.GetAsync("/api/v1/feed?tab=Latest&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<GetFeedViewModel>(body, _json);
+
+        result.Should().NotBeNull();
+        result!.Data.Should().NotContain(post => post.UserId == adminId);
     }
 }

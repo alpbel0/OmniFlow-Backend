@@ -88,6 +88,18 @@ public class FollowsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		db.SaveChangesAsync().GetAwaiter().GetResult();
 	}
 
+	private async Task EnsureBlockRelationAsync(Guid blockerId, Guid blockedUserId)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<OmniFlow.Application.Interfaces.IApplicationDbContext>();
+
+		if (!db.Blocks.Any(x => x.BlockerId == blockerId && x.BlockedUserId == blockedUserId))
+		{
+			db.Blocks.Add(new OmniFlow.Domain.Entities.Block { BlockerId = blockerId, BlockedUserId = blockedUserId });
+			await db.SaveChangesAsync();
+		}
+	}
+
 	[Fact]
 	public async Task Follow_WithoutToken_Returns401()
 	{
@@ -177,6 +189,27 @@ public class FollowsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		var following = JsonSerializer.Deserialize<PagedResponse<FollowUserResponse>>(followingBody, _json);
 		following.Should().NotBeNull();
 		following!.Data.Should().ContainSingle(user => user.Id == targetUserId && user.IsFollowing == true);
+	}
+
+	[Fact]
+	public async Task Followers_AndFollowing_WhenBlockedRelationshipExists_Return404()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+
+		using var scope = _factory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<OmniFlow.Application.Interfaces.IApplicationDbContext>();
+		var currentUserId = db.Users.Single(x => x.Email == TestDatabaseSeeder.TestUserEmail).Id;
+		var targetUserId = db.Users.Single(x => x.Email == TestDatabaseSeeder.AdminEmail).Id;
+		ResetTestFollowState(targetUserId);
+
+		await EnsureBlockRelationAsync(targetUserId, currentUserId);
+
+		var followersResponse = await authClient.GetAsync($"/api/v1/users/{targetUserId}/followers?pageNumber=1&pageSize=10");
+		followersResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+		var followingResponse = await authClient.GetAsync($"/api/v1/users/{targetUserId}/following?pageNumber=1&pageSize=10");
+		followingResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 	}
 
 	[Fact]

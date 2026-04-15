@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.Follows;
 using OmniFlow.Application.Exceptions;
+using OmniFlow.Application.Helpers;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Application.Parameters;
@@ -37,6 +38,26 @@ public class GetFollowersQueryHandler : IRequestHandler<GetFollowersQuery, Paged
 			throw new EntityNotFoundException("User", request.UserId);
 		}
 
+		Guid? currentUserId = null;
+		if (Guid.TryParse(_authenticatedUserService.UserId, out var parsedUserId))
+		{
+			currentUserId = parsedUserId;
+		}
+
+		if (currentUserId.HasValue && currentUserId.Value != request.UserId)
+		{
+			var hasBlockRelationship = await BlockVisibilityHelper.HasBlockRelationshipAsync(
+				_context,
+				currentUserId.Value,
+				request.UserId,
+				cancellationToken);
+
+			if (hasBlockRelationship)
+			{
+				throw new EntityNotFoundException("User", request.UserId);
+			}
+		}
+
 		var parameter = new RequestParameter
 		{
 			PageNumber = request.Parameter.PageNumber,
@@ -46,12 +67,6 @@ public class GetFollowersQueryHandler : IRequestHandler<GetFollowersQuery, Paged
 		var pagedFollowers = await _followRepository.GetFollowersAsync(request.UserId, parameter);
 		var followerUsers = pagedFollowers.Data.Select(follow => follow.Follower!).ToList();
 		var response = _mapper.Map<List<FollowUserResponse>>(followerUsers);
-
-		Guid? currentUserId = null;
-		if (Guid.TryParse(_authenticatedUserService.UserId, out var parsedUserId))
-		{
-			currentUserId = parsedUserId;
-		}
 
 		if (currentUserId.HasValue && response.Any())
 		{

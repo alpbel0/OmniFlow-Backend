@@ -54,6 +54,25 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 		return client;
 	}
 
+	private async Task<Guid> GetUserIdAsync(string email)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+		return db.Users.Single(x => x.Email == email).Id;
+	}
+
+	private async Task EnsureBlockRelationAsync(Guid blockerId, Guid blockedUserId)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+		if (!db.Blocks.Any(x => x.BlockerId == blockerId && x.BlockedUserId == blockedUserId))
+		{
+			db.Blocks.Add(new Block { BlockerId = blockerId, BlockedUserId = blockedUserId });
+			await db.SaveChangesAsync();
+		}
+	}
+
 	[Fact]
 	public async Task GetTopContributors_WithoutToken_Returns200AndExcludesSuspendedUsers()
 	{
@@ -122,6 +141,20 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 		result.Should().NotBeNull();
 		result!.Username.Should().Be(TestDatabaseSeeder.TestUserUsername);
 		result.Email.Should().Be(TestDatabaseSeeder.TestUserEmail);
+	}
+
+	[Fact]
+	public async Task GetByUsername_WhenBlockedRelationshipExists_Returns404()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+
+		var currentUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
+		var targetUserId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
+		await EnsureBlockRelationAsync(currentUserId, targetUserId);
+
+		var response = await authClient.GetAsync("/api/v1/users/admin");
+		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 	}
 
 	[Fact]

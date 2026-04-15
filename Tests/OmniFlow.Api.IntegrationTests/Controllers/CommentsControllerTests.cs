@@ -5,6 +5,8 @@ using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.DTOs.Comments;
 using OmniFlow.Application.DTOs.Posts;
+using OmniFlow.Application.Interfaces;
+using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Api.IntegrationTests.Controllers;
@@ -84,6 +86,25 @@ public class CommentsControllerTests : IClassFixture<CustomWebApplicationFactory
 		return JsonSerializer.Deserialize<Guid>(body);
 	}
 
+	private async Task<Guid> GetUserIdAsync(string email)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+		return dbContext.Users.Single(x => x.Email == email).Id;
+	}
+
+	private async Task EnsureBlockRelationAsync(Guid blockerId, Guid blockedUserId)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+		if (!dbContext.Blocks.Any(x => x.BlockerId == blockerId && x.BlockedUserId == blockedUserId))
+		{
+			dbContext.Blocks.Add(new Block { BlockerId = blockerId, BlockedUserId = blockedUserId });
+			await dbContext.SaveChangesAsync();
+		}
+	}
+
 	[Fact]
 	public async Task GetByPost_WithoutToken_Returns401()
 	{
@@ -110,6 +131,25 @@ public class CommentsControllerTests : IClassFixture<CustomWebApplicationFactory
 		result.Should().NotBeNull();
 		result!.Data.Should().HaveCount(1);
 		result.Data[0].Content.Should().Be("Great trip");
+	}
+
+	[Fact]
+	public async Task GetByPost_WhenPostOwnerIsBlocked_Returns404()
+	{
+		var testUserToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+
+		var testUserClient = CreateAuthenticatedClient(testUserToken);
+		var adminClient = CreateAuthenticatedClient(adminToken);
+
+		var postId = await CreatePostAsync(adminClient);
+		var testUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
+		var adminId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
+
+		await EnsureBlockRelationAsync(testUserId, adminId);
+
+		var response = await testUserClient.GetAsync($"/api/v1/posts/{postId}/comments");
+		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 	}
 
 	[Fact]

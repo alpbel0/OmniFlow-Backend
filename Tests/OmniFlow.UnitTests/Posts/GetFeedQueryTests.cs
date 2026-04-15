@@ -37,6 +37,7 @@ public class GetFeedQueryTests
             newerPost
         }).Object);
         _contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
         _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>()).Object);
 
         var handler = CreateHandler();
@@ -75,6 +76,7 @@ public class GetFeedQueryTests
         {
             new() { FollowerId = userId, FollowingId = followedUserId }
         }).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
         _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>()).Object);
 
         var handler = CreateHandler();
@@ -107,6 +109,7 @@ public class GetFeedQueryTests
             firstPost
         }).Object);
         _contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
         _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>()).Object);
 
         var handler = CreateHandler();
@@ -138,6 +141,7 @@ public class GetFeedQueryTests
             post
         }).Object);
         _contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
         _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>()).Object);
 
         var handler = CreateHandler();
@@ -168,6 +172,7 @@ public class GetFeedQueryTests
             post
         }).Object);
         _contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
         _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>
         {
             new() { PostId = postId, UserId = userId }
@@ -182,6 +187,41 @@ public class GetFeedQueryTests
         }), CancellationToken.None);
 
         result.Data.Single().IsUpvoted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_WhenAuthorIsBlocked_ShouldExcludePostFromFeed()
+    {
+        var userId = Guid.NewGuid();
+        var blockedUserId = Guid.NewGuid();
+
+        _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+
+        var blockedPost = CreatePost(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-1), "blocked", blockedUserId);
+        var visiblePost = CreatePost(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-2), "visible", Guid.NewGuid());
+
+        _contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Post>
+        {
+            blockedPost,
+            visiblePost
+        }).Object);
+        _contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>
+        {
+            new() { BlockerId = userId, BlockedUserId = blockedUserId }
+        }).Object);
+        _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>()).Object);
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetFeedQuery(new GetFeedParameter
+        {
+            Tab = FeedTab.Latest,
+            PageSize = 20
+        }), CancellationToken.None);
+
+        result.Data.Should().ContainSingle();
+        result.Data[0].Content.Should().Be("visible");
     }
 
     private GetFeedQueryHandler CreateHandler()

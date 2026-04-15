@@ -203,14 +203,16 @@ public class GetCommentsByPostQueryHandlerTests
 	{
 		var postId = Guid.NewGuid();
 		var currentUserId = Guid.NewGuid();
+		var postOwnerId = Guid.NewGuid();
 		var rootCommentId = Guid.NewGuid();
 		var replyCommentId = Guid.NewGuid();
 
 		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
 		_contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Post>
 		{
-			new() { Id = postId }
+			new() { Id = postId, UserId = postOwnerId }
 		}).Object);
+		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
 		var replyComment = new Comment
 		{
@@ -234,7 +236,11 @@ public class GetCommentsByPostQueryHandlerTests
 		};
 
 		var comments = new List<Comment> { rootComment };
-		_commentRepositoryMock.Setup(x => x.GetByPostAsync(postId, It.IsAny<OmniFlow.Application.Parameters.RequestParameter>()))
+		_commentRepositoryMock.Setup(x => x.GetByPostAsync(
+			postId,
+			It.IsAny<OmniFlow.Application.Parameters.RequestParameter>(),
+			It.IsAny<IReadOnlyCollection<Guid>>(),
+			It.IsAny<CancellationToken>()))
 			.ReturnsAsync(new PagedResponse<Comment>(comments, 1, 10, 1));
 
 		var upvotes = new List<CommentUpvote>

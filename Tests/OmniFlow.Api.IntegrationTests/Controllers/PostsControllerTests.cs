@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.DTOs.Posts;
+using OmniFlow.Application.Interfaces;
+using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Api.IntegrationTests.Controllers;
@@ -70,6 +72,25 @@ public class PostsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		return JsonSerializer.Deserialize<Guid>(body);
 	}
 
+	private async Task<Guid> GetUserIdAsync(string email)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+		return dbContext.Users.Single(x => x.Email == email).Id;
+	}
+
+	private async Task EnsureBlockRelationAsync(Guid blockerId, Guid blockedUserId)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+		if (!dbContext.Blocks.Any(x => x.BlockerId == blockerId && x.BlockedUserId == blockedUserId))
+		{
+			dbContext.Blocks.Add(new Block { BlockerId = blockerId, BlockedUserId = blockedUserId });
+			await dbContext.SaveChangesAsync();
+		}
+	}
+
 	[Fact]
 	public async Task GetById_WithoutToken_Returns401()
 	{
@@ -108,6 +129,26 @@ public class PostsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		result!.Id.Should().Be(postId);
 		result.Content.Should().Be("Sunset in Antalya");
 		result.Username.Should().Be(TestDatabaseSeeder.TestUserUsername);
+	}
+
+	[Fact]
+	public async Task GetById_WhenPostOwnerIsBlocked_Returns404()
+	{
+		var testUserToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+
+		var testUserClient = CreateAuthenticatedClient(testUserToken);
+		var adminClient = CreateAuthenticatedClient(adminToken);
+
+		var testUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
+		var adminId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
+
+		var postId = await CreatePostAsync(adminClient);
+		await EnsureBlockRelationAsync(testUserId, adminId);
+
+		var response = await testUserClient.GetAsync($"/api/v1/posts/{postId}");
+
+		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 	}
 
 	[Fact]

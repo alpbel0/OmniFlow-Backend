@@ -4,6 +4,7 @@ using AutoMapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.Posts;
+using OmniFlow.Application.Helpers;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
@@ -41,6 +42,16 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
         IQueryable<Post> query = _context.Posts
             .Include(post => post.User)
             .Where(post => post.DeletedAt == null && post.IsVisible);
+
+        if (currentUserId.HasValue)
+        {
+            var blockedUserIds = await BlockVisibilityHelper.GetBlockedUserIdsAsync(_context, currentUserId.Value, cancellationToken);
+            if (blockedUserIds.Count > 0)
+            {
+                var blockedUserIdList = blockedUserIds.ToList();
+                query = query.Where(post => !blockedUserIdList.Contains(post.UserId));
+            }
+        }
 
         if (parameter.Tab == FeedTab.Following)
         {

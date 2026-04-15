@@ -44,6 +44,7 @@ public class GetPostByIdQueryHandlerTests
         };
         var upvoteSet = MockDbSetHelper.CreateAsyncMockDbSet(upvotes);
         _contextMock.Setup(x => x.PostUpvotes).Returns(upvoteSet.Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         _mapperMock
             .Setup(x => x.Map<PostResponse>(post))
@@ -55,5 +56,28 @@ public class GetPostByIdQueryHandlerTests
 
         result.Id.Should().Be(postId);
         result.IsUpvoted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_WhenAuthorIsBlocked_ShouldThrowEntityNotFoundException()
+    {
+        var postId = Guid.NewGuid();
+        var currentUserId = Guid.NewGuid();
+        var blockedAuthorId = Guid.NewGuid();
+
+        _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+
+        var post = new Post { Id = postId, UserId = blockedAuthorId, IsVisible = true };
+        _postRepositoryMock.Setup(x => x.GetByIdWithUserAsync(postId)).ReturnsAsync(post);
+        _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>
+        {
+            new() { BlockerId = currentUserId, BlockedUserId = blockedAuthorId }
+        }).Object);
+
+        var handler = new GetPostByIdQueryHandler(_postRepositoryMock.Object, _contextMock.Object, _authenticatedUserServiceMock.Object, _mapperMock.Object);
+
+        await Assert.ThrowsAsync<EntityNotFoundException>(() =>
+            handler.Handle(new GetPostByIdQuery { PostId = postId }, CancellationToken.None));
     }
 }

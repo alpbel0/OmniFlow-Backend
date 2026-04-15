@@ -23,20 +23,39 @@ public class CommentRepositoryAsync : GenericRepositoryAsync<Comment>, ICommentR
 			.FirstOrDefaultAsync(c => c.Id == commentId);
 	}
 
-	public async Task<PagedResponse<Comment>> GetByPostAsync(Guid postId, RequestParameter parameter)
+	public async Task<PagedResponse<Comment>> GetByPostAsync(
+		Guid postId,
+		RequestParameter parameter,
+		IReadOnlyCollection<Guid>? blockedUserIds = null,
+		CancellationToken cancellationToken = default)
 	{
-		var query = _dbSet
-			.Include(c => c.User)
-			.Include(c => c.Replies)
-			.ThenInclude(r => r.User)
-			.Where(c => c.PostId == postId && c.ParentCommentId == null)
-			.OrderBy(c => c.CreatedAt);
+		var blockedIds = blockedUserIds?.ToList() ?? new List<Guid>();
 
-		var totalCount = await query.CountAsync();
+		IQueryable<Comment> query = _dbSet
+			.Include(c => c.User)
+			.Where(c => c.PostId == postId && c.ParentCommentId == null);
+
+		if (blockedIds.Count > 0)
+		{
+			query = query
+				.Where(c => !blockedIds.Contains(c.UserId))
+				.Include(c => c.Replies.Where(r => !blockedIds.Contains(r.UserId)))
+				.ThenInclude(r => r.User);
+		}
+		else
+		{
+			query = query
+				.Include(c => c.Replies)
+				.ThenInclude(r => r.User);
+		}
+
+		query = query.OrderBy(c => c.CreatedAt);
+
+		var totalCount = await query.CountAsync(cancellationToken);
 		var items = await query
 			.Skip((parameter.PageNumber - 1) * parameter.PageSize)
 			.Take(parameter.PageSize)
-			.ToListAsync();
+			.ToListAsync(cancellationToken);
 
 		return new PagedResponse<Comment>(items, parameter.PageNumber, parameter.PageSize, totalCount);
 	}

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.Exceptions;
+using OmniFlow.Application.Helpers;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Domain.Entities;
@@ -35,6 +36,20 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, U
 		if (user == null)
 		{
 			throw new EntityNotFoundException("User", request.UserKey);
+		}
+
+		if (Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId) && currentUserId != user.Id)
+		{
+			var hasBlockRelationship = await BlockVisibilityHelper.HasBlockRelationshipAsync(
+				_context,
+				currentUserId,
+				user.Id,
+				cancellationToken);
+
+			if (hasBlockRelationship)
+			{
+				throw new EntityNotFoundException("User", request.UserKey);
+			}
 		}
 
 		var response = _mapper.Map<UserProfileResponse>(user);

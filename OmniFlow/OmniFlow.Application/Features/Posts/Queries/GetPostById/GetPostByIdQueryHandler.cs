@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using OmniFlow.Application.DTOs.Posts;
 using OmniFlow.Application.Exceptions;
+using OmniFlow.Application.Helpers;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 
@@ -34,11 +35,25 @@ public class GetPostByIdQueryHandler : IRequestHandler<GetPostByIdQuery, PostRes
             throw new EntityNotFoundException("Post", request.PostId);
         }
 
+        if (Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId) && currentUserId != post.UserId)
+        {
+            var hasBlockRelationship = await BlockVisibilityHelper.HasBlockRelationshipAsync(
+                _context,
+                currentUserId,
+                post.UserId,
+                cancellationToken);
+
+            if (hasBlockRelationship)
+            {
+                throw new EntityNotFoundException("Post", request.PostId);
+            }
+        }
+
         var response = _mapper.Map<PostResponse>(post);
 
-        var currentUserId = Guid.Parse(_authenticatedUserService.UserId);
+        var viewerUserId = Guid.Parse(_authenticatedUserService.UserId);
         response.IsUpvoted = _context.PostUpvotes
-            .Any(x => x.PostId == post.Id && x.UserId == currentUserId);
+            .Any(x => x.PostId == post.Id && x.UserId == viewerUserId);
 
         return response;
     }
