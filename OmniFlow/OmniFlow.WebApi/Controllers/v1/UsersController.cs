@@ -100,7 +100,12 @@ public class UsersController : BaseApiController
 			return BadRequest(new { message = "Yalnızca resim dosyaları kabul edilir." });
 
 		await using var stream = file.OpenReadStream();
-		var url = await _blobService.UploadAsync(stream, contentType, file.FileName, cancellationToken);
+		var url = await _blobService.UploadAsync(
+			stream,
+			contentType,
+			file.FileName,
+			"profile-photos",
+			cancellationToken);
 
 		await Mediator.Send(
 			new UpdateProfileCommand { ProfilePhotoUrl = url },

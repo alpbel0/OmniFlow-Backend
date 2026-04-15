@@ -30,6 +30,7 @@ public class BlobService : IBlobService
 		Stream stream,
 		string contentType,
 		string? originalFileName,
+		string? folder = null,
 		CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(stream);
@@ -43,7 +44,7 @@ public class BlobService : IBlobService
 				cancellationToken: cancellationToken);
 
 			var extension = ResolveExtension(originalFileName, contentType);
-			var blobName = $"{Guid.NewGuid():N}{extension}";
+			var blobName = BuildBlobName(extension, folder);
 			var blobClient = containerClient.GetBlobClient(blobName);
 
 			var headers = new BlobHttpHeaders
@@ -98,6 +99,24 @@ public class BlobService : IBlobService
 			return fromName.ToLowerInvariant();
 
 		return ExtensionFromContentType(contentType) ?? ".bin";
+	}
+
+	private static string BuildBlobName(string extension, string? folder)
+	{
+		var fileName = $"{Guid.NewGuid():N}{extension}";
+		if (string.IsNullOrWhiteSpace(folder))
+			return fileName;
+
+		var safeFolder = folder
+			.Replace('\\', '/')
+			.Trim('/')
+			.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+		if (safeFolder.Length == 0)
+			return fileName;
+
+		var now = DateTime.UtcNow;
+		return $"{string.Join('/', safeFolder)}/{now:yyyy}/{now:MM}/{fileName}";
 	}
 
 	private static string? ExtensionFromContentType(string contentType)

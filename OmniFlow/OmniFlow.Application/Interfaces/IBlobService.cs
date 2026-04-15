@@ -12,5 +12,6 @@ public interface IBlobService
 		Stream stream,
 		string contentType,
 		string? originalFileName,
+		string? folder = null,
 		CancellationToken cancellationToken = default);
 }
