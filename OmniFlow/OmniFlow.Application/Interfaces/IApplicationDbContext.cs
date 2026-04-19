@@ -27,6 +27,7 @@ public interface IApplicationDbContext
 	DbSet<KarmaEvent> KarmaEvents { get; }
 	DbSet<RefreshToken> RefreshTokens { get; }
 	DbSet<EmailVerificationDispatch> EmailVerificationDispatches { get; }
+	DbSet<PasswordResetToken> PasswordResetTokens { get; }
 
 	DbSet<T> Set<T>() where T : class;
 

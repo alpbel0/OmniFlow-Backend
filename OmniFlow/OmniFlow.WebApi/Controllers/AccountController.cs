@@ -18,6 +18,7 @@ public class AccountController : ControllerBase
 	private readonly IValidator<AuthenticationRequest> _loginValidator;
 	private readonly IValidator<VerifyEmailRequest> _verifyEmailValidator;
 	private readonly IValidator<ResendVerificationEmailRequest> _resendVerificationEmailValidator;
+	private readonly IValidator<ResetPasswordRequest> _resetPasswordValidator;
 
 	public AccountController(
 		IAccountService accountService,
@@ -25,7 +26,8 @@ public class AccountController : ControllerBase
 		IValidator<RegisterRequest> registerValidator,
 		IValidator<AuthenticationRequest> loginValidator,
 		IValidator<VerifyEmailRequest> verifyEmailValidator,
-		IValidator<ResendVerificationEmailRequest> resendVerificationEmailValidator)
+		IValidator<ResendVerificationEmailRequest> resendVerificationEmailValidator,
+		IValidator<ResetPasswordRequest> resetPasswordValidator)
 	{
 		_accountService = accountService;
 		_jwtSettings = jwtSettings.Value;
@@ -33,6 +35,7 @@ public class AccountController : ControllerBase
 		_loginValidator = loginValidator;
 		_verifyEmailValidator = verifyEmailValidator;
 		_resendVerificationEmailValidator = resendVerificationEmailValidator;
+		_resetPasswordValidator = resetPasswordValidator;
 	}
 
 	/// <summary>Register a new user account.</summary>
@@ -143,13 +146,28 @@ public class AccountController : ControllerBase
 		return Ok(result);
 	}
 
-	/// <summary>Request a password reset email (placeholder — mail service not implemented in MVP).</summary>
+	/// <summary>Request a password reset email.</summary>
 	[HttpPost("forgot-password")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
 	{
 		await _accountService.ForgotPasswordAsync(request.Email);
 		return Ok(new { message = "If the email exists, a reset link has been sent." });
+	}
+
+	/// <summary>Reset password using token from forgot-password email.</summary>
+	[HttpPost("reset-password")]
+	[ProducesResponseType(typeof(MessageResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+	public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+	{
+		var validation = await _resetPasswordValidator.ValidateAsync(request);
+		if (!validation.IsValid)
+			throw new ValidationException(validation.Errors);
+
+		await _accountService.ResetPasswordAsync(request);
+		return Ok(new MessageResponse { Message = "Password has been reset successfully." });
 	}
 
 	private bool IsMobileRequest() =>
