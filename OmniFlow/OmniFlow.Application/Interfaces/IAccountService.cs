@@ -10,4 +10,5 @@ public interface IAccountService
 	Task VerifyEmailAsync(VerifyEmailRequest request);
 	Task ResendVerificationEmailAsync(ResendVerificationEmailRequest request);
 	Task ForgotPasswordAsync(string email);
+	Task ResetPasswordAsync(ResetPasswordRequest request);
 }

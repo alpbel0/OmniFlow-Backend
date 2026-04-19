@@ -255,10 +255,105 @@ public class AccountService : IAccountService
 		};
 	}
 
-	public Task ForgotPasswordAsync(string email)
+	public async Task ForgotPasswordAsync(string email)
 	{
-		// Placeholder — mail service not implemented in MVP phase
-		return Task.CompletedTask;
+		var applicationUser = await _userManager.FindByEmailAsync(email);
+		if (applicationUser is null)
+			return;
+
+		if (!applicationUser.EmailConfirmed)
+			return;
+
+		var now = DateTime.UtcNow;
+
+		var lastDispatch = await _context.Set<EmailVerificationDispatch>()
+			.Where(x => x.Email == email && x.Purpose == "password-reset")
+			.OrderByDescending(x => x.SentAt)
+			.FirstOrDefaultAsync();
+
+		if (lastDispatch is not null && now - lastDispatch.SentAt < TimeSpan.FromSeconds(60))
+			throw new ApiException("Please wait before requesting another password reset email.", 429);
+
+		var today = now.Date;
+		var dispatchCountToday = await _context.Set<EmailVerificationDispatch>()
+			.CountAsync(x => x.Email == email
+				&& x.Purpose == "password-reset"
+				&& x.SentAt >= today
+				&& x.SentAt < today.AddDays(1));
+
+		if (dispatchCountToday >= 5)
+			throw new ApiException("You have reached the daily password reset email limit.", 429);
+
+		var existingTokens = await _context.Set<PasswordResetToken>()
+			.Where(t => t.UserId == applicationUser.Id && t.UsedAt == null && t.ExpiresAt > now)
+			.ToListAsync();
+
+		foreach (var t in existingTokens)
+			t.UsedAt = DateTime.UtcNow;
+
+		var rawToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+		var hashedToken = HashToken(rawToken);
+
+		var passwordResetToken = new PasswordResetToken
+		{
+			UserId = applicationUser.Id,
+			TokenHash = hashedToken,
+			CreatedAt = now,
+			ExpiresAt = now.AddHours(1)
+		};
+
+		_context.Set<PasswordResetToken>().Add(passwordResetToken);
+
+		var resetUrl = $"{_mailSettings.FrontendResetUrl}?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(rawToken)}";
+
+		await _emailService.SendPasswordResetEmailAsync(email, resetUrl);
+
+		_context.Set<EmailVerificationDispatch>().Add(new EmailVerificationDispatch
+		{
+			UserId = applicationUser.Id,
+			Email = email,
+			Purpose = "password-reset",
+			SentAt = now
+		});
+
+		await _context.SaveChangesAsync();
+	}
+
+	public async Task ResetPasswordAsync(ResetPasswordRequest request)
+	{
+		var applicationUser = await _userManager.FindByEmailAsync(request.Email);
+		if (applicationUser is null)
+			throw new ApiException("Invalid or expired reset token.");
+
+		var hashedToken = HashToken(request.Token);
+
+		var passwordResetToken = await _context.Set<PasswordResetToken>()
+			.Where(t => t.UserId == applicationUser.Id
+				&& t.TokenHash == hashedToken
+				&& t.UsedAt == null
+				&& t.ExpiresAt > DateTime.UtcNow)
+			.FirstOrDefaultAsync();
+
+		if (passwordResetToken is null)
+			throw new ApiException("Invalid or expired reset token.");
+
+		passwordResetToken.UsedAt = DateTime.UtcNow;
+
+		var result = await _userManager.RemovePasswordAsync(applicationUser);
+		if (!result.Succeeded)
+		{
+			var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+			throw new ApiException($"Password reset failed: {errors}");
+		}
+
+		result = await _userManager.AddPasswordAsync(applicationUser, request.NewPassword);
+		if (!result.Succeeded)
+		{
+			var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+			throw new ApiException($"Password reset failed: {errors}");
+		}
+
+		await _context.SaveChangesAsync();
 	}
 
 	private string GenerateJwtToken(ApplicationUser user, string role)

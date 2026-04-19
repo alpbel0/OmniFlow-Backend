@@ -10,4 +10,5 @@ public class MailSettings
 	public string SenderEmail { get; set; } = default!;
 	public string SenderName { get; set; } = default!;
 	public string FrontendVerifyUrl { get; set; } = default!;
+	public string FrontendResetUrl { get; set; } = default!;
 }
