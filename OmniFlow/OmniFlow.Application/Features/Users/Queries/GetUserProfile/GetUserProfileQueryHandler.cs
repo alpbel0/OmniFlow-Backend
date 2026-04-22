@@ -38,20 +38,6 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, U
 			throw new EntityNotFoundException("User", request.UserKey);
 		}
 
-		if (Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId) && currentUserId != user.Id)
-		{
-			var hasBlockRelationship = await BlockVisibilityHelper.HasBlockRelationshipAsync(
-				_context,
-				currentUserId,
-				user.Id,
-				cancellationToken);
-
-			if (hasBlockRelationship)
-			{
-				throw new EntityNotFoundException("User", request.UserKey);
-			}
-		}
-
 		var response = _mapper.Map<UserProfileResponse>(user);
 		response.TripCount = (await _context.Trips
 			.Where(trip => trip.OwnerId == user.Id && trip.DeletedAt == null)
@@ -60,6 +46,29 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, U
 			.Where(post => post.UserId == user.Id && post.DeletedAt == null)
 			.ToListAsync(cancellationToken)).Count;
 		response.IsFollowing = await IsFollowingCurrentUserAsync(user.Id, cancellationToken);
+
+		if (Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId) && currentUserId != user.Id)
+		{
+			var isBlockedByMe = await _context.Blocks.AnyAsync(
+				block => block.BlockerId == currentUserId && block.BlockedUserId == user.Id,
+				cancellationToken);
+
+			var isBlockedByThem = await _context.Blocks.AnyAsync(
+				block => block.BlockerId == user.Id && block.BlockedUserId == currentUserId,
+				cancellationToken);
+
+			if (isBlockedByMe || isBlockedByThem)
+			{
+				response.IsBlocked = true;
+				response.IsBlockedByMe = isBlockedByMe;
+				response.FollowersCount = 0;
+				response.FollowingCount = 0;
+				response.TripCount = 0;
+				response.PostCount = 0;
+				response.IsFollowing = false;
+				response.KarmaScore = 0;
+			}
+		}
 
 		return response;
 	}

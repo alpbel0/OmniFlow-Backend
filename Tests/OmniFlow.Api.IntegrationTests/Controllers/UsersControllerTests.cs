@@ -144,7 +144,7 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 	}
 
 	[Fact]
-	public async Task GetByUsername_WhenBlockedRelationshipExists_Returns404()
+	public async Task GetByUsername_WhenBlockedRelationshipExists_Returns200WithMetricsZeroed()
 	{
 		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
 		var authClient = CreateAuthenticatedClient(token);
@@ -154,7 +154,19 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 		await EnsureBlockRelationAsync(currentUserId, targetUserId);
 
 		var response = await authClient.GetAsync("/api/v1/users/admin");
-		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<UserProfileResponse>(body, _json);
+
+		result.Should().NotBeNull();
+		result!.Username.Should().Be("admin");
+		result.IsBlocked.Should().BeTrue();
+		result.IsBlockedByMe.Should().BeTrue();
+		result.FollowersCount.Should().Be(0);
+		result.FollowingCount.Should().Be(0);
+		result.TripCount.Should().Be(0);
+		result.PostCount.Should().Be(0);
 	}
 
 	[Fact]

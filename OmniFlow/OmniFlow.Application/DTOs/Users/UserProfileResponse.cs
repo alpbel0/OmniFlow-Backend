@@ -14,4 +14,6 @@ public class UserProfileResponse
 	public bool IsFollowing { get; set; }
 	public int TripCount { get; set; }
 	public int PostCount { get; set; }
+	public bool IsBlocked { get; set; }
+	public bool IsBlockedByMe { get; set; }
 }

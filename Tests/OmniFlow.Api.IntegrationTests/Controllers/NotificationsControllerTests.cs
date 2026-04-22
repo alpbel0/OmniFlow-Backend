@@ -97,12 +97,22 @@ public class NotificationsControllerTests : IClassFixture<CustomWebApplicationFa
 	{
 		using var scope = _factory.Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
 		var follow = db.Follows.FirstOrDefault(x => x.FollowerId == followerId && x.FollowingId == followingId);
 		if (follow != null)
 		{
 			db.Follows.Remove(follow);
-			db.SaveChangesAsync().GetAwaiter().GetResult();
 		}
+
+		var block = db.Blocks.FirstOrDefault(x =>
+			(x.BlockerId == followerId && x.BlockedUserId == followingId) ||
+			(x.BlockerId == followingId && x.BlockedUserId == followerId));
+		if (block != null)
+		{
+			db.Blocks.Remove(block);
+		}
+
+		db.SaveChangesAsync().GetAwaiter().GetResult();
 	}
 
 	private (Guid TestUserId, Guid AdminUserId) GetUserIds()
