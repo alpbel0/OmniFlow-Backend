@@ -26,6 +26,7 @@ public class GetFollowingQueryTests
     {
         var targetUserId = Guid.NewGuid();
         _contextMock.Setup(x => x.Users).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<User>()).Object);
+	_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         var handler = new GetFollowingQueryHandler(
             _followRepositoryMock.Object,
@@ -58,6 +59,7 @@ public class GetFollowingQueryTests
         {
             new() { Id = targetUserId, Username = "target", Email = "target@example.com" }
         }).Object);
+	_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         var followingOne = new User { Id = followingOneId, Username = "alice", Email = "alice@example.com" };
         var followingTwo = new User { Id = followingTwoId, Username = "bob", Email = "bob@example.com" };
@@ -73,6 +75,7 @@ public class GetFollowingQueryTests
         {
             new() { FollowerId = currentUserId, FollowingId = followingOneId }
         }).Object);
+	_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         var handler = new GetFollowingQueryHandler(
             _followRepositoryMock.Object,

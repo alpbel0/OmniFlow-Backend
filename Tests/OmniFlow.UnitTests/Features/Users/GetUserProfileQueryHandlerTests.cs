@@ -167,7 +167,7 @@ public class GetUserProfileQueryHandlerTests
 	}
 
 	[Fact]
-	public async Task Handle_WhenViewerAndTargetAreBlocked_ShouldThrowEntityNotFoundException()
+	public async Task Handle_WhenViewerAndTargetAreBlocked_ShouldReturnProfileWithMetricsZeroed()
 	{
 		var currentUserId = Guid.NewGuid();
 		var targetUserId = Guid.NewGuid();
@@ -178,10 +178,22 @@ public class GetUserProfileQueryHandlerTests
 		{
 			Id = targetUserId,
 			Username = "blocked-target",
-			Email = "blocked-target@example.com"
+			Email = "blocked-target@example.com",
+			KarmaScore = 100,
+			FollowersCount = 50,
+			FollowingCount = 25
 		};
 
 		_userRepositoryMock.Setup(x => x.GetByUsernameAsync("blocked-target")).ReturnsAsync(targetUser);
+		_contextMock.Setup(x => x.Trips).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Trip>
+		{
+			new() { Id = Guid.NewGuid(), OwnerId = targetUserId }
+		}).Object);
+		_contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Post>
+		{
+			new() { Id = Guid.NewGuid(), UserId = targetUserId }
+		}).Object);
+		_contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
 		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>
 		{
 			new() { BlockerId = currentUserId, BlockedUserId = targetUserId }
@@ -193,7 +205,17 @@ public class GetUserProfileQueryHandlerTests
 			_authenticatedUserServiceMock.Object,
 			_mapper);
 
-		await Assert.ThrowsAsync<EntityNotFoundException>(() =>
-			handler.Handle(new GetUserProfileQuery { UserKey = "blocked-target" }, CancellationToken.None));
+		var result = await handler.Handle(new GetUserProfileQuery { UserKey = "blocked-target" }, CancellationToken.None);
+
+		result.Id.Should().Be(targetUserId);
+		result.Username.Should().Be("blocked-target");
+		result.IsBlocked.Should().BeTrue();
+		result.IsBlockedByMe.Should().BeTrue();
+		result.FollowersCount.Should().Be(0);
+		result.FollowingCount.Should().Be(0);
+		result.TripCount.Should().Be(0);
+		result.PostCount.Should().Be(0);
+		result.KarmaScore.Should().Be(0);
+		result.IsFollowing.Should().BeFalse();
 	}
 }

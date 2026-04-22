@@ -26,6 +26,7 @@ public class GetFollowersQueryTests
     {
         var targetUserId = Guid.NewGuid();
         _contextMock.Setup(x => x.Users).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<User>()).Object);
+	_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         var handler = new GetFollowersQueryHandler(
             _followRepositoryMock.Object,
@@ -58,6 +59,7 @@ public class GetFollowersQueryTests
         {
             new() { Id = targetUserId, Username = "target", Email = "target@example.com" }
         }).Object);
+	_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         var followerOne = new User { Id = followerOneId, Username = "alice", Email = "alice@example.com", ProfilePhotoUrl = "https://cdn.example.com/alice.jpg" };
         var followerTwo = new User { Id = followerTwoId, Username = "bob", Email = "bob@example.com" };
@@ -73,6 +75,7 @@ public class GetFollowersQueryTests
         {
             new() { FollowerId = currentUserId, FollowingId = followerOneId }
         }).Object);
+	_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
 
         var handler = new GetFollowersQueryHandler(
             _followRepositoryMock.Object,
