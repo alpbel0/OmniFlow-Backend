@@ -42,8 +42,8 @@ public class GetFlightsByTripQueryTests
             Id = tripId,
             OwnerId = userId,
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             Status = TripStatus.Published
         };
 

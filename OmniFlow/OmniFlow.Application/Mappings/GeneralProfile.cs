@@ -7,15 +7,12 @@ using OmniFlow.Application.DTOs.Follows;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.DTOs.Places;
 using OmniFlow.Application.DTOs.Posts;
-using OmniFlow.Application.DTOs.Stops;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.Comments.Commands.CreateComment;
 using OmniFlow.Application.Features.CommunityTips.Commands.CreateTip;
 using OmniFlow.Application.Features.Places.Commands.CreatePlace;
 using OmniFlow.Application.Features.Posts.Commands.CreatePost;
 using OmniFlow.Application.Features.Posts.Commands.UpdatePost;
-using OmniFlow.Application.Features.Stops.Commands.CreateStop;
-using OmniFlow.Application.Features.Stops.Commands.UpdateStop;
 using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 using OmniFlow.Domain.Entities;
@@ -56,28 +53,6 @@ public class GeneralProfile : Profile
 
         CreateMap<CreateTripCommand, Trip>();
         CreateMap<UpdateTripCommand, Trip>();
-
-        // Stop mappings
-        CreateMap<Stop, StopResponse>()
-            .ForMember(dest => dest.PlaceName, opt => opt.MapFrom(src => src.Place!.Name))
-            .ForMember(dest => dest.PlaceCategory, opt => opt.MapFrom(src => src.Place != null ? src.Place.Category : (Domain.Enums.PlaceCategory?)null))
-            .ForMember(dest => dest.PlacePhotoUrl, opt => opt.MapFrom(src => src.Place!.PhotoUrl))
-            .ForMember(dest => dest.FallbackPlaceName, opt => opt.MapFrom(src => src.FallbackPlace!.Name))
-            .ForMember(dest => dest.FallbackPlaceCategory, opt => opt.MapFrom(src => src.FallbackPlace != null ? src.FallbackPlace.Category : (Domain.Enums.PlaceCategory?)null));
-
-        CreateMap<CreateStopCommand, Stop>();
-        CreateMap<UpdateStopCommand, Stop>()
-            .ForMember(dest => dest.TripId, opt => opt.Ignore())
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.IsVisited, opt => opt.Ignore())
-            .ForMember(dest => dest.VisitedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.AddedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.AiReasoning, opt => opt.Ignore())
-            .ForMember(dest => dest.OrderIndex, opt => opt.Ignore())
-            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
         // Flight mappings
         CreateMap<Flight, FlightResponse>();

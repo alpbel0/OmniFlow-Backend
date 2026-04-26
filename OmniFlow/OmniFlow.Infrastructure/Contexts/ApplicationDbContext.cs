@@ -21,8 +21,9 @@ public class ApplicationDbContext
 	DbSet<User> IApplicationDbContext.Users => Set<User>();
 
 	public DbSet<Trip> Trips => Set<Trip>();
+	public DbSet<TripDestination> TripDestinations => Set<TripDestination>();
+	public DbSet<TimelineEntry> TimelineEntries => Set<TimelineEntry>();
 	public DbSet<Place> Places => Set<Place>();
-	public DbSet<Stop> Stops => Set<Stop>();
 	public DbSet<Flight> Flights => Set<Flight>();
 	public DbSet<Hotel> Hotels => Set<Hotel>();
 	public DbSet<ProviderFlight> ProviderFlights => Set<ProviderFlight>();

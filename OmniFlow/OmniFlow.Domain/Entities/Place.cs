@@ -13,7 +13,7 @@ public class Place : BaseEntity
 
     public string? PhotoUrl { get; set; }
 
-    public string? PhotoUrls { get; set; }  // JSON array - birden fazla fotогraf URL'i
+    public List<string> PhotoUrls { get; set; } = new();  // Fotoğraf galerisi URL'leri
 
     public string? Phone { get; set; }
 
@@ -46,6 +46,8 @@ public class Place : BaseEntity
     public List<BudgetTier> BudgetTiers { get; set; } = new();
 
     public List<TravelStyle> TravelStyles { get; set; } = new();
+
+    public List<string> GoogleTags { get; set; } = new();  // Google Places tag'leri (scoring bonus)
 
     public int? DurationMinutes { get; set; }
 

@@ -5,8 +5,8 @@ public class FeaturedTripResponse
 	public Guid Id { get; set; }
 	public string Title { get; set; } = string.Empty;
 	public string? CoverPhotoUrl { get; set; }
-	public string City { get; set; } = string.Empty;
-	public string Country { get; set; } = string.Empty;
+	public string Origin { get; set; } = string.Empty;
+	public string OriginCountry { get; set; } = string.Empty;
 	public int ForkCount { get; set; }
 	public int UpvoteCount { get; set; }
 	public decimal PopularityScore { get; set; }

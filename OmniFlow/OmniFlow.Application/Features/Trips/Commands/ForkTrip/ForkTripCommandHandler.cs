@@ -33,7 +33,7 @@ public class ForkTripCommandHandler : IRequestHandler<ForkTripCommand, Guid>
 
     public async Task<Guid> Handle(ForkTripCommand request, CancellationToken cancellationToken)
     {
-        // 1. Get original trip with all related data (Stops, Flights, Hotels, Owner)
+        // 1. Get original trip with related data (Flights, Hotels, Owner)
         var originalTrip = await _tripRepository.GetWithAllRelatedDataAsync(request.TripId);
 
         // 2. Validate trip exists
@@ -60,14 +60,16 @@ public class ForkTripCommandHandler : IRequestHandler<ForkTripCommand, Guid>
             Description = originalTrip.Description,
             CoverPhotoUrl = originalTrip.CoverPhotoUrl,
             Status = TripStatus.Draft,
-            City = originalTrip.City,
-            Country = originalTrip.Country,
-            StartDate = originalTrip.StartDate,
-            EndDate = originalTrip.EndDate,
+            Origin = originalTrip.Origin,
+            OriginCountry = originalTrip.OriginCountry,
             PersonCount = originalTrip.PersonCount,
             BudgetTier = originalTrip.BudgetTier,
-            TravelStyle = originalTrip.TravelStyle,
-            UserBudget = originalTrip.UserBudget,
+            TravelCompanion = originalTrip.TravelCompanion,
+            TravelStyles = originalTrip.TravelStyles.ToList(),
+            Tempo = originalTrip.Tempo,
+            TransportPreference = originalTrip.TransportPreference,
+            ManualBudget = originalTrip.ManualBudget,
+            AdjustedBudgetTier = originalTrip.AdjustedBudgetTier,
             EstimatedCost = originalTrip.EstimatedCost,
             ForkCount = 0,
             UpvoteCount = 0,
@@ -76,38 +78,39 @@ public class ForkTripCommandHandler : IRequestHandler<ForkTripCommand, Guid>
             Tags = originalTrip.Tags.ToList()
         };
 
-        // 7. Deep copy Stops (new IDs, reset visited state)
-        foreach (var originalStop in originalTrip.Stops)
+        // 7. Deep copy TripDestinations + TimelineEntries
+        var originalDestinations = await _context.TripDestinations
+            .Where(d => d.TripId == originalTrip.Id && d.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        var originalTimelineEntries = await _context.TimelineEntries
+            .Where(e => e.TripId == originalTrip.Id && e.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        var destinationIdMap = new Dictionary<Guid, Guid>();
+        foreach (var originalDest in originalDestinations)
         {
-            var forkedStop = new Stop
+            var newDestId = Guid.NewGuid();
+            destinationIdMap[originalDest.Id] = newDestId;
+
+            var forkedDest = new TripDestination(
+                originalDest.ArrivalDate,
+                originalDest.DepartureDate,
+                originalDest.City,
+                originalDest.Country,
+                originalDest.OrderIndex)
             {
-                TripId = forkedTrip.Id,
-                PlaceId = originalStop.PlaceId,
-                FallbackPlaceId = originalStop.FallbackPlaceId,
-                DayNumber = originalStop.DayNumber,
-                OrderIndex = originalStop.OrderIndex,
-                ArrivalTime = originalStop.ArrivalTime,
-                DurationMinutes = originalStop.DurationMinutes,
-                IsTimeLocked = originalStop.IsTimeLocked,
-                CustomName = originalStop.CustomName,
-                CustomCategory = originalStop.CustomCategory,
-                CustomPhotoUrl = originalStop.CustomPhotoUrl,
-                CustomLatitude = originalStop.CustomLatitude,
-                CustomLongitude = originalStop.CustomLongitude,
-                Notes = originalStop.Notes,
-                BookingReference = null,
-                ReservationNote = null,
-                ActivityPrice = originalStop.ActivityPrice,
-                TransportPrice = originalStop.TransportPrice,
-                CurrencyCode = originalStop.CurrencyCode,
-                TransportFromPrevious = originalStop.TransportFromPrevious,
-                TravelTimeFromPrevious = originalStop.TravelTimeFromPrevious,
-                IsVisited = false,
-                VisitedAt = null,
-                AddedBy = originalStop.AddedBy,
-                AiReasoning = originalStop.AiReasoning
+                Id = newDestId,
+                TripId = forkedTrip.Id
             };
-            forkedTrip.Stops.Add(forkedStop);
+            await _context.TripDestinations.AddAsync(forkedDest, cancellationToken);
+        }
+
+        foreach (var originalEntry in originalTimelineEntries)
+        {
+            var newDestId = destinationIdMap[originalEntry.DestinationId];
+            var forkedEntry = originalEntry.CloneForFork(forkedTrip.Id, newDestId);
+            await _context.TimelineEntries.AddAsync(forkedEntry, cancellationToken);
         }
 
         // 8. Deep copy Flights (new IDs, reset booking state)

@@ -59,13 +59,11 @@ public class FlightsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Id = Guid.NewGuid(),
             OwnerId = userId,
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             Status = status,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure,
-            StartDate = DateOnly.FromDateTime(DateTime.Today.AddDays(7)),
-            EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(14))
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure },
         };
 
         dbContext.Trips.Add(trip);

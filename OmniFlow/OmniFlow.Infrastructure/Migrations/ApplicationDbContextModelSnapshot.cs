@@ -841,7 +841,8 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("country");
 
                     b.Property<string>("Cuisine")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("cuisine");
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
@@ -865,17 +866,25 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("estimated_price");
 
                     b.Property<string>("Fee")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("fee");
 
                     b.Property<string>("GooglePlaceId")
                         .HasColumnType("text")
                         .HasColumnName("google_place_id");
 
+                    b.Property<string[]>("GoogleTags")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("google_tags");
+
                     b.Property<string>("Heritage")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("heritage");
 
                     b.Property<string>("Image")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("image");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -912,18 +921,22 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("photo_url");
 
-                    b.Property<string>("PhotoUrls")
-                        .HasColumnType("text");
+                    b.Property<string[]>("PhotoUrls")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("photo_urls");
 
                     b.Property<int?>("PriceLevel")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("price_level");
 
                     b.Property<decimal?>("Rating")
                         .HasColumnType("numeric")
                         .HasColumnName("rating");
 
                     b.Property<int?>("ReviewCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("review_count");
 
                     b.Property<string>("Timezone")
                         .HasColumnType("text")
@@ -939,13 +952,16 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("website_url");
 
                     b.Property<string>("Wheelchair")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("wheelchair");
 
                     b.Property<string>("Wikidata")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("wikidata");
 
                     b.Property<string>("Wikipedia")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("wikipedia");
 
                     b.HasKey("Id");
 
@@ -962,6 +978,11 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.HasIndex("City")
                         .HasDatabaseName("idx_places_city")
                         .HasFilter("is_active = TRUE");
+
+                    b.HasIndex("GoogleTags")
+                        .HasDatabaseName("idx_places_google_tags_gin");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("GoogleTags"), "gin");
 
                     b.HasIndex("OpeningHours")
                         .HasDatabaseName("idx_places_opening_hours_gin");
@@ -1406,18 +1427,24 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.ToTable("saved_trips", (string)null);
                 });
 
-            modelBuilder.Entity("OmniFlow.Domain.Entities.Stop", b =>
+            modelBuilder.Entity("OmniFlow.Domain.Entities.TimelineEntry", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<decimal>("ActivityPrice")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("numeric")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("activity_price");
+                    b.Property<string>("AccommodationAddress")
+                        .HasColumnType("text")
+                        .HasColumnName("accommodation_address");
+
+                    b.Property<DateTime?>("AccommodationCheckIn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accommodation_check_in");
+
+                    b.Property<DateTime?>("AccommodationCheckOut")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accommodation_check_out");
 
                     b.Property<string>("AddedBy")
                         .IsRequired()
@@ -1428,13 +1455,13 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("ai_reasoning");
 
-                    b.Property<TimeOnly?>("ArrivalTime")
-                        .HasColumnType("time without time zone")
-                        .HasColumnName("arrival_time");
-
-                    b.Property<string>("BookingReference")
+                    b.Property<string>("Airline")
                         .HasColumnType("text")
-                        .HasColumnName("booking_reference");
+                        .HasColumnName("airline");
+
+                    b.Property<int?>("BufferMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("buffer_minutes");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1442,12 +1469,18 @@ namespace OmniFlow.Infrastructure.Migrations
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("text")
+                        .HasDefaultValue("USD")
                         .HasColumnName("currency_code");
 
                     b.Property<string>("CustomCategory")
                         .HasColumnType("text")
                         .HasColumnName("custom_category");
+
+                    b.Property<string>("CustomDescription")
+                        .HasColumnType("text")
+                        .HasColumnName("custom_description");
 
                     b.Property<double?>("CustomLatitude")
                         .HasColumnType("double precision")
@@ -1473,19 +1506,52 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<Guid>("DestinationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("destination_id");
+
                     b.Property<int?>("DurationMinutes")
                         .HasColumnType("integer")
                         .HasColumnName("duration_minutes");
 
-                    b.Property<Guid?>("FallbackPlaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("fallback_place_id");
+                    b.Property<string>("EntryType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("entry_type");
 
-                    b.Property<bool>("IsTimeLocked")
+                    b.Property<DateTime?>("FlightArrivalAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("flight_arrival_at");
+
+                    b.Property<DateTime?>("FlightDepartureAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("flight_departure_at");
+
+                    b.Property<string>("FlightFromAirport")
+                        .HasColumnType("text")
+                        .HasColumnName("flight_from_airport");
+
+                    b.Property<string>("FlightFromCity")
+                        .HasColumnType("text")
+                        .HasColumnName("flight_from_city");
+
+                    b.Property<string>("FlightNumber")
+                        .HasColumnType("text")
+                        .HasColumnName("flight_number");
+
+                    b.Property<string>("FlightToAirport")
+                        .HasColumnType("text")
+                        .HasColumnName("flight_to_airport");
+
+                    b.Property<string>("FlightToCity")
+                        .HasColumnType("text")
+                        .HasColumnName("flight_to_city");
+
+                    b.Property<bool>("IsLocked")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
-                        .HasColumnName("is_time_locked");
+                        .HasColumnName("is_locked");
 
                     b.Property<bool>("IsVisited")
                         .ValueGeneratedOnAdd()
@@ -1505,23 +1571,39 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("place_id");
 
-                    b.Property<string>("ReservationNote")
-                        .HasColumnType("text")
-                        .HasColumnName("reservation_note");
-
-                    b.Property<string>("TransportFromPrevious")
-                        .HasColumnType("text")
-                        .HasColumnName("transport_from_previous");
-
-                    b.Property<decimal>("TransportPrice")
+                    b.Property<decimal>("Price")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("numeric")
                         .HasDefaultValue(0m)
-                        .HasColumnName("transport_price");
+                        .HasColumnName("price");
 
-                    b.Property<int?>("TravelTimeFromPrevious")
-                        .HasColumnType("integer")
-                        .HasColumnName("travel_time_from_previous");
+                    b.Property<Guid?>("ProviderFlightId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_flight_id");
+
+                    b.Property<Guid?>("ProviderHotelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_hotel_id");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time")
+                        .HasColumnName("start_time");
+
+                    b.Property<string>("TransportCompany")
+                        .HasColumnType("text")
+                        .HasColumnName("transport_company");
+
+                    b.Property<string>("TransportFromStation")
+                        .HasColumnType("text")
+                        .HasColumnName("transport_from_station");
+
+                    b.Property<string>("TransportToStation")
+                        .HasColumnType("text")
+                        .HasColumnName("transport_to_station");
+
+                    b.Property<string>("TransportType")
+                        .HasColumnType("text")
+                        .HasColumnName("transport_type");
 
                     b.Property<Guid>("TripId")
                         .HasColumnType("uuid")
@@ -1537,26 +1619,38 @@ namespace OmniFlow.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FallbackPlaceId");
+                    b.HasIndex("DestinationId");
 
-                    b.HasIndex("PlaceId");
+                    b.HasIndex("PlaceId")
+                        .HasDatabaseName("idx_timeline_entries_place")
+                        .HasFilter("place_id IS NOT NULL");
 
-                    b.HasIndex("TripId", "DayNumber", "OrderIndex")
-                        .HasDatabaseName("idx_stops_trip_day_order");
+                    b.HasIndex("ProviderFlightId")
+                        .HasDatabaseName("idx_timeline_entries_provider_flight")
+                        .HasFilter("provider_flight_id IS NOT NULL");
 
-                    b.ToTable("stops", null, t =>
+                    b.HasIndex("ProviderHotelId")
+                        .HasDatabaseName("idx_timeline_entries_provider_hotel")
+                        .HasFilter("provider_hotel_id IS NOT NULL");
+
+                    b.HasIndex("TripId", "DestinationId", "DayNumber", "OrderIndex")
+                        .HasDatabaseName("idx_timeline_entries_trip_dest_day_order");
+
+                    b.ToTable("timeline_entries", null, t =>
                         {
-                            t.HasCheckConstraint("ai_reasoning_required", "added_by != 'Ai' OR ai_reasoning IS NOT NULL");
+                            t.HasCheckConstraint("custom_accommodation_requires_dates", "entry_type != 'CustomAccommodation' OR (accommodation_check_in IS NOT NULL AND accommodation_check_out IS NOT NULL)");
 
-                            t.HasCheckConstraint("custom_place_requires_category", "custom_name IS NULL OR custom_category IS NOT NULL");
+                            t.HasCheckConstraint("custom_event_requires_time", "entry_type != 'CustomEvent' OR (start_time IS NOT NULL AND duration_minutes IS NOT NULL)");
 
-                            t.HasCheckConstraint("fallback_differs_from_place", "fallback_place_id IS NULL OR fallback_place_id != place_id");
+                            t.HasCheckConstraint("custom_flight_requires_fields", "entry_type != 'CustomFlight' OR (flight_from_airport IS NOT NULL AND flight_to_airport IS NOT NULL AND flight_departure_at IS NOT NULL AND flight_arrival_at IS NOT NULL)");
 
-                            t.HasCheckConstraint("place_or_custom_name", "place_id IS NOT NULL OR custom_name IS NOT NULL");
+                            t.HasCheckConstraint("custom_transport_requires_type", "entry_type != 'CustomTransport' OR transport_type IS NOT NULL");
 
-                            t.HasCheckConstraint("time_lock_requires_arrival", "is_time_locked = FALSE OR arrival_time IS NOT NULL");
+                            t.HasCheckConstraint("entry_type_place_requires_id", "entry_type = 'Place' AND place_id IS NOT NULL OR entry_type != 'Place'");
 
-                            t.HasCheckConstraint("visited_consistency", "is_visited = FALSE OR visited_at IS NOT NULL");
+                            t.HasCheckConstraint("locked_entry_has_buffer", "is_locked = FALSE OR buffer_minutes IS NOT NULL");
+
+                            t.HasCheckConstraint("valid_order_index", "order_index > 0");
                         });
                 });
 
@@ -1589,20 +1683,14 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AdjustedBudgetTier")
+                        .HasColumnType("text")
+                        .HasColumnName("adjusted_budget_tier");
+
                     b.Property<string>("BudgetTier")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("budget_tier");
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("city");
-
-                    b.Property<string>("Country")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("country");
 
                     b.Property<string>("CoverPhotoUrl")
                         .HasColumnType("text")
@@ -1638,6 +1726,20 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("forked_from_id");
 
+                    b.Property<decimal?>("ManualBudget")
+                        .HasColumnType("numeric")
+                        .HasColumnName("manual_budget");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("origin");
+
+                    b.Property<string>("OriginCountry")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("origin_country");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid")
                         .HasColumnName("owner_id");
@@ -1668,15 +1770,30 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("tags");
 
+                    b.Property<string>("Tempo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tempo");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("title");
 
-                    b.Property<string>("TravelStyle")
+                    b.Property<string>("TransportPreference")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("travel_style");
+                        .HasColumnName("transport_preference");
+
+                    b.Property<string>("TravelCompanion")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("travel_companion");
+
+                    b.Property<string[]>("TravelStyles")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("travel_styles");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1687,10 +1804,6 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("upvote_count");
-
-                    b.Property<decimal?>("UserBudget")
-                        .HasColumnType("numeric")
-                        .HasColumnName("user_budget");
 
                     b.Property<int>("ViewCount")
                         .ValueGeneratedOnAdd()
@@ -1720,6 +1833,75 @@ namespace OmniFlow.Infrastructure.Migrations
                             t.HasCheckConstraint("valid_dates", "end_date >= start_date");
 
                             t.HasCheckConstraint("valid_person_count", "person_count >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("OmniFlow.Domain.Entities.TripDestination", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("ArrivalDate")
+                        .HasColumnType("date")
+                        .HasColumnName("arrival_date");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("country");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateOnly>("DepartureDate")
+                        .HasColumnType("date")
+                        .HasColumnName("departure_date");
+
+                    b.Property<int>("NightCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("night_count");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_index");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("City")
+                        .HasDatabaseName("idx_trip_destinations_city")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("TripId", "OrderIndex")
+                        .IsUnique()
+                        .HasDatabaseName("idx_trip_destinations_trip_order");
+
+                    b.ToTable("trip_destinations", null, t =>
+                        {
+                            t.HasCheckConstraint("valid_dates", "departure_date >= arrival_date");
+
+                            t.HasCheckConstraint("valid_night_count", "night_count >= 0");
+
+                            t.HasCheckConstraint("valid_order_index", "order_index BETWEEN 1 AND 3");
                         });
                 });
 
@@ -2205,27 +2387,42 @@ namespace OmniFlow.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("OmniFlow.Domain.Entities.Stop", b =>
+            modelBuilder.Entity("OmniFlow.Domain.Entities.TimelineEntry", b =>
                 {
-                    b.HasOne("OmniFlow.Domain.Entities.Place", "FallbackPlace")
-                        .WithMany()
-                        .HasForeignKey("FallbackPlaceId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                    b.HasOne("OmniFlow.Domain.Entities.TripDestination", "Destination")
+                        .WithMany("TimelineEntries")
+                        .HasForeignKey("DestinationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("OmniFlow.Domain.Entities.Place", "Place")
                         .WithMany()
                         .HasForeignKey("PlaceId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("OmniFlow.Domain.Entities.ProviderFlight", "ProviderFlight")
+                        .WithMany()
+                        .HasForeignKey("ProviderFlightId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OmniFlow.Domain.Entities.ProviderHotel", "ProviderHotel")
+                        .WithMany()
+                        .HasForeignKey("ProviderHotelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("OmniFlow.Domain.Entities.Trip", "Trip")
-                        .WithMany("Stops")
+                        .WithMany("TimelineEntries")
                         .HasForeignKey("TripId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("FallbackPlace");
+                    b.Navigation("Destination");
 
                     b.Navigation("Place");
+
+                    b.Navigation("ProviderFlight");
+
+                    b.Navigation("ProviderHotel");
 
                     b.Navigation("Trip");
                 });
@@ -2259,6 +2456,17 @@ namespace OmniFlow.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("OmniFlow.Domain.Entities.TripDestination", b =>
+                {
+                    b.HasOne("OmniFlow.Domain.Entities.Trip", "Trip")
+                        .WithMany("Destinations")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trip");
                 });
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.TripUpvote", b =>
@@ -2297,11 +2505,18 @@ namespace OmniFlow.Infrastructure.Migrations
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.Trip", b =>
                 {
+                    b.Navigation("Destinations");
+
                     b.Navigation("Flights");
 
                     b.Navigation("Hotels");
 
-                    b.Navigation("Stops");
+                    b.Navigation("TimelineEntries");
+                });
+
+            modelBuilder.Entity("OmniFlow.Domain.Entities.TripDestination", b =>
+                {
+                    b.Navigation("TimelineEntries");
                 });
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.User", b =>

@@ -44,6 +44,17 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 		builder.Property(p => p.BestMonths).HasColumnName("best_months").HasColumnType("integer[]");
 		builder.Property(p => p.IsActive).HasColumnName("is_active").HasDefaultValue(true);
 
+		// Eksik mapping'ler
+		builder.Property(p => p.PriceLevel).HasColumnName("price_level");
+		builder.Property(p => p.ReviewCount).HasColumnName("review_count");
+		builder.Property(p => p.Wikipedia).HasColumnName("wikipedia");
+		builder.Property(p => p.Wikidata).HasColumnName("wikidata");
+		builder.Property(p => p.Wheelchair).HasColumnName("wheelchair");
+		builder.Property(p => p.Heritage).HasColumnName("heritage");
+		builder.Property(p => p.Fee).HasColumnName("fee");
+		builder.Property(p => p.Image).HasColumnName("image");
+		builder.Property(p => p.Cuisine).HasColumnName("cuisine");
+
 		var budgetTierConverter = new ValueConverter<List<BudgetTier>, string[]>(
 			v => v.Select(x => x.ToString()).ToArray(),
 			v => v.Select(x => Enum.Parse<BudgetTier>(x)).ToList());
@@ -68,6 +79,24 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 			.HasColumnType("text[]")
 			.HasConversion(travelStyleConverter, travelStyleComparer);
 
+		var stringListConverter = new ValueConverter<List<string>, string[]>(
+			v => v.ToArray(),
+			v => v.ToList());
+		var stringListComparer = new ValueComparer<List<string>>(
+			(a, b) => a != null && b != null && a.SequenceEqual(b),
+			v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
+			v => v.ToList());
+
+		builder.Property(p => p.PhotoUrls)
+			.HasColumnName("photo_urls")
+			.HasColumnType("text[]")
+			.HasConversion(stringListConverter, stringListComparer);
+
+		builder.Property(p => p.GoogleTags)
+			.HasColumnName("google_tags")
+			.HasColumnType("text[]")
+			.HasConversion(stringListConverter, stringListComparer);
+
 		builder.HasIndex(p => p.BudgetTiers)
 			.HasMethod("gin")
 			.HasDatabaseName("idx_places_budget_tiers_gin");
@@ -83,6 +112,10 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 		builder.HasIndex(p => p.OpeningHours)
 			.HasMethod("gin")
 			.HasDatabaseName("idx_places_opening_hours_gin");
+
+		builder.HasIndex(p => p.GoogleTags)
+			.HasMethod("gin")
+			.HasDatabaseName("idx_places_google_tags_gin");
 
 		builder.HasIndex(p => p.City)
 			.HasFilter("is_active = TRUE")

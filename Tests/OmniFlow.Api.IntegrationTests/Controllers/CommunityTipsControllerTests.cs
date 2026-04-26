@@ -64,12 +64,10 @@ public class CommunityTipsControllerTests : IClassFixture<CustomWebApplicationFa
 			Id = Guid.NewGuid(),
 			OwnerId = ownerId,
 			Title = "Weekend in Antalya",
-			City = "Antalya",
-			Country = "Turkey",
-			StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
-			EndDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(2)),
+			Origin = "Antalya",
+			OriginCountry = "Turkey",
 			BudgetTier = BudgetTier.Standard,
-			TravelStyle = TravelStyle.Relax,
+			TravelStyles = new List<TravelStyle> { TravelStyle.Relax },
 			PersonCount = 2,
 			Status = TripStatus.Published
 		};

@@ -7,8 +7,9 @@ public interface IApplicationDbContext
 {
 	DbSet<User> Users { get; }
 	DbSet<Trip> Trips { get; }
+	DbSet<TripDestination> TripDestinations { get; }
+	DbSet<TimelineEntry> TimelineEntries { get; }
 	DbSet<Place> Places { get; }
-	DbSet<Stop> Stops { get; }
 	DbSet<Flight> Flights { get; }
 	DbSet<Hotel> Hotels { get; }
 	DbSet<ProviderFlight> ProviderFlights { get; }

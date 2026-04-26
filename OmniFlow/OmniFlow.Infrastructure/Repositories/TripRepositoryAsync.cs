@@ -38,14 +38,12 @@ public class TripRepositoryAsync : GenericRepositoryAsync<Trip>, ITripRepository
             .ToListAsync();
     }
 
-    public async Task<Trip?> GetWithStopsAsync(Guid tripId)
-    {
-        return await _dbSet
-            .Include(t => t.Stops)
-                .ThenInclude(s => s.Place)
-            .Include(t => t.Owner)
-            .FirstOrDefaultAsync(t => t.Id == tripId && t.DeletedAt == null);
-    }
+	public async Task<Trip?> GetWithStopsAsync(Guid tripId)
+	{
+		return await _dbSet
+			.Include(t => t.Owner)
+			.FirstOrDefaultAsync(t => t.Id == tripId && t.DeletedAt == null);
+	}
 
     public async Task<Trip?> GetByIdWithOwnerAsync(Guid tripId)
     {
@@ -54,13 +52,12 @@ public class TripRepositoryAsync : GenericRepositoryAsync<Trip>, ITripRepository
             .FirstOrDefaultAsync(t => t.Id == tripId && t.DeletedAt == null);
     }
 
-    public async Task<Trip?> GetWithAllRelatedDataAsync(Guid tripId)
-    {
-        return await _dbSet
-            .Include(t => t.Stops)
-            .Include(t => t.Flights)
-            .Include(t => t.Hotels)
-            .Include(t => t.Owner)
-            .FirstOrDefaultAsync(t => t.Id == tripId && t.DeletedAt == null);
-    }
+	public async Task<Trip?> GetWithAllRelatedDataAsync(Guid tripId)
+	{
+		return await _dbSet
+			.Include(t => t.Flights)
+			.Include(t => t.Hotels)
+			.Include(t => t.Owner)
+			.FirstOrDefaultAsync(t => t.Id == tripId && t.DeletedAt == null);
+	}
 }

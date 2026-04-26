@@ -9,14 +9,24 @@ public class TripResponse
     public string? Description { get; set; }
     public string? CoverPhotoUrl { get; set; }
     public TripStatus Status { get; set; }
-    public string City { get; set; } = string.Empty;
-    public string Country { get; set; } = string.Empty;
+
+    // Step 1: Origin
+    public string Origin { get; set; } = string.Empty;
+    public string OriginCountry { get; set; } = string.Empty;
+
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public int PersonCount { get; set; }
     public BudgetTier BudgetTier { get; set; }
-    public TravelStyle TravelStyle { get; set; }
-    public decimal? UserBudget { get; set; }
+
+    // Wizard fields
+    public TravelCompanion TravelCompanion { get; set; }
+    public List<TravelStyle> TravelStyles { get; set; } = new();
+    public Tempo Tempo { get; set; }
+    public TransportPreference TransportPreference { get; set; }
+    public decimal? ManualBudget { get; set; }
+    public BudgetTier? AdjustedBudgetTier { get; set; }
+
     public decimal? EstimatedCost { get; set; }
     public int ForkCount { get; set; }
     public int UpvoteCount { get; set; }
@@ -25,7 +35,7 @@ public class TripResponse
     public Guid? ForkedFromId { get; set; }
     public List<string> Tags { get; set; } = new();
 
-    // Owner bilgisi
+    // Owner info
     public Guid OwnerId { get; set; }
     public string OwnerUsername { get; set; } = string.Empty;
     public string? OwnerProfilePhotoUrl { get; set; }

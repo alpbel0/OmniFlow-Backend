@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.DTOs.Posts;
-using OmniFlow.Application.DTOs.Stops;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Domain.Entities;
@@ -67,28 +66,34 @@ public class KarmaIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 		var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", new CreateTripRequest
 		{
 			Title = title,
-			City = "Antalya",
-			Country = "Turkey",
-			StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
-			EndDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(2)),
+			Origin = "Antalya",
+			OriginCountry = "Turkey",
 			PersonCount = 2,
 			BudgetTier = BudgetTier.Standard,
-			TravelStyle = TravelStyle.Adventure
+			TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
 		});
 		createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 		return JsonSerializer.Deserialize<Guid>(await createResponse.Content.ReadAsStringAsync());
 	}
 
-	private async Task AddStopAndPublishAsync(HttpClient authClient, Guid tripId)
+	private async Task AddTimelineEntryAndPublishAsync(HttpClient authClient, Guid tripId)
 	{
-		var stopResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/stops", new CreateStopRequest
+		using var scope = _factory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+		var dest = db.TripDestinations.FirstOrDefault(d => d.TripId == tripId);
+		if (dest == null)
 		{
-			DayNumber = 1,
-			CustomName = "Publish Stop",
-			CustomCategory = PlaceCategory.Restaurant,
-			DurationMinutes = 60
-		});
-		stopResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+			dest = new TripDestination(DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), "TestCity", "TestCountry", 1)
+			{
+				TripId = tripId
+			};
+			await db.TripDestinations.AddAsync(dest);
+			await db.SaveChangesAsync();
+		}
+		var entry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
+		await db.TimelineEntries.AddAsync(entry);
+		await db.SaveChangesAsync();
+
 		var publishResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);
 		publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 	}
@@ -120,7 +125,7 @@ public class KarmaIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 			var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
 			beforeScore = db.Users.Single(x => x.Id == testUserId).KarmaScore;
 		}
-		await AddStopAndPublishAsync(testClient, tripId);
+		await AddTimelineEntryAndPublishAsync(testClient, tripId);
 		using (var scope = _factory.Services.CreateScope())
 		{
 			var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
@@ -142,7 +147,7 @@ public class KarmaIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 		var adminClient = CreateAuthenticatedClient(adminToken);
 		var (testUserId, adminUserId) = GetUserIds();
 		var tripId = await CreateTripAsync(adminClient, $"karma-fork-{Guid.NewGuid():N}");
-		await AddStopAndPublishAsync(adminClient, tripId);
+		await AddTimelineEntryAndPublishAsync(adminClient, tripId);
 		int beforeAdminScore;
 		using (var scope = _factory.Services.CreateScope())
 		{
@@ -171,7 +176,7 @@ public class KarmaIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 		var testClient = CreateAuthenticatedClient(testToken);
 		var (testUserId, _) = GetUserIds();
 		var tripId = await CreateTripAsync(testClient, $"karma-farming-{Guid.NewGuid():N}");
-		await AddStopAndPublishAsync(testClient, tripId);
+		await AddTimelineEntryAndPublishAsync(testClient, tripId);
 		var secondPublish = await testClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);
 		secondPublish.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 		using var scope = _factory.Services.CreateScope();

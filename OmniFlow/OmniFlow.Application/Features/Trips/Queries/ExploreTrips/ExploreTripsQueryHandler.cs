@@ -59,10 +59,10 @@ public class ExploreTripsQueryHandler : IRequestHandler<ExploreTripsQuery, Explo
 
         // 4. Apply filters
         if (!string.IsNullOrEmpty(parameter.City))
-            query = query.Where(t => t.City.ToLower() == parameter.City.ToLower());
+            query = query.Where(t => t.Destinations.Any(d => d.City.ToLower() == parameter.City.ToLower()));
 
         if (!string.IsNullOrEmpty(parameter.Country))
-            query = query.Where(t => t.Country.ToLower() == parameter.Country.ToLower());
+            query = query.Where(t => t.Destinations.Any(d => d.Country.ToLower() == parameter.Country.ToLower()));
 
         if (!string.IsNullOrWhiteSpace(parameter.SearchTerm))
         {
@@ -70,8 +70,8 @@ public class ExploreTripsQueryHandler : IRequestHandler<ExploreTripsQuery, Explo
             query = query.Where(t =>
                 t.Title.ToLower().Contains(searchTerm) ||
                 (t.Description != null && t.Description.ToLower().Contains(searchTerm)) ||
-                t.City.ToLower().Contains(searchTerm) ||
-                t.Country.ToLower().Contains(searchTerm) ||
+                t.Destinations.Any(d => d.City.ToLower().Contains(searchTerm)) ||
+                t.Destinations.Any(d => d.Country.ToLower().Contains(searchTerm)) ||
                 (t.Owner != null && t.Owner.Username.ToLower().Contains(searchTerm)) ||
                 t.Tags.Any(tag => tag.ToLower().Contains(searchTerm)));
         }
@@ -79,8 +79,8 @@ public class ExploreTripsQueryHandler : IRequestHandler<ExploreTripsQuery, Explo
         if (parameter.BudgetTier.HasValue)
             query = query.Where(t => t.BudgetTier == parameter.BudgetTier.Value);
 
-        if (parameter.TravelStyle.HasValue)
-            query = query.Where(t => t.TravelStyle == parameter.TravelStyle.Value);
+        if (parameter.TravelStyles != null && parameter.TravelStyles.Any())
+            query = query.Where(t => t.TravelStyles.Any(ts => parameter.TravelStyles.Contains(ts)));
 
         if (parameter.Tags != null && parameter.Tags.Any())
             query = query.Where(t => t.Tags.Any(tag => parameter.Tags.Contains(tag)));

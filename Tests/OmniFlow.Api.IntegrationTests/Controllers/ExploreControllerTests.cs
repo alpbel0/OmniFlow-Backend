@@ -48,7 +48,7 @@ public class ExploreControllerTests : IClassFixture<CustomWebApplicationFactory>
 
 		var routeTrip = CreateTrip(routeOwner.Id, $"Aurora {routeTerm}", TripStatus.Published, DateTime.UtcNow, score: 300);
 		var cityTrip = CreateTrip(cityOwner.Id, $"Coastal Escape {suffix}", TripStatus.Published, DateTime.UtcNow, score: 200);
-		cityTrip.City = cityTerm;
+		cityTrip.Origin = cityTerm;
 		var creatorTrip = CreateTrip(creatorOwner.Id, $"Creator Escape {suffix}", TripStatus.Published, DateTime.UtcNow, score: 100);
 		var nonMatchingTrip = CreateTrip(otherOwner.Id, $"Plain Escape {suffix}", TripStatus.Published, DateTime.UtcNow, score: 900);
 		var draftMatchingTrip = CreateTrip(otherOwner.Id, $"Draft {routeTerm}", TripStatus.Draft, DateTime.UtcNow, score: 1_000);
@@ -180,13 +180,11 @@ public class ExploreControllerTests : IClassFixture<CustomWebApplicationFactory>
 			OwnerId = ownerId,
 			Title = title,
 			Status = status,
-			City = "Antalya",
-			Country = "Turkey",
-			StartDate = new DateOnly(2026, 7, 1),
-			EndDate = new DateOnly(2026, 7, 7),
+			Origin = "Antalya",
+			OriginCountry = "Turkey",
 			PersonCount = 2,
 			BudgetTier = BudgetTier.Standard,
-			TravelStyle = TravelStyle.Adventure,
+			TravelStyles = new List<TravelStyle> { TravelStyle.Adventure },
 			ForkCount = score,
 			UpvoteCount = score,
 			ViewCount = score,
@@ -225,7 +223,7 @@ public class ExploreControllerTests : IClassFixture<CustomWebApplicationFactory>
 		db.CommunityTips.RemoveRange(db.CommunityTips);
 		db.SavedTrips.RemoveRange(db.SavedTrips);
 		db.TripUpvotes.RemoveRange(db.TripUpvotes);
-		db.Stops.RemoveRange(db.Stops);
+		db.TimelineEntries.RemoveRange(db.TimelineEntries);
 		db.Flights.RemoveRange(db.Flights);
 		db.Hotels.RemoveRange(db.Hotels);
 		db.Trips.RemoveRange(db.Trips);

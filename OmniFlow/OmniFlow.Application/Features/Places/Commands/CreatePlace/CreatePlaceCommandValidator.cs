@@ -33,5 +33,23 @@ public class CreatePlaceCommandValidator : AbstractValidator<CreatePlaceCommand>
 
         RuleFor(x => x.CurrencyCode)
             .Matches(@"^[A-Z]{3}$").WithMessage("Currency code must be exactly 3 uppercase letters.");
+
+        RuleFor(x => x.PriceLevel)
+            .InclusiveBetween(0, 4).When(x => x.PriceLevel.HasValue)
+            .WithMessage("PriceLevel must be between 0 and 4.");
+
+        RuleFor(x => x.ReviewCount)
+            .GreaterThanOrEqualTo(0).When(x => x.ReviewCount.HasValue)
+            .WithMessage("ReviewCount must be non-negative.");
+
+        RuleFor(x => x.PhotoUrls)
+            .Must(list => list == null || list.Count <= 20)
+            .WithMessage("PhotoUrls cannot exceed 20 items.")
+            .Must(list => list == null || list.All(url => Uri.IsWellFormedUriString(url, UriKind.Absolute)))
+            .WithMessage("All PhotoUrls must be valid absolute URLs.");
+
+        RuleFor(x => x.GoogleTags)
+            .Must(x => x.Count <= 10).When(x => x.GoogleTags != null)
+            .WithMessage("GoogleTags cannot exceed 10 tags.");
     }
 }

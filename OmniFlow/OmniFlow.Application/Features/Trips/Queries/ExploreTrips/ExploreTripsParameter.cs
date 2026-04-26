@@ -9,7 +9,7 @@ public class ExploreTripsParameter
     public string? Country { get; set; }
     public string? SearchTerm { get; set; }
     public BudgetTier? BudgetTier { get; set; }
-    public TravelStyle? TravelStyle { get; set; }
+    public List<TravelStyle>? TravelStyles { get; set; }
     public List<string>? Tags { get; set; }
 
     // Sorting & Pagination

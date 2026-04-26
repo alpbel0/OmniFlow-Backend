@@ -59,7 +59,8 @@ public static class ServiceRegistration
 		// Specific Repository registrations
 		services.AddScoped<IPlaceRepositoryAsync, PlaceRepositoryAsync>();
 		services.AddScoped<ITripRepositoryAsync, TripRepositoryAsync>();
-		services.AddScoped<IStopRepositoryAsync, StopRepositoryAsync>();
+		services.AddScoped<ITripDestinationRepositoryAsync, TripDestinationRepositoryAsync>();
+		services.AddScoped<ITimelineEntryRepositoryAsync, TimelineEntryRepositoryAsync>();
 		services.AddScoped<IFlightRepositoryAsync, FlightRepositoryAsync>();
 		services.AddScoped<IHotelRepositoryAsync, HotelRepositoryAsync>();
 		services.AddScoped<IUserRepositoryAsync, UserRepositoryAsync>();

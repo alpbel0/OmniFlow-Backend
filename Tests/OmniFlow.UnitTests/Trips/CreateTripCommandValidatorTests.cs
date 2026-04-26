@@ -19,13 +19,13 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
 
         // Act
@@ -42,8 +42,8 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2
@@ -64,8 +64,8 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = new string('a', 101),
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2
@@ -86,8 +86,8 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "",
-            Country = "Turkey",
+            Origin = "",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2
@@ -98,7 +98,7 @@ public class CreateTripCommandValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "City");
+        result.Errors.Should().Contain(e => e.PropertyName == "Origin");
     }
 
     [Fact]
@@ -108,8 +108,8 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "",
+            Origin = "Antalya",
+            OriginCountry = "",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2
@@ -120,7 +120,7 @@ public class CreateTripCommandValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "Country");
+        result.Errors.Should().Contain(e => e.PropertyName == "OriginCountry");
     }
 
     [Fact]
@@ -130,8 +130,8 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 7),
             EndDate = new DateOnly(2025, 6, 1),
             PersonCount = 2
@@ -152,8 +152,8 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 0
@@ -174,12 +174,12 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2,
-            UserBudget = -100
+            ManualBudget = -100
         };
 
         // Act
@@ -187,7 +187,7 @@ public class CreateTripCommandValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UserBudget");
+        result.Errors.Should().Contain(e => e.PropertyName == "ManualBudget");
     }
 
     [Fact]
@@ -197,12 +197,12 @@ public class CreateTripCommandValidatorTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2,
-            UserBudget = null
+            ManualBudget = null
         };
 
         // Act

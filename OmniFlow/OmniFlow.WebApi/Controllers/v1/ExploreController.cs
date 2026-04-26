@@ -25,13 +25,14 @@ public class ExploreController : BaseApiController
         [FromQuery] string? city,
         [FromQuery] string? country,
         [FromQuery] BudgetTier? budgetTier,
-        [FromQuery] TravelStyle? travelStyle,
+        [FromQuery] string? travelStyles,
         [FromQuery] string? tags,
         [FromQuery] string sortBy = "popularity_score",
         [FromQuery] int pageSize = 10,
         [FromQuery] string? cursor = null)
     {
         var tagList = tags?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        var styleList = ParseTravelStyles(travelStyles);
 
         var parameter = new ExploreTripsParameter
         {
@@ -39,7 +40,7 @@ public class ExploreController : BaseApiController
             City = city,
             Country = country,
             BudgetTier = budgetTier,
-            TravelStyle = travelStyle,
+            TravelStyles = styleList,
             Tags = tagList,
             SortBy = sortBy,
             PageSize = pageSize,
@@ -59,5 +60,19 @@ public class ExploreController : BaseApiController
     {
         var result = await Mediator.Send(new GetFeaturedTripsQuery { Limit = limit });
         return Ok(result);
+    }
+
+    private static List<TravelStyle>? ParseTravelStyles(string? travelStyles)
+    {
+        if (string.IsNullOrWhiteSpace(travelStyles))
+            return null;
+
+        var styles = new List<TravelStyle>();
+        foreach (var part in travelStyles.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (Enum.TryParse<TravelStyle>(part.Trim(), true, out var style))
+                styles.Add(style);
+        }
+        return styles.Count > 0 ? styles : null;
     }
 }

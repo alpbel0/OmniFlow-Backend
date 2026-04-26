@@ -17,21 +17,37 @@ public class Trip : AuditableBaseEntity
 
 	public TripStatus Status { get; set; } = TripStatus.Draft;
 
-	public string City { get; set; } = string.Empty;
+	// Origin city (departure point - Step 1 of wizard)
+	public string Origin { get; set; } = string.Empty;
 
-	public string Country { get; set; } = string.Empty;
+	public string OriginCountry { get; set; } = string.Empty;
 
-	public DateOnly StartDate { get; set; }
+	// Date range computed from Destinations
+	public DateOnly StartDate { get; private set; }
 
-	public DateOnly EndDate { get; set; }
+	public DateOnly EndDate { get; private set; }
 
 	public int PersonCount { get; set; } = 1;
 
 	public BudgetTier BudgetTier { get; set; }
 
-	public TravelStyle TravelStyle { get; set; }
+	// Step 4: Travel Companion
+	public TravelCompanion TravelCompanion { get; set; }
 
-	public decimal? UserBudget { get; set; }
+	// Step 6: Vibe (max 3 travel styles)
+	public List<TravelStyle> TravelStyles { get; set; } = new();
+
+	// Step 7: Tempo
+	public Tempo Tempo { get; set; }
+
+	// Step 8: Transport Preference
+	public TransportPreference TransportPreference { get; set; }
+
+	// Step 5: Manual budget input
+	public decimal? ManualBudget { get; set; }
+
+	// Step 5: Budget tier after fallback calculation
+	public BudgetTier? AdjustedBudgetTier { get; set; }
 
 	public decimal? EstimatedCost { get; set; }
 
@@ -45,11 +61,37 @@ public class Trip : AuditableBaseEntity
 
 	public List<string> Tags { get; set; } = new();
 
+	// Navigation properties
 	public User? Owner { get; set; }
 
-	public ICollection<Stop> Stops { get; set; } = new List<Stop>();
+	public ICollection<TripDestination> Destinations { get; set; } = new List<TripDestination>();
+
+	public ICollection<TimelineEntry> TimelineEntries { get; set; } = new List<TimelineEntry>();
 
 	public ICollection<Flight> Flights { get; set; } = new List<Flight>();
 
 	public ICollection<Hotel> Hotels { get; set; } = new List<Hotel>();
+
+	/// <summary>
+	/// Recalculates StartDate and EndDate from the Destinations collection.
+	/// IMPORTANT: Destinations must be eager-loaded (.Include) before calling this method.
+	/// Never call this from a collection setter or property accessor to avoid EF Core side-effects.
+	/// </summary>
+	public void RecalculateFromDestinations()
+	{
+		if (Destinations == null)
+			throw new InvalidOperationException(
+				"Destinations must be loaded before calling RecalculateFromDestinations.");
+
+		if (Destinations.Any())
+		{
+			StartDate = Destinations.Min(d => d.ArrivalDate);
+			EndDate = Destinations.Max(d => d.DepartureDate);
+		}
+		else
+		{
+			StartDate = default;
+			EndDate = default;
+		}
+	}
 }

@@ -35,5 +35,15 @@ public class CreatePlaceRequestValidator : AbstractValidator<CreatePlaceRequest>
 
         RuleFor(x => x.CurrencyCode)
             .Matches(@"^[A-Z]{3}$").WithMessage("Currency code must be exactly 3 uppercase letters.");
+
+        RuleFor(x => x.PhotoUrls)
+            .Must(list => list == null || list.Count <= 20)
+            .WithMessage("PhotoUrls cannot exceed 20 items.")
+            .Must(list => list == null || list.All(url => Uri.IsWellFormedUriString(url, UriKind.Absolute)))
+            .WithMessage("All PhotoUrls must be valid absolute URLs.");
+
+        RuleFor(x => x.GoogleTags)
+            .Must(list => list == null || list.Count <= 10)
+            .WithMessage("GoogleTags cannot exceed 10 tags.");
     }
 }

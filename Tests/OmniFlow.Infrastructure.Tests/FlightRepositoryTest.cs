@@ -61,12 +61,12 @@ public class FlightRepositoryTest : IAsyncLifetime
         var trip = new Trip
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             OwnerId = existingUser.Id,
             Status = TripStatus.Draft,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
         await _tripRepository.AddAsync(trip);
 
@@ -166,12 +166,12 @@ public class FlightRepositoryTest : IAsyncLifetime
         var trip = new Trip
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             OwnerId = existingUser.Id,
             Status = TripStatus.Draft,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
         await _tripRepository.AddAsync(trip);
 
@@ -242,12 +242,12 @@ public class FlightRepositoryTest : IAsyncLifetime
         var trip = new Trip
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             OwnerId = existingUser.Id,
             Status = TripStatus.Draft,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
         await _tripRepository.AddAsync(trip);
 
@@ -323,12 +323,12 @@ public class FlightRepositoryTest : IAsyncLifetime
         var trip = new Trip
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             OwnerId = existingUser.Id,
             Status = TripStatus.Draft,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
         await _tripRepository.AddAsync(trip);
 
@@ -403,12 +403,12 @@ public class FlightRepositoryTest : IAsyncLifetime
         var trip = new Trip
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             OwnerId = existingUser.Id,
             Status = TripStatus.Draft,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
         await _tripRepository.AddAsync(trip);
 

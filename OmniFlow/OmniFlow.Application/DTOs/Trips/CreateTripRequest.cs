@@ -6,14 +6,31 @@ public class CreateTripRequest
 {
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string City { get; set; } = string.Empty;
-    public string Country { get; set; } = string.Empty;
+
+    // Step 1: Origin city (departure point)
+    public string Origin { get; set; } = string.Empty;
+    public string OriginCountry { get; set; } = string.Empty;
+
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public int PersonCount { get; set; } = 1;
     public BudgetTier BudgetTier { get; set; }
-    public TravelStyle TravelStyle { get; set; }
-    public decimal? UserBudget { get; set; }
+
+    // Step 4: Travel Companion
+    public TravelCompanion TravelCompanion { get; set; }
+
+    // Step 6: Vibe (max 3 styles)
+    public List<TravelStyle> TravelStyles { get; set; } = new();
+
+    // Step 7: Tempo
+    public Tempo Tempo { get; set; }
+
+    // Step 8: Transport Preference
+    public TransportPreference TransportPreference { get; set; }
+
+    // Step 5: Manual budget
+    public decimal? ManualBudget { get; set; }
+
     public string? CoverPhotoUrl { get; set; }
     public List<string> Tags { get; set; } = new();
 }

@@ -44,8 +44,8 @@ public class SelectFlightCommandTests
             Id = tripId,
             OwnerId = userId,
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             Status = TripStatus.Draft
         };
 

@@ -76,6 +76,8 @@ public class PlacesController : BaseApiController
             Description = request.Description,
             Category = request.Category,
             PhotoUrl = request.PhotoUrl,
+            PhotoUrls = request.PhotoUrls,
+            GoogleTags = request.GoogleTags,
             Phone = request.Phone,
             WebsiteUrl = request.WebsiteUrl,
             Latitude = request.Latitude,
@@ -88,12 +90,21 @@ public class PlacesController : BaseApiController
             EstimatedPrice = request.EstimatedPrice,
             CurrencyCode = request.CurrencyCode,
             IsFree = request.IsFree,
+            PriceLevel = request.PriceLevel,
+            ReviewCount = request.ReviewCount,
             BudgetTiers = request.BudgetTiers,
             TravelStyles = request.TravelStyles,
             DurationMinutes = request.DurationMinutes,
             Rating = request.Rating,
             OpeningHours = request.OpeningHours,
-            BestMonths = request.BestMonths
+            BestMonths = request.BestMonths,
+            Wikipedia = request.Wikipedia,
+            Wikidata = request.Wikidata,
+            Wheelchair = request.Wheelchair,
+            Heritage = request.Heritage,
+            Fee = request.Fee,
+            Image = request.Image,
+            Cuisine = request.Cuisine
         };
 
         var placeId = await Mediator.Send(command);

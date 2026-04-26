@@ -3,9 +3,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
-using OmniFlow.Application.DTOs.Stops;
 using OmniFlow.Application.DTOs.Trips;
+using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Wrappers;
+using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Api.IntegrationTests.Controllers;
@@ -62,13 +63,11 @@ public class TripsControllerSaveUpvoteTests : IClassFixture<CustomWebApplication
         var createRequest = new CreateTripRequest
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
-            StartDate = new DateOnly(2025, 6, 1),
-            EndDate = new DateOnly(2025, 6, 7),
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
 
         var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
@@ -87,17 +86,19 @@ public class TripsControllerSaveUpvoteTests : IClassFixture<CustomWebApplication
         // 1. Create trip
         var tripId = await CreateTripAsync(authClient);
 
-        // 2. Add a stop (required for publishing)
-        var stopRequest = new CreateStopRequest
+        // 2. Add a timeline entry (required for publishing)
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var dest = new TripDestination(DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), "TestCity", "TestCountry", 1)
         {
-            DayNumber = 1,
-            CustomName = "Test Stop",
-            CustomCategory = PlaceCategory.Restaurant,
-            DurationMinutes = 60
+            TripId = tripId
         };
+        await db.TripDestinations.AddAsync(dest);
+        await db.SaveChangesAsync();
 
-        var stopResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/stops", stopRequest);
-        stopResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var entry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
+        await db.TimelineEntries.AddAsync(entry);
+        await db.SaveChangesAsync();
 
         // 3. Publish trip
         var publishResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);

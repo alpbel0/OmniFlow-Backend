@@ -69,7 +69,7 @@ public class ExploreTripQueryTests
     }
 
     [Fact]
-    public async Task Handle_CityFilter_ReturnsMatchingTrips()
+    public async Task Handle_TravelStyleFilter_ReturnsMatchingTrips()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -77,8 +77,8 @@ public class ExploreTripQueryTests
 
         var trips = new List<Trip>
         {
-            new() { Id = Guid.NewGuid(), Status = TripStatus.Published, City = "Istanbul", PopularityScore = 100, Owner = new User { Id = Guid.NewGuid(), Username = "user1" } },
-            new() { Id = Guid.NewGuid(), Status = TripStatus.Published, City = "Ankara", PopularityScore = 90, Owner = new User { Id = Guid.NewGuid(), Username = "user2" } }
+            new() { Id = Guid.NewGuid(), Status = TripStatus.Published, TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }, PopularityScore = 100, Owner = new User { Id = Guid.NewGuid(), Username = "user1" } },
+            new() { Id = Guid.NewGuid(), Status = TripStatus.Published, TravelStyles = new List<TravelStyle> { TravelStyle.Relax }, PopularityScore = 90, Owner = new User { Id = Guid.NewGuid(), Username = "user2" } }
         }.AsQueryable();
 
         var mockSet = CreateMockDbSet(trips);
@@ -94,7 +94,7 @@ public class ExploreTripQueryTests
         var savedTrips = new List<SavedTrip>().AsQueryable();
         _contextMock.Setup(x => x.SavedTrips).Returns(CreateMockDbSet(savedTrips).Object);
 
-        var parameter = new ExploreTripsParameter { City = "Istanbul", PageSize = 10 };
+        var parameter = new ExploreTripsParameter { TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }, PageSize = 10 };
         var query = new ExploreTripsQuery(parameter);
 
         // Act

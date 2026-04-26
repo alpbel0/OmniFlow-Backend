@@ -89,13 +89,11 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 				OwnerId = activeUser.Id,
 				Title = $"Leaderboard Trip {suffix}",
 				Status = TripStatus.Published,
-				City = "Antalya",
-				Country = "Turkey",
-				StartDate = new DateOnly(2026, 6, 1),
-				EndDate = new DateOnly(2026, 6, 5),
+				Origin = "Antalya",
+				OriginCountry = "Turkey",
 				PersonCount = 2,
 				BudgetTier = BudgetTier.Standard,
-				TravelStyle = TravelStyle.Adventure
+				TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
 			});
 			await db.SaveChangesAsync();
 		}

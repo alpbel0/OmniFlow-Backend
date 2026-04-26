@@ -2,9 +2,15 @@ namespace OmniFlow.Domain.Enums;
 
 public enum TravelStyle
 {
-	Solo,
-	Family,
+	Romantic,
+	Cultural,
 	Adventure,
-	Luxury,
-	Relax
+	Nature,
+	Local,
+	Relax,
+	Shopping,
+	Gastronomy,
+	Influencer,
+	Nightlife,
+	Budget
 }

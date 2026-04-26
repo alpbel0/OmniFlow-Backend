@@ -227,12 +227,12 @@ public class GenericRepositoryTests : IAsyncLifetime
 			var tripForLogicTest = new Trip
 			{
 				Title = "Test Trip Logic",
-				City = "Antalya",
-				Country = "Turkey",
+				Origin = "Antalya",
+				OriginCountry = "Turkey",
 				OwnerId = Guid.NewGuid(),
 				Status = TripStatus.Draft,
 				BudgetTier = BudgetTier.Standard,
-				TravelStyle = TravelStyle.Adventure
+				TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
 			};
 
 			// Act - Simulate soft-delete logic directly
@@ -247,12 +247,12 @@ public class GenericRepositoryTests : IAsyncLifetime
 		var testTripValid = new Trip
 		{
 			Title = "Test Trip for Soft Delete",
-			City = "Antalya",
-			Country = "Turkey",
+			Origin = "Antalya",
+			OriginCountry = "Turkey",
 			OwnerId = existingUser.Id,
 			Status = TripStatus.Draft,
 			BudgetTier = BudgetTier.Standard,
-			TravelStyle = TravelStyle.Adventure
+			TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
 		};
 		await _tripRepository.AddAsync(testTripValid);
 

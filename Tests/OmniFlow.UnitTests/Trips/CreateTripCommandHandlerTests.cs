@@ -36,26 +36,24 @@ public class CreateTripCommandHandlerTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
 
         var mappedTrip = new Trip
         {
             Id = Guid.NewGuid(),
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
-            StartDate = new DateOnly(2025, 6, 1),
-            EndDate = new DateOnly(2025, 6, 7),
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
-            TravelStyle = TravelStyle.Adventure
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
 
         _mapperMock
@@ -86,8 +84,8 @@ public class CreateTripCommandHandlerTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2
@@ -115,8 +113,8 @@ public class CreateTripCommandHandlerTests
         var command = new CreateTripCommand
         {
             Title = "Test Trip",
-            City = "Antalya",
-            Country = "Turkey",
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
             StartDate = new DateOnly(2025, 6, 1),
             EndDate = new DateOnly(2025, 6, 7),
             PersonCount = 2
