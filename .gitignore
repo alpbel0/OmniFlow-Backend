@@ -6,6 +6,14 @@
 # dotenv files
 .env
 
+# Local SQL scripts and data files
+migrate_travel_styles.sql
+places_202604261814.sql
+query.sql
+update_google_tags.sql
+*.opencode
+.opencode/
+
 # ASP.NET Core sensitive config overrides — never commit production secrets
 appsettings.Production.json
 appsettings.Development.json
