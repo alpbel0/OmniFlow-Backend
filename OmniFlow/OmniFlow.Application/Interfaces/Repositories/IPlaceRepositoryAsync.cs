@@ -9,4 +9,9 @@ public interface IPlaceRepositoryAsync : IGenericRepositoryAsync<Place>
 {
     Task<PagedResponse<Place>> GetByCityAsync(string city, RequestParameter parameter);
     Task<PagedResponse<Place>> GetByCategoryAsync(PlaceCategory category, RequestParameter parameter);
+
+    /// <summary>
+    /// Gets active places in a city filtered by budget tier (PostgreSQL array overlap).
+    /// </summary>
+    Task<IReadOnlyList<Place>> GetByCityAndBudgetTierAsync(string city, BudgetTier budgetTier);
 }

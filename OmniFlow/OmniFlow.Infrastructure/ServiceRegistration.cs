@@ -52,6 +52,11 @@ public static class ServiceRegistration
 		services.AddScoped<IAccountService, AccountService>();
 		services.AddScoped<IEmailService, EmailService>();
 		services.AddScoped<IBlobService, BlobService>();
+		services.AddSingleton<IScoringService, ScoringService>();
+		services.AddSingleton<IBudgetCalculationService, BudgetCalculationService>();
+		services.AddSingleton<ITimelineService, TimelineService>();
+		services.AddScoped<IRecommendationService, RecommendationService>();
+		services.AddMemoryCache();
 
 		// Open-Generic DI registration for Generic Repository
 		services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
@@ -63,6 +68,8 @@ public static class ServiceRegistration
 		services.AddScoped<ITimelineEntryRepositoryAsync, TimelineEntryRepositoryAsync>();
 		services.AddScoped<IFlightRepositoryAsync, FlightRepositoryAsync>();
 		services.AddScoped<IHotelRepositoryAsync, HotelRepositoryAsync>();
+		services.AddScoped<IProviderFlightRepositoryAsync, ProviderFlightRepositoryAsync>();
+		services.AddScoped<IProviderHotelRepositoryAsync, ProviderHotelRepositoryAsync>();
 		services.AddScoped<IUserRepositoryAsync, UserRepositoryAsync>();
 		services.AddScoped<IFollowRepositoryAsync, FollowRepositoryAsync>();
 		services.AddScoped<IPostRepositoryAsync, PostRepositoryAsync>();

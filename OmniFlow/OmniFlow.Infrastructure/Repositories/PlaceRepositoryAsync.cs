@@ -45,4 +45,15 @@ public class PlaceRepositoryAsync : GenericRepositoryAsync<Place>, IPlaceReposit
 
         return new PagedResponse<Place>(items, parameter.PageNumber, parameter.PageSize, totalCount);
     }
+
+    public async Task<IReadOnlyList<Place>> GetByCityAndBudgetTierAsync(string city, BudgetTier budgetTier)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .Where(p => p.City.ToLower() == city.ToLower())
+            .Where(p => p.BudgetTiers.Contains(budgetTier))
+            .OrderBy(p => p.Name)
+            .ToListAsync();
+    }
 }

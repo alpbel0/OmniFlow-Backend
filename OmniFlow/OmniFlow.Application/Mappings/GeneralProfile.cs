@@ -29,6 +29,7 @@ public class GeneralProfile : Profile
     {
         // Place mappings
         CreateMap<Place, PlaceResponse>();
+        CreateMap<Place, ScoredPlaceResponse>();
         CreateMap<CreatePlaceCommand, Place>();
 
         // Trip mappings
