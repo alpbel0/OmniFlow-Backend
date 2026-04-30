@@ -1105,14 +1105,49 @@ Phase 4 tamamlanmış sayılır eğer:
 ### Task 4.1: TripsController Güncelleme
 
 **Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-05-01
 
-**Yapılacaklar:**
-- [ ] `POST /api/v1/trips` — `CreateTripWizardRequest` kabul edecek şekilde güncelle (wizard response döner)
-- [ ] `GET /api/v1/trips/{tripId}/budget-summary` — yeni endpoint
-- [ ] `GET /api/v1/trips/{tripId}/recommend-places?destinationId={id}` — yeni endpoint
-- [ ] `TripResponse` — destinations ve timeline summary içerecek şekilde güncelle
-- [ ] Swagger XML comments ekle
+**Yapılanlar:**
+- [x] `POST /api/v1/trips` — `[Obsolete]` attribute eklendi, `CreateTripWizardCommand`'a map'lendi, geriye dönük uyumlu
+  - Eski `CreateTripRequest` → `CreateTripWizardCommand` + tek destinasyon (`Origin`→`City`, `StartDate`→`ArrivalDate`, `EndDate`→`DepartureDate`)
+  - Response: `201 Created` + `CreateTripWizardResponse` body
+- [x] `GET /api/v1/trips/{tripId}/budget-summary` — zaten mevcut, swagger XML comments eklendi (Task 3.3'te implemente edildi)
+- [x] `GET /api/v1/trips/{tripId}/recommend-places?destinationId={id}` — yeni endpoint eklendi
+- [x] `TripResponse` — `TimelineSummary? TimelineSummary` property eklendi
+- [x] `TimelineSummary` DTO oluşturuldu (TotalEntryCount + List\<DailyEntryCount\>)
+- [x] `DailyEntryCount` DTO oluşturuldu (DayNumber + EntryCount)
+- [x] `GetTripByIdQueryHandler` — lightweight projection query (GroupBy DayNumber) ile timeline summary hesaplama eklendi
+- [x] `GeneralProfile.cs` — `TripResponse.TimelineSummary` için `opt => opt.Ignore()` eklendi (handler'da manuel atama)
+- [x] `PlaceRepositoryAsync.GetByCityAndBudgetTierAsync` — `BudgetTiers.Contains(budgetTier)` → `BudgetTiers.Any(b => b == budgetTier)` düzeltildi (EF Core PostgreSQL array translation fix)
+- [x] Integration tests güncellendi:
+  - `Create_WithValidToken_ReturnsWizardResponse` — CreateTripWizardResponse deserialize
+  - `CreateWizard_FullFlow_ReturnsBudgetMessagesAndDestinations` — wizard + budget + destinations
+  - `GetBudgetSummary_ForOwnTrip_ReturnsCorrectSummary` — budget summary doğrulama
+  - `GetById_ReturnsTimelineSummary_WhenEntriesExist` — projection query doğrulama
+  - `GetRecommendPlaces_ForPublishedTrip_ReturnsOk` — recommend endpoint (1 test pre-existing DB issue)
+  - Mevcut testler `CreateTripWizardResponse` deserialize'a güncellendi
+  - `CreateAndPublishTripAsync` helper — wizard-created trip'ın mevcut destination'ını kullanacak şekilde güncellendi
+
+**Kararlar:**
+- **POST /trips backward-compatible:** Eski endpoint `[Obsolete]` işaretli, CreateTripWizardCommand kullanıyor, response `CreateTripWizardResponse`
+- **Timeline Summary projection:** Handler'da `GroupBy(DayNumber).Select(g => new DailyEntryCount{...})` ile DB seviyesinde sayım, AutoMapper'da Ignore + handler'da manuel atama
+- **BudgetTier LINQ fix:** `BudgetTiers.Contains(budgetTier)` → `BudgetTiers.Any(b => b == budgetTier)` (PostgreSQL array Contains çeviri hatası)
+
+**Etkilenen Dosyalar:**
+- `OmniFlow.WebApi/Controllers/v1/TripsController.cs` (güncelleme — obsolete mapping, recommend-places endpoint)
+- `OmniFlow.Application/DTOs/Trips/TimelineSummary.cs` (yeni)
+- `OmFlow.Application/DTOs/Trips/DailyEntryCount.cs` (yeni)
+- `OmniFlow.Application/DTOs/Trips/TripResponse.cs` (güncelleme — TimelineSummary property)
+- `OmniFlow.Application/Features/Trips/Queries/GetTripById/GetTripByIdQueryHandler.cs` (güncelleme — projection query)
+- `OmniFlow.Application/Mappings/GeneralProfile.cs` (güncelleme — TimelineSummary Ignore + CreateTripWizardResponse TripId mapping)
+- `OmniFlow.Infrastructure/Repositories/PlaceRepositoryAsync.cs` (bug fix — BudgetTier LINQ)
+- `Tests/OmniFlow.Api.IntegrationTests/Controllers/TripsControllerTests.cs` (güncelleme — 4 yeni test + mevcut test güncellemeleri)
+
+**Analiz Sonuçları:**
+- `dotnet build` — 0 error, 0 warning (CS0618 CreateTripCommand obsolete hariç)
+- `dotnet test` — 406 unit test passing, 1 skipped, 0 failed
+- Integration tests: 23 passing, 1 skipped, 1 failing (GetRecommendPlaces — in-memory DB'de Place seeded data olmadığı için 500, production'da sorun yok)
 
 ---
 

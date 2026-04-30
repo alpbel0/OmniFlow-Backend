@@ -52,7 +52,7 @@ public class PlaceRepositoryAsync : GenericRepositoryAsync<Place>, IPlaceReposit
             .AsNoTracking()
             .Where(p => p.IsActive)
             .Where(p => p.City.ToLower() == city.ToLower())
-            .Where(p => p.BudgetTiers.Contains(budgetTier))
+            .Where(p => p.BudgetTiers.Any(b => b == budgetTier))
             .OrderBy(p => p.Name)
             .ToListAsync();
     }

@@ -14,6 +14,7 @@ using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpvoteTrip;
 using OmniFlow.Application.Features.Trips.Queries.GetBudgetSummary;
 using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
+using OmniFlow.Application.Features.Trips.Queries.GetRecommendedPlaces;
 using OmniFlow.Application.Features.Trips.Queries.GetTripById;
 using OmniFlow.Domain.Enums;
 
@@ -68,21 +69,20 @@ public class TripsController : BaseApiController
         return Ok(result);
     }
 
-    /// <summary>Create a new trip.</summary>
+    /// <summary>Create a new trip (backward compatible — maps to wizard flow).</summary>
     [HttpPost]
-    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    [Obsolete("Use POST /api/v1/trips/wizard instead.")]
+    [ProducesResponseType(typeof(CreateTripWizardResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Create([FromBody] CreateTripRequest request)
     {
-        var command = new CreateTripCommand
+        var command = new CreateTripWizardCommand
         {
             Title = request.Title,
             Description = request.Description,
             Origin = request.Origin,
             OriginCountry = request.OriginCountry,
-            StartDate = request.StartDate,
-            EndDate = request.EndDate,
             PersonCount = request.PersonCount,
             BudgetTier = request.BudgetTier,
             TravelCompanion = request.TravelCompanion,
@@ -91,11 +91,22 @@ public class TripsController : BaseApiController
             TransportPreference = request.TransportPreference,
             ManualBudget = request.ManualBudget,
             CoverPhotoUrl = request.CoverPhotoUrl,
-            Tags = request.Tags
+            Tags = request.Tags,
+            Destinations =
+            [
+                new OmniFlow.Application.DTOs.TripDestinations.CreateTripDestinationRequest
+                {
+                    City = request.Origin,
+                    Country = request.OriginCountry,
+                    ArrivalDate = request.StartDate,
+                    DepartureDate = request.EndDate,
+                    OrderIndex = 1
+                }
+            ]
         };
 
-        var tripId = await Mediator.Send(command);
-        return CreatedAtAction(nameof(GetById), new { id = tripId }, tripId);
+        var result = await Mediator.Send(command);
+        return CreatedAtAction(nameof(GetById), new { id = result.TripId }, result);
     }
 
     /// <summary>Create a new trip via the full wizard flow (with up to 10 destinations).</summary>
@@ -136,6 +147,20 @@ public class TripsController : BaseApiController
     public async Task<IActionResult> GetBudgetSummary([FromRoute] Guid tripId)
     {
         var query = new GetBudgetSummaryQuery { TripId = tripId };
+        var result = await Mediator.Send(query);
+        return Ok(result);
+    }
+
+    /// <summary>Get scored place recommendations for a trip destination.</summary>
+    [HttpGet("{tripId:guid}/recommend-places")]
+    [ProducesResponseType(typeof(RecommendedPlacesResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRecommendPlaces([FromRoute] Guid tripId, [FromQuery] Guid destinationId)
+    {
+        var query = new GetRecommendedPlacesQuery { TripId = tripId, DestinationId = destinationId };
         var result = await Mediator.Send(query);
         return Ok(result);
     }
