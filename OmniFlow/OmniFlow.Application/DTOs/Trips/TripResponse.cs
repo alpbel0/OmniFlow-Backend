@@ -43,4 +43,7 @@ public class TripResponse
     // User-specific flags (null for unauthenticated users)
     public bool? IsUpvoted { get; set; }
     public bool? IsSaved { get; set; }
+
+    // Multi-destination legs
+    public List<TripDestinationResponse> Destinations { get; set; } = new();
 }

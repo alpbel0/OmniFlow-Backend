@@ -92,7 +92,7 @@ builder.Services.AddControllers()
             );
         };
     });
-builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>(); // Scans entire OmniFlow.Application assembly (includes CreateTripWizardCommandValidator)
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

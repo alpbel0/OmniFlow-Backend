@@ -19,8 +19,8 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
 
     public async Task<TripResponse> Handle(GetTripByIdQuery request, CancellationToken cancellationToken)
     {
-        // GetByIdWithOwnerAsync kullanıyoruz - Owner include olmadan mapping patlar!
-        var trip = await _tripRepository.GetByIdWithOwnerAsync(request.TripId);
+        // GetByIdWithOwnerAndDestinationsAsync kullanıyoruz - Owner + Destinations include
+        var trip = await _tripRepository.GetByIdWithOwnerAndDestinationsAsync(request.TripId);
 
         if (trip == null)
         {

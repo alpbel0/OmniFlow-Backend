@@ -22,4 +22,13 @@ public class ProviderFlightRepositoryAsync : GenericRepositoryAsync<ProviderFlig
             .OrderBy(f => f.Price)
             .ToListAsync();
     }
+
+    public async Task<IReadOnlyList<ProviderFlight>> GetDistinctDepartureCitiesAsync()
+    {
+        return await _dbSet
+            .GroupBy(f => new { f.DepartureCity, f.DepartureAirportCode })
+            .Select(g => g.First())
+            .OrderBy(f => f.DepartureCity)
+            .ToListAsync();
+    }
 }

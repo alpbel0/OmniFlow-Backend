@@ -7,5 +7,6 @@ public class BudgetFallbackResult
     public BudgetTier OriginalTier { get; set; }
     public BudgetTier AdjustedTier { get; set; }
     public bool IsAdjusted { get; set; }
+    public decimal EstimatedCost { get; set; }
     public List<string> Messages { get; set; } = new();
 }

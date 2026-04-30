@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using OmniFlow.Domain.Entities;
 
 namespace OmniFlow.Application.Interfaces;
@@ -31,6 +32,8 @@ public interface IApplicationDbContext
 	DbSet<PasswordResetToken> PasswordResetTokens { get; }
 
 	DbSet<T> Set<T>() where T : class;
+
+	DatabaseFacade Database { get; }
 
 	Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

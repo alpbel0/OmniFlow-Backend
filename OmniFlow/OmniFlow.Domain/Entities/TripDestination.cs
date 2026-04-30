@@ -46,8 +46,8 @@ public class TripDestination : AuditableBaseEntity
 	{
 		if (departureDate < arrivalDate)
 			throw new DomainException("DepartureDate cannot be earlier than ArrivalDate.");
-		if (orderIndex < 1 || orderIndex > 3)
-			throw new DomainException("OrderIndex must be between 1 and 3.");
+		if (orderIndex < 1 || orderIndex > 10)
+			throw new DomainException("OrderIndex must be between 1 and 10.");
 		if (string.IsNullOrWhiteSpace(city))
 			throw new DomainException("City is required.");
 		if (string.IsNullOrWhiteSpace(country))

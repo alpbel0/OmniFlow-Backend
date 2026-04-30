@@ -3,6 +3,7 @@ using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Application.Features.Trips.Commands.CreateTrip;
 
+[Obsolete("Use CreateTripWizardCommand instead.")]
 public class CreateTripCommand : IRequest<Guid>
 {
     public string Title { get; set; } = string.Empty;

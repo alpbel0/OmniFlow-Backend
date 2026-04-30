@@ -64,7 +64,7 @@ public class GetFollowingQueryHandler : IRequestHandler<GetFollowingQuery, Paged
 			PageSize = request.Parameter.PageSize
 		};
 
-		var pagedFollowing = await _followRepository.GetFollowingAsync(request.UserId, parameter);
+		var pagedFollowing = await _followRepository.GetFollowingAsync(request.UserId, parameter, request.Parameter.SearchTerm);
 		var followingUsers = pagedFollowing.Data.Select(follow => follow.Following!).ToList();
 		var response = _mapper.Map<List<FollowUserResponse>>(followingUsers);
 

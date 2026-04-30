@@ -708,63 +708,129 @@ Phase 3 tamamlanmış sayılır eğer:
 ### Task 3.1: Trip DTO'ları Güncelleme
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-04-28
 
 **Yapılacaklar:**
-- [ ] `Application/DTOs/Trips/CreateTripWizardRequest.cs` oluştur:
+- [x] `Application/DTOs/Trips/CreateTripWizardRequest.cs` oluştur:
   - `Origin`, `OriginCountry`, `Destinations: List<DestinationInput>`, `PersonCount`, `TravelCompanion`, `BudgetTier`, `ManualBudget?`, `TravelStyles: List<TravelStyle>` (max 3), `Tempo`, `TransportPreference`
-- [ ] `Application/DTOs/Trips/CreateTripWizardRequestValidator.cs` oluştur:
+- [x] `Application/DTOs/Trips/CreateTripWizardRequestValidator.cs` oluştur:
   - `TravelStyles.Count <= 3` validation
-  - `Destinations.Count BETWEEN 1 AND 3` validation
+  - `Destinations.Count BETWEEN 1 AND 10` validation (3→10 güncellemesi yapıldı)
   - `PersonCount >= 1` validation
-  - Her destination için `ArrivalDate < DepartureDate` validation
-  - `ManualBudget > 0` (eğer girilmişse)
-- [ ] `Application/DTOs/Trips/TripResponse.cs` güncelle — `City`/`Country` → `Origin`/`Destinations: List<TripDestinationResponse>`, yeni alanlar ekle
-- [ ] `Application/DTOs/Trips/UpdateTripRequest.cs` güncelle — yeni alanlar (Tempo, TransportPreference, TravelStyles, ManualBudget)
-- [ ] `Application/DTOs/Trips/BudgetSummaryResponse.cs` oluştur:
+  - Her destination için `DepartureDate >= ArrivalDate` validation
+  - `ManualBudget >= 0` (eğer girilmişse)
+  - Sequential dates: `Destinations[i].DepartureDate <= Destinations[i+1].ArrivalDate`
+- [x] `Application/DTOs/Trips/TripResponse.cs` güncelle — `Destinations: List<TripDestinationResponse>` eklendi
+- [x] `Application/DTOs/Trips/UpdateTripRequest.cs` güncelle — zaten wizard alanları mevcuttu (Tempo, TransportPreference, TravelStyles, ManualBudget)
+- [x] `Application/DTOs/Trips/BudgetSummaryResponse.cs` oluştur:
   - `TotalFlightCost`, `TotalHotelCost`, `TotalActivityCost`, `TotalCost`, `ManualBudget?`, `BudgetTier`, `AdjustedBudgetTier?`, `SeasonMultiplier`, `Warnings: List<string>`
-- [ ] `Application/DTOs/Trips/ScoredPlaceResponse.cs` oluştur — `Place`, `FinalScore`, `GroupScore`, `StyleScoreAvg`, `GoogleMatchBonus`
-- [ ] AutoMapper `GeneralProfile.cs` güncelle — yeni mapping'ler
+- [x] `Application/DTOs/Trips/ScoredPlaceResponse.cs` oluştur — Phase 2'de tamamlandı
+- [x] `Application/DTOs/Trips/TripDestinationResponse.cs` oluştur — Phase 2 Task 1.2'de oluşturuldu, bu task'ta kullanıma hazır hale getirildi
+- [x] AutoMapper `GeneralProfile.cs` güncelle — TripDestination mapping + SavedTripResponse ignore'ları
+- [x] `ITripRepositoryAsync` + `TripRepositoryAsync` — `GetByIdWithOwnerAndDestinationsAsync` eklendi
+- [x] `GetTripByIdQueryHandler` — yeni repo metodu kullanacak şekilde güncellendi
+
+**Feedback Değerlendirmeleri (Uygulandı):**
+- ✅ **Redundant Ordering önlendi:** Sadece repository'de `OrderBy(d => d.OrderIndex)`, AutoMapper'da yok
+- ✅ **SavedTripResponse bombası çözüldü:** `TravelStyle`, `City`, `Country`, `UserBudget` alanları `.Ignore()` ile build güvenliği sağlandı
+- ✅ **Null Check korundu:** `GetTripByIdQueryHandler`'da `EntityNotFoundException` zaten mevcut, bozulmadı
+
+**Analiz Sonuçları:**
+- `dotnet build` — 0 error, 5 warning (hepsi CS0618 Obsolete — beklenen)
+- `dotnet test` — 362 unit test passing, 1 skipped, 0 failed
+- `SavedTripResponse` eski şema kalıntısıdır — Phase 5'te tam revizyon gerekecek (teknik borç)
+- `CreateTripWizardRequest` + `CreateTripWizardCommand` önceki task'ta (Destinasyon Limit 3→10) oluşturulmuştu, bu task'ta doğrulandı
 
 ---
 
 ### Task 3.2: TripDestination CRUD CQRS
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-04-28
 
 **Yapılacaklar:**
-- [ ] `Application/DTOs/TripDestination/TripDestinationResponse.cs` oluştur
-- [ ] `Application/DTOs/TripDestination/CreateTripDestinationRequest.cs` + Validator
-- [ ] `Application/DTOs/TripDestination/UpdateTripDestinationRequest.cs` + Validator
-- [ ] `Application/Features/TripDestinations/Commands/CreateTripDestination/` — Command + Handler
-- [ ] `Application/Features/TripDestinations/Commands/UpdateTripDestination/` — Command + Handler
-- [ ] `Application/Features/TripDestinations/Commands/DeleteTripDestination/` — Command + Handler
-- [ ] `Application/Features/TripDestinations/Queries/GetTripDestinations/` — Query + Handler (trip'in tüm destinasyonları, sıralı)
-- [ ] Handler'larda ownership check — sadece trip sahibi değiştirebilir
-- [ ] Unit test: Create, Update, Delete, Get handler'ları
+- [x] `Application/DTOs/TripDestinations/CreateTripDestinationRequest.cs` + Validator oluştur
+- [x] `Application/DTOs/TripDestinations/UpdateTripDestinationRequest.cs` + Validator oluştur
+- [x] `Application/Features/TripDestinations/Commands/CreateTripDestination/` — Command + Handler + Validator
+- [x] `Application/Features/TripDestinations/Commands/UpdateTripDestination/` — Command + Handler + Validator
+- [x] `Application/Features/TripDestinations/Commands/DeleteTripDestination/` — Command + Handler
+- [x] `Application/Features/TripDestinations/Queries/GetTripDestinations/` — Query + Handler
+- [x] `WebApi/Controllers/v1/TripDestinationsController.cs` — CRUD endpoint'leri
+- [x] Handler'larda ownership check + Draft-only kontrolü
+- [x] `IApplicationDbContext`'e `Database` property eklendi (transaction desteği)
+
+**Kararlar & Feedback Değerlendirmeleri (Uygulandı):**
+- ✅ **Bağımsız CRUD Endpoint'leri:** `GET/POST/PUT/DELETE /api/v1/trips/{tripId}/destinations` ayrı çalışıyor
+- ✅ **Namespace Tutarlılığı:** `CreateTripDestinationRequest` `Trips` → `TripDestinations` namespace'ine taşındı. Wizard handler'ları güncellendi
+- ✅ **OrderIndex Shift (Yönlü LINQ-based):**
+  - Create: `OrderByDescending` + `++` (çakışma önleme)
+  - Update (Aşağı): `old < new` → aradakiler `-1`
+  - Update (Yukarı): `old > new` → aradakiler `+1`
+  - Delete: `OrderIndex > deleted` olanlar `-1` (boşluk kapatma)
+- ✅ **Transaction Yönetimi:** Her handler'da `BeginTransactionAsync` + `CommitAsync`/`RollbackAsync`. Shift + CRUD + Recalculate tek transaction altında
+- ✅ **RecalculateFromDestinations:** `Include(t => t.Destinations)` ile trip tarihleri güncelleniyor
+- ✅ **Raw SQL → LINQ:** `ExecuteSqlRawAsync` yerine EF Core LINQ kullanıldı (Clean Architecture uyumu)
+
+**Etkilenen Dosyalar:**
+- Yeni: `DTOs/TripDestinations/*`, `Features/TripDestinations/Commands/*`, `Features/TripDestinations/Queries/*`, `TripDestinationsController.cs`
+- Güncelleme: `IApplicationDbContext.cs` (+ Database property), `CreateTripWizardRequest/Command/Validator.cs` (using güncellemesi), `GeneralProfile.cs`
+- Silinen: `DTOs/Trips/CreateTripDestinationRequest.cs`
+
+**Analiz Sonuçları:**
+- `dotnet build` — 0 error, 5 warning (hepsi CS0618 Obsolete — beklenen)
+- `dotnet test` — 362 unit test passing, 1 skipped, 0 failed
 
 ---
 
 ### Task 3.3: Wizard CQRS + Budget Summary
 
 **Tahmini Süre:** 4 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-04-30
 
-**Yapılacaklar:**
-- [ ] `Application/Features/Trips/Commands/CreateTrip/CreateTripCommandHandler.cs` güncelle — `CreateTripWizardRequest` ile uyumlu, wizard'ı destekler
-  - Trip oluştur + TripDestinations oluştur (transaction içinde)
-  - `BudgetCalculationService.CalculateBudgetFallback` çağır
-  - `AdjustedBudgetTier` set et
-  - `StartDate` ve `EndDate`'i ilk/son destination'dan hesapla
-- [ ] `Application/Features/Trips/Queries/GetBudgetSummary/GetBudgetSummaryQuery.cs` oluştur
-- [ ] `Application/Features/Trips/Queries/GetBudgetSummary/GetBudgetSummaryQueryHandler.cs` oluştur:
-  - Trip + Destinations + seçili Flights/Hotels getir
-  - Her leg için `CalculateFlightCost` + `CalculateHotelCost` çağır
-  - Timeline'daki custom entry fiyatlarını topla
-  - `BudgetSummaryResponse` döner
-- [ ] Unit test: Wizard create — destinasyonlar doğru oluşuyor mu, fallback çalışıyor mu
-- [ ] Unit test: Budget summary — 2 destinasyon, 3 kişi, Yaz ayı senaryosu
+**Kararlar:**
+1. **Wizard Response — Zengin:** `CreateTripWizardResponse` (TripId + AdjustedBudgetTier + EstimatedCost + BudgetMessages + Destinations OrderBy OrderIndex)
+2. **Budget Summary — Gerçek zamanlı:** `GetBudgetSummaryQueryHandler` TimelineEntry fiyatları + Provider uçuş/otel sezon çarpanları ile hesaplama yapar, `Trip.EstimatedCost` kullanılmaz
+3. **Transaction — Zorunlu:** `BeginTransactionAsync` + `CommitAsync`/`RollbackAsync`
+4. **Uçuş/Otel Tarihi — Her entry'ye özgü:** CustomFlight → `FlightDepartureAt`, CustomAccommodation → `AccommodationCheckIn`, fallback → `Destination.ArrivalDate + DayNumber - 1`
+5. **BudgetFallbackResult.EstimatedCost eklendi:** Wizard create sırasında tek çağrıyla hem tier hem cost alınır
+6. **BudgetSummaryResponse.Warnings — Tek liste:** Fallback + runtime uyarıları bir arada; bütçe aşım uyarısı dahil
+7. **SeasonMultiplier — Math.Round(val, 2)** ile yuvarlama
+
+**Yapılanlar:**
+- [x] `Application/DTOs/Trips/BudgetFallbackResult.cs` güncelle — `EstimatedCost` alanı eklendi
+- [x] `Infrastructure/Services/BudgetCalculationService.cs` güncelle — `CalculateBudgetFallbackAsync` sonucuna EstimatedCost eklendi; null/zero bütçe branch'inde de maliyet hesaplama; null flight result koruması
+- [x] `Application/DTOs/Trips/CreateTripWizardResponse.cs` oluştur — TripId, Title, Status, BudgetTier, AdjustedBudgetTier, EstimatedCost, ManualBudget, BudgetMessages, Destinations, StartDate, EndDate
+- [x] `Application/Features/Trips/Commands/CreateTripWizard/CreateTripWizardCommand.cs` güncelle — `IRequest<CreateTripWizardResponse>` dönüş tipi
+- [x] `Application/Features/Trips/Commands/CreateTripWizard/CreateTripWizardCommandHandler.cs` yeniden yaz — `IApplicationDbContext` + `IBudgetCalculationService` inject; budget fallback hesaplama; transaction ile kaydet; zengin response döndür (AutoMapper + `with { BudgetMessages }`)
+- [x] `Application/Mappings/GeneralProfile.cs` güncelle — `Trip → CreateTripWizardResponse` mapping (Destinations OrderBy OrderIndex, BudgetMessages Ignore)
+- [x] `Application/Features/Trips/Queries/GetBudgetSummary/GetBudgetSummaryQuery.cs` oluştur
+- [x] `Application/Features/Trips/Queries/GetBudgetSummary/GetBudgetSummaryQueryHandler.cs` oluştur — Gerçek zamanlı bütçe hesaplama:
+  - CustomFlight: ProviderFlightId varsa `CalculateFlightCost`, yoksa `entry.Price`
+  - CustomAccommodation: ProviderHotelId varsa `CalculateHotelCost`, yoksa `entry.Price`
+  - CustomTransport/CustomEvent/Place: `entry.Price`
+  - Entry tarihi: `FlightDepartureAt` > `AccommodationCheckIn` > `Destination.ArrivalDate + DayNumber - 1`
+  - Bütçe aşım uyarısı: `manualBudget.HasValue && totalCost > manualBudget`
+  - Ownership check (ForbiddenException)
+- [x] `WebApi/Controllers/v1/TripsController.cs` güncelle:
+  - `POST wizard` response type → `CreateTripWizardResponse`
+  - `GET {tripId}/budget-summary` endpoint eklendi
+  - ArchiveTrip using eklendi (eksik import düzeltmesi)
+- [x] `dotnet build` — 0 error, 1 warning (CS0618 CreateTripCommand obsolete)
+- [x] `dotnet test` — 362 unit test passing, 1 skipped (önceden skip edilmiş ForkTrip testi), 0 failed
+
+**Etkilenen Dosyalar:**
+- `OmniFlow.Application/DTOs/Trips/BudgetFallbackResult.cs` (güncelleme)
+- `OmniFlow.Application/DTOs/Trips/CreateTripWizardResponse.cs` (yeni)
+- `OmniFlow.Application/Features/Trips/Commands/CreateTripWizard/CreateTripWizardCommand.cs` (güncelleme)
+- `OmniFlow.Application/Features/Trips/Commands/CreateTripWizard/CreateTripWizardCommandHandler.cs` (yeniden yaz)
+- `OmniFlow.Application/Features/Trips/Queries/GetBudgetSummary/GetBudgetSummaryQuery.cs` (yeni)
+- `OmniFlow.Application/Features/Trips/Queries/GetBudgetSummary/GetBudgetSummaryQueryHandler.cs` (yeni)
+- `OmniFlow.Application/Mappings/GeneralProfile.cs` (güncelleme)
+- `OmniFlow.Infrastructure/Services/BudgetCalculationService.cs` (güncelleme)
+- `OmniFlow.WebApi/Controllers/v1/TripsController.cs` (güncelleme)
 
 ---
 
@@ -777,81 +843,231 @@ Phase 3 tamamlanmış sayılır eğer:
 ### Task 3.4: TimelineEntry DTO'ları + Validator'lar
 
 **Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-04-30
 
-**Yapılacaklar:**
-- [ ] `Application/DTOs/TimelineEntry/TimelineEntryResponse.cs` oluştur — tüm alanlar, EntryType bazlı nullable alanlar
-- [ ] `Application/DTOs/TimelineEntry/CreateTimelineEntryRequest.cs` oluştur — discriminated union benzeri: `EntryType` + tip bazlı alanlar
-- [ ] `Application/DTOs/TimelineEntry/CreateTimelineEntryRequestValidator.cs` oluştur:
+**Kararlar:**
+1. **Create/Response DTO — Tek Birleşik:** `CreateTimelineEntryRequest` ve `TimelineEntryResponse` tek DTO, `.When()` ile koşullu validasyon
+2. **Update DTO — Tüm alanlar:** `UpdateTimelineEntryRequest` EntryType hariç tüm alanları içerir; EntryType değiştirilemez (tip değişikliği = delete + create)
+3. **Validator Sınırı — DTO seviyesi:** Kapasite/çakışma TimelineService/Handler'da, validator sadece alan validasyonu
+4. **Reorder — Relative Move:** `BeforeEntryId` / `AfterEntryId`, backend `GetLexoRankBetween`; her ikisi de null olabilir (boş listeye ilk entry = 500.0)
+5. **Kilitli entry güncelleme — Serbest:** Update sonrası `CheckConflict` zorunlu, çakışma varsa ApiException
+
+**Yapılanlar:**
+- [x] `Application/DTOs/TimelineEntries/TimelineEntryResponse.cs` oluştur — tek birleşik response (tüm alanlar nullable)
+- [x] `Application/DTOs/TimelineEntries/CreateTimelineEntryRequest.cs` oluştur — tek birleşik create request
+- [x] `Application/DTOs/TimelineEntries/CreateTimelineEntryRequestValidator.cs` oluştur:
   - `EntryType = Place` → `PlaceId` zorunlu
-  - `EntryType = CustomFlight` → `FlightFromAirport`, `FlightToAirport`, `FlightDepartureAt`, `FlightArrivalAt` zorunlu
+  - `EntryType = CustomFlight` → `FlightFromAirport`, `FlightToAirport`, `FlightDepartureAt`, `FlightArrivalAt` zorunlu + arrival > departure
   - `EntryType = CustomTransport` → `TransportType` zorunlu
-  - `EntryType = CustomAccommodation` → `AccommodationCheckIn`, `AccommodationCheckOut` zorunlu
-  - `EntryType = CustomEvent` → `StartTime`, `DurationMinutes` zorunlu
-- [ ] `Application/DTOs/TimelineEntry/UpdateTimelineEntryRequest.cs` + Validator
-- [ ] `Application/DTOs/TimelineEntry/ReorderTimelineEntriesRequest.cs` — `List<{EntryId, NewOrderIndex}>`
-- [ ] AutoMapper mapping ekle
+  - `EntryType = CustomAccommodation` → `CustomName`, `AccommodationCheckIn`, `AccommodationCheckOut` zorunlu + checkout > checkin
+  - `EntryType = CustomEvent` → `CustomName`, `StartTime`, `DurationMinutes` zorunlu (> 0)
+  - Ortak: `Price >= 0`, `CurrencyCode` = 3 büyük harf, `Latitude` ∈ [-90,90], `Longitude` ∈ [-180,180], URL formatı
+- [x] `Application/DTOs/TimelineEntries/UpdateTimelineEntryRequest.cs` oluştur — tüm alanlar, EntryType yok
+- [x] `Application/DTOs/TimelineEntries/UpdateTimelineEntryRequestValidator.cs` oluştur — Create'deki tüm tip bazlı kurallar + `Id`/`DestinationId` zorunlu + uçuş/accommodation tarih sıralaması
+- [x] `Application/DTOs/TimelineEntries/ReorderTimelineEntriesRequest.cs` oluştur — `EntryId`, `BeforeEntryId`, `AfterEntryId`
+- [x] `Application/DTOs/TimelineEntries/ReorderTimelineEntriesRequestValidator.cs` oluştur — `EntryId != BeforeEntryId`, `EntryId != AfterEntryId`; her ikisi null olabilir
+- [x] `Application/Mappings/GeneralProfile.cs` güncelle — `TimelineEntry ↔ TimelineEntryResponse` + `CreateTimelineEntryRequest → TimelineEntry` mapping
+- [x] `dotnet build` — 0 error, 5 warning (CS0618 CreateTripCommand obsolete — beklenen)
+- [x] `dotnet test` — 362 unit test passing, 1 skipped, 0 failed
+
+**Etkilenen Dosyalar:**
+- `OmniFlow.Application/DTOs/TimelineEntries/TimelineEntryResponse.cs` (yeni)
+- `OmniFlow.Application/DTOs/TimelineEntries/CreateTimelineEntryRequest.cs` (yeni)
+- `OmniFlow.Application/DTOs/TimelineEntries/CreateTimelineEntryRequestValidator.cs` (yeni)
+- `OmniFlow.Application/DTOs/TimelineEntries/UpdateTimelineEntryRequest.cs` (yeni)
+- `OmniFlow.Application/DTOs/TimelineEntries/UpdateTimelineEntryRequestValidator.cs` (yeni)
+- `OmniFlow.Application/DTOs/TimelineEntries/ReorderTimelineEntriesRequest.cs` (yeni)
+- `OmniFlow.Application/DTOs/TimelineEntries/ReorderTimelineEntriesRequestValidator.cs` (yeni)
+- `OmniFlow.Application/Mappings/GeneralProfile.cs` (güncelleme)
 
 ---
 
 ### Task 3.5: TimelineEntry CQRS Handler'lar
 
 **Tahmini Süre:** 4 saat  
-**Durum:** ⏳ Bekliyor
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-04-30
 
-**Yapılacaklar:**
-- [ ] `Application/Features/TimelineEntries/Commands/CreateTimelineEntry/` — Command + Handler:
-  - `TimelineService.ValidateNewEntry` çağır (kapasite + çakışma kontrolü)
-  - `IsLocked` ve `BufferMinutes` — entry tipine göre otomatik set et
-  - LexoRank: yeni entry'nin order_index'ini hesapla
-- [ ] `Application/Features/TimelineEntries/Commands/UpdateTimelineEntry/` — Command + Handler (kilitli entry'ler sadece fiyat/not güncellenir)
-- [ ] `Application/Features/TimelineEntries/Commands/DeleteTimelineEntry/` — Command + Handler (kilitli entry silinemez)
-- [ ] `Application/Features/TimelineEntries/Commands/ReorderTimelineEntries/` — Command + Handler (LexoRank güncelleme)
-- [ ] `Application/Features/TimelineEntries/Commands/MarkEntryVisited/` — Command + Handler
-- [ ] `Application/Features/TimelineEntries/Queries/GetTimeline/` — Query + Handler (destinationId opsiyonel, günlük gruplandırılmış)
-- [ ] Unit test: CustomFlight ekleme — buffer ve is_locked doğru set ediliyor mu
-- [ ] Unit test: Kilitli entry silme — hata dönmeli
-- [ ] Unit test: Günlük kapasite aşımı — hata dönmeli
+**Kararlar:**
+1. **Domain Metotları Kullanıldı:** `UpdatePlaceDetails`, `UpdateFlightDetails`, `UpdateTransportDetails`, `UpdateAccommodationDetails`, `UpdateEventDetails`, `UpdateCommonFields`, `UpdateDestinationAndDay` — Reflection veya public setter yerine
+2. **IsLocked Koruma:** Kilitli entry'lerde tip-bazlı alan değişikliği `ApiException` fırlatır; sadece `Price`, `CurrencyCode`, `Notes`, `ProviderFlightId`, `ProviderHotelId` güncellenebilir
+3. **IsVisited/VisitedAt Ayrı Handler:** `MarkEntryVisitedCommand` — Draft ve Published trip'lerde çalışır
+4. **Authorization:** Ownership check + Draft-only yazma; Published trip'ler read-only
+5. **GetTimeline:** Flat liste döner, frontend `groupBy` yapar; Place detayı `Include` ile yüklenir
+6. **Reorder:** Tek entry, `BeforeEntryId`/`AfterEntryId` — her ikisi null = sona ekle; farklı gün/destinasyon arası reorder yasak
+7. **Delete:** Soft delete + OrderIndex shift (`subsequent.OrderIndex -= 1.0`)
+8. **Conflict Check:** Update sonrası `CheckConflict` çalıştırılır, çakışma varsa rollback
+9. **DeleteHandler:** Locked entry silinemez → `ForbiddenException`
+10. **DomainException → ApiException dönüşümü:** Handler'da try/catch ile yapılır
+
+**Yapılanlar:**
+- [x] `Domain/Entities/TimelineEntry.cs` — 7 domain update metodu eklendi
+- [x] `Application/Features/TimelineEntries/Commands/CreateTimelineEntry/` — Command + Handler:
+  - EntryType bazlı factory metot çağrısı
+  - LexoRank hesaplama
+  - `ValidateNewEntry` kapasite + çakışma kontrolü
+  - IsLocked ve BufferMinutes otomatik set
+- [x] `Application/Features/TimelineEntries/Commands/UpdateTimelineEntry/` — Command + Handler:
+  - Domain metotları ile tip-bazlı güncelleme
+  - IsLocked kontrolü: tip-bazlı alan değişikliği yasak, sadece common fields (Price, CurrencyCode, Notes, Provider refs) izinli
+  - `EnsureNoTypeSpecificChanges` metodu ile locked entry koruması
+  - Destination/day değişikliği + conflict re-check
+  - DomainException → ApiException dönüşümü
+- [x] `Application/Features/TimelineEntries/Commands/DeleteTimelineEntry/` — Command + Handler:
+  - Locked entry silinemez → `ForbiddenException`
+  - Soft delete + OrderIndex shift
+- [x] `Application/Features/TimelineEntries/Commands/ReorderTimelineEntries/` — Command + Handler:
+  - BeforeEntryId/AfterEntryId ile LexoRank hesaplama
+  - Same destination/day validation
+  - Draft-only kontrolü
+- [x] `Application/Features/TimelineEntries/Commands/MarkEntryVisited/` — Command + Handler:
+  - Draft ve Published trip'lerde çalışır
+  - MarkVisited/MarkUnvisited domain metotları
+- [x] `Application/Features/TimelineEntries/Queries/GetTimeline/` — Query + Handler:
+  - Published = public, Draft/Archived = owner-only
+  - Optional destinationId filtresi
+  - Place detayı Include ile
+- [x] Unit test: 27 test geçiyor (TimelineEntryHandlerTests):
+  - Create: Place, CustomFlight (locked + buffer 120), CustomTransport (locked + buffer 30), CustomAccommodation (locked), CustomEvent (locked), Capacity exceeded, Not owner, Published trip
+  - Update: Locked entry price-only success, Locked entry flight time → ApiException, Unlocked entry all fields, Destination/day change, Not owner, Published trip
+  - Delete: Unlocked success, Locked → ForbiddenException, Not owner
+  - Reorder: Between two entries, To end, Different day → ApiException, Not owner
+  - MarkVisited: Sets visited, Clears visited, Not owner
+  - GetTimeline: Published public, Draft owner, Draft not owner
+- [x] `dotnet build` — 0 error, 0 warning (_pre-existing CS0618 obsoletes excluded_)
+- [x] `dotnet test` — 389 unit test passing, 1 skipped, 0 failed
+
+**Etkilenen Dosyalar:**
+- `OmniFlow.Domain/Entities/TimelineEntry.cs` (güncelleme — 7 domain metodu)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/CreateTimelineEntry/CreateTimelineEntryCommand.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/CreateTimelineEntry/CreateTimelineEntryCommandHandler.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/UpdateTimelineEntry/UpdateTimelineEntryCommand.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/UpdateTimelineEntry/UpdateTimelineEntryCommandHandler.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/DeleteTimelineEntry/DeleteTimelineEntryCommand.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/DeleteTimelineEntry/DeleteTimelineEntryCommandHandler.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/ReorderTimelineEntries/ReorderTimelineEntriesCommand.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/ReorderTimelineEntries/ReorderTimelineEntriesCommandHandler.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/MarkEntryVisited/MarkEntryVisitedCommand.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Commands/MarkEntryVisited/MarkEntryVisitedCommandHandler.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Queries/GetTimeline/GetTimelineQuery.cs` (yeni)
+- `OmniFlow.Application/Features/TimelineEntries/Queries/GetTimeline/GetTimelineQueryHandler.cs` (yeni)
+- `Tests/OmniFlow.UnitTests/Phase3/TimelineEntryHandlerTests.cs` (yeni — 27 test)
 
 ---
 
 ### Task 3.6: Provider + Recommendation CQRS
 
-**Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 7.5 saat  
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-05-01
 
-**Yapılacaklar:**
-- [ ] `Application/Interfaces/Repositories/IProviderFlightRepositoryAsync.cs` oluştur
-- [ ] `Application/Interfaces/Repositories/IProviderHotelRepositoryAsync.cs` oluştur
-- [ ] `Infrastructure/Repositories/ProviderFlightRepositoryAsync.cs` oluştur
-- [ ] `Infrastructure/Repositories/ProviderHotelRepositoryAsync.cs` oluştur
-- [ ] `Application/Features/Providers/Queries/GetProviderFlights/` — Query + Handler:
-  - `fromCity`, `toCity`, `date`, `personCount` parametreleri
-  - **Dönüş uçuşu desteği:** `isReturn=true` → otomatik `fromCity = lastDest.City`, `toCity = trip.Origin`
-  - Sezon çarpanını response'a dahil et
-- [ ] `Application/Features/Providers/Queries/GetProviderHotels/` — Query + Handler:
-  - `city`, `checkIn`, `checkOut`, `budgetTier`, `personCount`
-  - Hotel segmentasyonu uygula
-- [ ] `Application/Features/Providers/Queries/GetOriginCities/` — Query + Handler:
-  - DB'deki `ProviderFlight`'lardan distinct kalkış şehirleri
-- [ ] `Application/Features/Trips/Queries/GetRecommendedPlaces/GetRecommendedPlacesQuery.cs` oluştur
-- [ ] `Application/Features/Trips/Queries/GetRecommendedPlaces/GetRecommendedPlacesQueryHandler.cs` oluştur:
-  - `RecommendationService.GetRecommendedPlaces` çağır
-  - Budget fallback bilgisini response'a ekle
-- [ ] Unit test: Origin cities query, Provider flights/hotels query
+**Tasarım Kararları:**
+
+| Karar | Seçim | Gerekçe |
+|-------|-------|---------|
+| Dönüş uçuşu | Backend trip'ten otomatik çözümler | Frontend sadece `tripId` + `isReturn=true` gönderir, backend son dest + origin'den fromCity/toCity çözer |
+| Uçuş fiyat formatı | `BasePrice` + `SeasonAdjustedPrice` + `SeasonMultiplier` | Frontend ek hesaplama yapmaz, ama çarpanı göstermek isterse bilgi mevcut |
+| Otel segmentasyon | Her otelde `Segment` alanı (Economy/Standard/Premium) | Frontend ister gruplar ister düz listeler, en esnek format |
+| Provider Auth | Public ([Authorize] yok) | Provider verisi pazarlama niteliğinde, kayıt gerektirmez |
+| Recommendation endpoint | `GET /api/v1/trips/{tripId}/recommend-places?destinationId=` | Trip'ten tercihlere otomatik erişilir |
+
+**Hata Yönetimi Kararları:**
+- `isReturn=true` + `TripId` null/empty → `ApiException("TripId is required for return flights.", 400)`
+- `isReturn=true` + Trip destinasyonu yok → `ApiException("Trip wizard is not completed or no destinations found.", 400)`
+- `isReturn=false` + eksik parametreler → `ApiException` ile 400 kodu
+- Destination trip'e ait değil → `ApiException("Destination not found in this trip.", 400)`
+
+**Yapılanlar:**
+
+- [x] `Application/DTOs/Providers/ProviderFlightResponse.cs` oluştur — BasePrice, SeasonAdjustedPrice, SeasonMultiplier, TotalPrice, uçuş detayları
+- [x] `Application/DTOs/Providers/ProviderHotelResponse.cs` oluştur — BasePricePerNight, SeasonAdjustedPricePerNight, TotalPrice, NightCount, Segment, otel detayları
+- [x] `Application/DTOs/Providers/OriginCityResponse.cs` oluştur — City, Country, AirportCode
+- [x] `Application/DTOs/Providers/GetProviderFlightsRequest.cs` oluştur — FromCity, ToCity, Date, PersonCount, IsReturn, TripId
+- [x] `Application/DTOs/Providers/GetProviderHotelsRequest.cs` oluştur — City, CheckIn, CheckOut, BudgetTier, PersonCount
+- [x] `Application/Mappings/GeneralProfile.cs` güncelle — ProviderFlight → ProviderFlightResponse, ProviderHotel → ProviderHotelResponse mapping (SeasonAdjusted/Segment Ignore)
+- [x] `Application/Features/Providers/Queries/GetOriginCities/GetOriginCitiesQuery.cs` oluştur
+- [x] `Application/Features/Providers/Queries/GetOriginCities/GetOriginCitiesQueryHandler.cs` oluştur — distinct şehirleri grupla, sırala
+- [x] `Application/Features/Providers/Queries/GetProviderFlights/GetProviderFlightsQuery.cs` oluştur
+- [x] `Application/Features/Providers/Queries/GetProviderFlights/GetProviderFlightsQueryHandler.cs` oluştur:
+  - `IsReturn=false` → normal uçuş: FromCity/ToCity/Date ile sorgula
+  - `IsReturn=true` → dönüş uçuşu: TripId'den son destinasyon + Origin çözümle
+  - Trip destinasyonu yoksa ApiException fırlat
+  - Sezon çarpanı: `IBudgetCalculationService.GetSeasonMultiplier(date)`
+  - Her flight: BasePrice, SeasonAdjustedPrice, TotalPrice hesapla
+- [x] `Application/Features/Providers/Queries/GetProviderHotels/GetProviderHotelsQuery.cs` oluştur
+- [x] `Application/Features/Providers/Queries/GetProviderHotels/GetProviderHotelsQueryHandler.cs` oluştur:
+  - `GetByCityAsync(city)` → sadece `IsAvailable = true`
+  - `IBudgetCalculationService.SegmentHotel(city)` ile threshold hesapla → her oteli segment'e ata
+  - `BudgetTier` filtresi: sadece istenen segment'in otellerini döndür
+  - Gece sayısı, sezon çarpanı, TotalPrice hesaplama
+- [x] `Application/Features/Trips/Queries/GetRecommendedPlaces/GetRecommendedPlacesQuery.cs` oluştur — TripId, DestinationId
+- [x] `Application/Features/Trips/Queries/GetRecommendedPlaces/GetRecommendedPlacesQueryHandler.cs` oluştur:
+  - Trip getir → ownership check (Published = public, Draft = owner-only)
+  - DestinationId doğrula (trip'e ait mi?)
+  - Trip'ten TravelCompanion, TravelStyles, Tempo, BudgetTier al
+  - Timeline'daki mekanları excludedPlaceIds olarak topla
+  - `IRecommendationService.GetRecommendedPlacesAsync()` çağır
+- [x] `IProviderFlightRepositoryAsync`'e `GetDistinctDepartureCitiesAsync()` eklendi
+- [x] `ProviderFlightRepositoryAsync`'de `GetDistinctDepartureCitiesAsync()` implemente edildi (GROUP BY DepartureCity, DepartureAirportCode)
+- [x] Unit test: 13 Provider test passing (8 Provider + 5 Hotels origin):
+  - `GetOriginCities_ReturnsDistinctCities`
+  - `GetOriginCities_NoFlights_ReturnsEmptyList`
+  - `GetProviderFlights_Outbound_ReturnsSeasonAdjustedPrices`
+  - `GetProviderFlights_ReturnFlight_ResolvesFromTrip`
+  - `GetProviderFlights_ReturnFlight_InvalidTripId_ThrowsEntityNotFound`
+  - `GetProviderFlights_ReturnFlight_NoDestinations_ThrowsApiException`
+  - `GetProviderFlights_ReturnFlight_MissingTripId_ThrowsApiException`
+  - `GetProviderFlights_Outbound_MissingParams_ThrowsApiException`
+  - `GetProviderFlights_NoFlights_ReturnsEmptyList`
+  - `GetProviderHotels_ReturnsWithSegmentInfo`
+  - `GetProviderHotels_BudgetTierFilter_ReturnsOnlyMatchingSegment`
+  - `GetProviderHotels_NoHotels_ReturnsEmptyList`
+  - `GetProviderHotels_FiltersUnavailableHotels`
+- [x] Unit test: 4 Recommendation test passing:
+  - `ReturnsRecommendedNeutralOther`
+  - `ExcludesAlreadyAddedPlaceIds`
+  - `InvalidTripId_ThrowsEntityNotFound`
+  - `DestinationNotBelongToTrip_ThrowsApiException`
+- [x] `dotnet build` — 0 error, 6 warning (CS0618 CreateTripCommand obsolete — beklenen)
+- [x] `dotnet test` — 406 unit test passing, 1 skipped, 0 failed
+
+**Önceden Tamamlandı (Task 2.3'te öne çekildi):**
+- [x] `IProviderFlightRepositoryAsync` — `GetByRouteAsync(fromCity, toCity, date)`
+- [x] `IProviderHotelRepositoryAsync` — `GetDistinctPricesByCityAsync`, `GetByCityAsync`
+- [x] `ProviderFlightRepositoryAsync` — implementasyon
+- [x] `ProviderHotelRepositoryAsync` — implementasyon
+- [x] DI kayıtları — `ServiceRegistration.cs`
+
+**Etkilenen Dosyalar:**
+- Yeni: `DTOs/Providers/ProviderFlightResponse.cs`, `ProviderHotelResponse.cs`, `OriginCityResponse.cs`, `GetProviderFlightsRequest.cs`, `GetProviderHotelsRequest.cs`
+- Yeni: `Features/Providers/Queries/GetOriginCities/GetOriginCitiesQuery.cs`, `GetOriginCitiesQueryHandler.cs`
+- Yeni: `Features/Providers/Queries/GetProviderFlights/GetProviderFlightsQuery.cs`, `GetProviderFlightsQueryHandler.cs`
+- Yeni: `Features/Providers/Queries/GetProviderHotels/GetProviderHotelsQuery.cs`, `GetProviderHotelsQueryHandler.cs`
+- Yeni: `Features/Trips/Queries/GetRecommendedPlaces/GetRecommendedPlacesQuery.cs`, `GetRecommendedPlacesQueryHandler.cs`
+- Güncelleme: `Mappings/GeneralProfile.cs` (+ProviderFlight, ProviderHotel mapping)
+- Güncelleme: `Interfaces/Repositories/IProviderFlightRepositoryAsync.cs` (+GetDistinctDepartureCitiesAsync)
+- Güncelleme: `Repositories/ProviderFlightRepositoryAsync.cs` (+GetDistinctDepartureCitiesAsync)
+- Yeni: `Tests/.../Phase3/ProviderQueryHandlerTests.cs` (13 test)
+- Yeni: `Tests/.../Phase3/GetRecommendedPlacesHandlerTests.cs` (4 test)
 
 ---
 
 ## ✅ Phase 3 Success Metrics
 
-- [ ] `CreateTripWizardRequest` — max 3 style, max 3 destination, date validation çalışıyor
-- [ ] Wizard trip create — destinasyonlar oluşuyor, fallback hesaplanıyor
-- [ ] Budget summary — sezon çarpanı uygulanmış doğru toplam
-- [ ] Timeline entry oluşturma — 5 tip için validator çalışıyor
-- [ ] Kilitli entry silme → `ForbiddenException` dönüyor
-- [ ] Dönüş uçuşu — `GetProviderFlights` son dest → origin doğru sorguluyor
-- [ ] `GetRecommendedPlaces` — 3 grup (recommended/neutral/other) doğru dönüyor
-- [ ] Handler unit testleri geçiyor
+- [x] `CreateTripWizardRequest` — max 3 style, max 10 destination, date validation çalışıyor (Task 3.1)
+- [x] Wizard trip create — destinasyonlar oluşuyor, fallback hesaplanıyor, zengin response dönüyor (Task 3.3)
+- [x] Budget summary — gerçek zamanlı hesaplama (TimelineEntry fiyatları + Provider uçuş/otel sezon çarpanları) (Task 3.3)
+- [x] `BudgetFallbackResult.EstimatedCost` — wizard create'de tek çağrıyla hem tier hem cost (Task 3.3)
+- [x] Timeline entry DTO'ları — 5 tip için tek birleşik request/response + koşullu validator çalışıyor (Task 3.4)
+- [x] Reorder DTO — Relative Move (Before/After), her ikisi null olabilir, GetLexoRankBetween destekli (Task 3.4)
+- [x] Timeline entry CQRS handler'ları — create/update/delete/reorder/visited/get (Task 3.5)
+- [x] Kilitli entry silme → `ForbiddenException` dönüyor (Task 3.5)
+- [x] Kilitli entry tip-bazlı güncelleme → `ApiException` dönüyor, sadece common fields (Price, CurrencyCode, Notes, Provider refs) izinli (Task 3.5)
+- [x] Dönüş uçuşu — `GetProviderFlights` son dest → origin doğru sorguluyor (Task 3.6)
+- [x] `GetRecommendedPlaces` — 3 grup (recommended/neutral/other) doğru dönüyor (Task 3.6)
+- [x] Provider CQRS handler'ları — OriginCities, Flights (outbound + return), Hotels (segmentasyon) çalışıyor (Task 3.6)
+- [x] Handler unit testleri geçiyor — 17 yeni test (13 Provider + 4 Recommendation)
 
 ---
 

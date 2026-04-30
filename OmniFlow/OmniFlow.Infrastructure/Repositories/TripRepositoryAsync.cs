@@ -52,6 +52,14 @@ public class TripRepositoryAsync : GenericRepositoryAsync<Trip>, ITripRepository
             .FirstOrDefaultAsync(t => t.Id == tripId && t.DeletedAt == null);
     }
 
+    public async Task<Trip?> GetByIdWithOwnerAndDestinationsAsync(Guid tripId)
+    {
+        return await _dbSet
+            .Include(t => t.Owner)
+            .Include(t => t.Destinations.OrderBy(d => d.OrderIndex))
+            .FirstOrDefaultAsync(t => t.Id == tripId && t.DeletedAt == null);
+    }
+
 	public async Task<Trip?> GetWithAllRelatedDataAsync(Guid tripId)
 	{
 		return await _dbSet

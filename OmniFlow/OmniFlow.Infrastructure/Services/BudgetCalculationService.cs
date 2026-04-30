@@ -107,11 +107,17 @@ public class BudgetCalculationService : IBudgetCalculationService
         // Step 1: No budget provided → exploration mode, no adjustment
         if (!manualBudget.HasValue || manualBudget.Value <= 0)
         {
+            var noBudgetDests = destinations?.OrderBy(d => d.OrderIndex).ToList() ?? new List<TripDestination>();
+            var noBudgetCost = noBudgetDests.Count > 0
+                ? await CalculateTotalCostForTierAsync(selectedTier, origin, noBudgetDests, personCount, new(), new())
+                : 0;
+
             return new BudgetFallbackResult
             {
                 OriginalTier = selectedTier,
                 AdjustedTier = selectedTier,
                 IsAdjusted = false,
+                EstimatedCost = noBudgetCost,
                 Messages = new List<string>()
             };
         }
@@ -127,6 +133,7 @@ public class BudgetCalculationService : IBudgetCalculationService
         var tiersToCheck = GetTiersToCheck(selectedTier);
         BudgetTier finalTier = BudgetTier.Economy;
         bool foundSufficient = false;
+        decimal estimatedCost = 0;
 
         foreach (var tier in tiersToCheck)
         {
@@ -136,9 +143,17 @@ public class BudgetCalculationService : IBudgetCalculationService
             if (manualBudget.Value >= totalCost)
             {
                 finalTier = tier;
+                estimatedCost = totalCost;
                 foundSufficient = true;
                 break;
             }
+        }
+
+        if (!foundSufficient)
+        {
+            var economyCost = await CalculateTotalCostForTierAsync(
+                BudgetTier.Economy, origin, sortedDestinations, personCount, new(), new());
+            estimatedCost = economyCost;
         }
 
         // Step 3: Build messages
@@ -151,6 +166,7 @@ public class BudgetCalculationService : IBudgetCalculationService
             OriginalTier = selectedTier,
             AdjustedTier = finalTier,
             IsAdjusted = finalTier != selectedTier || !foundSufficient,
+            EstimatedCost = estimatedCost,
             Messages = messages
         };
     }
@@ -207,7 +223,7 @@ public class BudgetCalculationService : IBudgetCalculationService
         string fromCity, string toCity, DateOnly date, int personCount, List<string> warnings)
     {
         var flights = await _flightRepo.GetByRouteAsync(fromCity, toCity, date);
-        if (flights.Any())
+        if (flights != null && flights.Any())
         {
             return flights.First().Price * personCount * GetSeasonMultiplier(date);
         }

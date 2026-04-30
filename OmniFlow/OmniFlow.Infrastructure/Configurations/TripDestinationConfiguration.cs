@@ -10,7 +10,7 @@ public class TripDestinationConfiguration : IEntityTypeConfiguration<TripDestina
 	{
 		builder.ToTable("trip_destinations", t =>
 		{
-			t.HasCheckConstraint("valid_order_index", "order_index BETWEEN 1 AND 3");
+			t.HasCheckConstraint("valid_order_index", "order_index BETWEEN 1 AND 10");
 			t.HasCheckConstraint("valid_dates", "departure_date >= arrival_date");
 			t.HasCheckConstraint("valid_night_count", "night_count >= 0");
 		});

@@ -33,7 +33,7 @@ public class FollowsController : BaseApiController
 	[ProducesResponseType(typeof(OmniFlow.Application.Wrappers.PagedResponse<OmniFlow.Application.DTOs.Follows.FollowUserResponse>), StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
 	[ProducesResponseType(StatusCodes.Status404NotFound)]
-	public async Task<IActionResult> GetFollowers([FromRoute] Guid userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+	public async Task<IActionResult> GetFollowers([FromRoute] Guid userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
 	{
 		var query = new GetFollowersQuery
 		{
@@ -41,7 +41,8 @@ public class FollowsController : BaseApiController
 			Parameter = new OmniFlow.Application.Features.Follows.Queries.GetFollowers.GetFollowersParameter
 			{
 				PageNumber = pageNumber,
-				PageSize = pageSize
+				PageSize = pageSize,
+				SearchTerm = search
 			}
 		};
 
@@ -53,7 +54,7 @@ public class FollowsController : BaseApiController
 	[ProducesResponseType(typeof(OmniFlow.Application.Wrappers.PagedResponse<OmniFlow.Application.DTOs.Follows.FollowUserResponse>), StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
 	[ProducesResponseType(StatusCodes.Status404NotFound)]
-	public async Task<IActionResult> GetFollowing([FromRoute] Guid userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+	public async Task<IActionResult> GetFollowing([FromRoute] Guid userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
 	{
 		var query = new GetFollowingQuery
 		{
@@ -61,7 +62,8 @@ public class FollowsController : BaseApiController
 			Parameter = new OmniFlow.Application.Features.Follows.Queries.GetFollowing.GetFollowingParameter
 			{
 				PageNumber = pageNumber,
-				PageSize = pageSize
+				PageSize = pageSize,
+				SearchTerm = search
 			}
 		};
 

@@ -1901,7 +1901,7 @@ namespace OmniFlow.Infrastructure.Migrations
 
                             t.HasCheckConstraint("valid_night_count", "night_count >= 0");
 
-                            t.HasCheckConstraint("valid_order_index", "order_index BETWEEN 1 AND 3");
+                            t.HasCheckConstraint("valid_order_index", "order_index BETWEEN 1 AND 10");
                         });
                 });
 

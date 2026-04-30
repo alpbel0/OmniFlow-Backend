@@ -18,12 +18,18 @@ public class FollowRepositoryAsync : IFollowRepositoryAsync
 		_dbSet = context.Set<Follow>();
 	}
 
-	public async Task<PagedResponse<Follow>> GetFollowersAsync(Guid userId, RequestParameter parameter)
+	public async Task<PagedResponse<Follow>> GetFollowersAsync(Guid userId, RequestParameter parameter, string? searchTerm = null)
 	{
 		var query = _dbSet
 			.Include(follow => follow.Follower)
-			.Where(follow => follow.FollowingId == userId)
-			.OrderBy(follow => follow.CreatedAt);
+			.Where(follow => follow.FollowingId == userId);
+
+		if (!string.IsNullOrWhiteSpace(searchTerm))
+		{
+			query = query.Where(follow => EF.Functions.ILike(follow.Follower!.Username, $"%{searchTerm}%"));
+		}
+
+		query = query.OrderBy(follow => follow.CreatedAt);
 
 		var totalCount = await query.CountAsync();
 		var items = await query
@@ -34,12 +40,18 @@ public class FollowRepositoryAsync : IFollowRepositoryAsync
 		return new PagedResponse<Follow>(items, parameter.PageNumber, parameter.PageSize, totalCount);
 	}
 
-	public async Task<PagedResponse<Follow>> GetFollowingAsync(Guid userId, RequestParameter parameter)
+	public async Task<PagedResponse<Follow>> GetFollowingAsync(Guid userId, RequestParameter parameter, string? searchTerm = null)
 	{
 		var query = _dbSet
 			.Include(follow => follow.Following)
-			.Where(follow => follow.FollowerId == userId)
-			.OrderBy(follow => follow.CreatedAt);
+			.Where(follow => follow.FollowerId == userId);
+
+		if (!string.IsNullOrWhiteSpace(searchTerm))
+		{
+			query = query.Where(follow => EF.Functions.ILike(follow.Following!.Username, $"%{searchTerm}%"));
+		}
+
+		query = query.OrderBy(follow => follow.CreatedAt);
 
 		var totalCount = await query.CountAsync();
 		var items = await query

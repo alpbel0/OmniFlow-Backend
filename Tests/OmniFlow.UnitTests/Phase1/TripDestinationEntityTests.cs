@@ -32,9 +32,22 @@ public class TripDestinationEntityTests
 		dest.NightCount.Should().Be(0);
 	}
 
+	[Fact]
+	public void Constructor_OrderIndexUpTo10_IsValid()
+	{
+		var dest = new TripDestination(
+			new DateOnly(2026, 8, 10),
+			new DateOnly(2026, 8, 13),
+			"Rome",
+			"Italy",
+			10);
+
+		dest.OrderIndex.Should().Be(10);
+	}
+
 	[Theory]
 	[InlineData(0)]
-	[InlineData(4)]
+	[InlineData(11)]
 	[InlineData(-1)]
 	public void Constructor_InvalidOrderIndex_Throws(int orderIndex)
 	{
@@ -46,7 +59,7 @@ public class TripDestinationEntityTests
 			orderIndex);
 
 		act.Should().Throw<DomainException>()
-			.WithMessage("*OrderIndex must be between 1 and 3*");
+			.WithMessage("*OrderIndex must be between 1 and 10*");
 	}
 
 	[Theory]

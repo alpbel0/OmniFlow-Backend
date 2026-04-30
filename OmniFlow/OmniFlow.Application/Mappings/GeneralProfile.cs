@@ -7,6 +7,8 @@ using OmniFlow.Application.DTOs.Follows;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.DTOs.Places;
 using OmniFlow.Application.DTOs.Posts;
+using OmniFlow.Application.DTOs.Providers;
+using OmniFlow.Application.DTOs.TimelineEntries;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.Comments.Commands.CreateComment;
 using OmniFlow.Application.Features.CommunityTips.Commands.CreateTip;
@@ -14,6 +16,7 @@ using OmniFlow.Application.Features.Places.Commands.CreatePlace;
 using OmniFlow.Application.Features.Posts.Commands.CreatePost;
 using OmniFlow.Application.Features.Posts.Commands.UpdatePost;
 using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
+using OmniFlow.Application.Features.Trips.Commands.CreateTripWizard;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 using OmniFlow.Domain.Entities;
 
@@ -50,16 +53,57 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.SavedAt, opt => opt.Ignore()) // Set manually in handler
             .ForMember(dest => dest.OwnerId, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Id : Guid.Empty))
             .ForMember(dest => dest.OwnerUsername, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Username : string.Empty))
-            .ForMember(dest => dest.OwnerProfilePhotoUrl, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.ProfilePhotoUrl : null));
+            .ForMember(dest => dest.OwnerProfilePhotoUrl, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.ProfilePhotoUrl : null))
+            .ForMember(dest => dest.TravelStyle, opt => opt.Ignore()) // Trip uses List<TravelStyle>, SavedTripResponse uses single TravelStyle
+            .ForMember(dest => dest.City, opt => opt.Ignore())        // Moved to TripDestination
+            .ForMember(dest => dest.Country, opt => opt.Ignore())     // Moved to TripDestination
+            .ForMember(dest => dest.UserBudget, opt => opt.Ignore()); // No longer exists on Trip
+
+        CreateMap<TripDestination, TripDestinationResponse>();
 
         CreateMap<CreateTripCommand, Trip>();
+        CreateMap<CreateTripWizardCommand, Trip>()
+            .ForMember(dest => dest.Destinations, opt => opt.Ignore()); // Handled manually in CreateTripWizardCommandHandler
+
+        CreateMap<Trip, CreateTripWizardResponse>()
+            .ForMember(dest => dest.BudgetMessages, opt => opt.Ignore())
+            .ForMember(dest => dest.Destinations, opt => opt.MapFrom(src => src.Destinations.OrderBy(d => d.OrderIndex)));
+
         CreateMap<UpdateTripCommand, Trip>();
+
+        // TimelineEntry mappings
+        CreateMap<TimelineEntry, TimelineEntryResponse>();
+        CreateMap<CreateTimelineEntryRequest, TimelineEntry>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.OrderIndex, opt => opt.Ignore())
+            .ForMember(dest => dest.IsLocked, opt => opt.Ignore())
+            .ForMember(dest => dest.BufferMinutes, opt => opt.Ignore())
+            .ForMember(dest => dest.VisitedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.AddedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
 
         // Flight mappings
         CreateMap<Flight, FlightResponse>();
 
         // Hotel mappings
         CreateMap<Hotel, HotelResponse>();
+
+        // Provider mappings
+        CreateMap<ProviderFlight, ProviderFlightResponse>()
+            .ForMember(dest => dest.BasePrice, opt => opt.MapFrom(src => src.Price))
+            .ForMember(dest => dest.SeasonAdjustedPrice, opt => opt.Ignore())
+            .ForMember(dest => dest.SeasonMultiplier, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalPrice, opt => opt.Ignore());
+
+        CreateMap<ProviderHotel, ProviderHotelResponse>()
+            .ForMember(dest => dest.BasePricePerNight, opt => opt.MapFrom(src => src.PricePerNight))
+            .ForMember(dest => dest.SeasonAdjustedPricePerNight, opt => opt.Ignore())
+            .ForMember(dest => dest.SeasonMultiplier, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalPrice, opt => opt.Ignore())
+            .ForMember(dest => dest.NightCount, opt => opt.Ignore())
+            .ForMember(dest => dest.Segment, opt => opt.Ignore());
 
         // Follow mappings
         CreateMap<User, FollowUserResponse>();

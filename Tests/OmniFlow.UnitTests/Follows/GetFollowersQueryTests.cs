@@ -64,7 +64,7 @@ public class GetFollowersQueryTests
         var followerOne = new User { Id = followerOneId, Username = "alice", Email = "alice@example.com", ProfilePhotoUrl = "https://cdn.example.com/alice.jpg" };
         var followerTwo = new User { Id = followerTwoId, Username = "bob", Email = "bob@example.com" };
 
-        _followRepositoryMock.Setup(x => x.GetFollowersAsync(targetUserId, It.IsAny<RequestParameter>()))
+        _followRepositoryMock.Setup(x => x.GetFollowersAsync(targetUserId, It.IsAny<RequestParameter>(), It.IsAny<string?>()))
             .ReturnsAsync(new PagedResponse<Follow>(new List<Follow>
             {
                 new() { FollowerId = followerOneId, FollowingId = targetUserId, Follower = followerOne },

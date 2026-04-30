@@ -77,6 +77,10 @@ public class Trip : AuditableBaseEntity
 	/// IMPORTANT: Destinations must be eager-loaded (.Include) before calling this method.
 	/// Never call this from a collection setter or property accessor to avoid EF Core side-effects.
 	/// </summary>
+	/// <remarks>
+	/// This method does NOT depend on OrderIndex. It only uses ArrivalDate/DepartureDate Min/Max values.
+	/// Safe to call after ExecuteUpdateAsync OrderIndex shifts because date values remain unaffected.
+	/// </remarks>
 	public void RecalculateFromDestinations()
 	{
 		if (Destinations == null)

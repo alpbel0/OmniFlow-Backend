@@ -279,6 +279,170 @@ public class TimelineEntry : AuditableBaseEntity
     }
 
     // ------------------------------------------------------------------
+    // Domain update methods
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Updates place-specific fields. Only allowed when EntryType is Place.
+    /// </summary>
+    public void UpdatePlaceDetails(Guid? placeId, TimeOnly? startTime, int? durationMinutes)
+    {
+        if (EntryType != TimelineEntryType.Place)
+            throw new DomainException("UpdatePlaceDetails can only be called on Place entries.");
+
+        if (placeId.HasValue)
+            PlaceId = placeId.Value;
+
+        if (startTime.HasValue)
+            StartTime = startTime.Value;
+
+        if (durationMinutes.HasValue)
+        {
+            if (durationMinutes.Value <= 0)
+                throw new DomainException("DurationMinutes must be greater than 0.");
+            DurationMinutes = durationMinutes.Value;
+        }
+    }
+
+    /// <summary>
+    /// Updates flight-specific fields. Throws if entry is locked.
+    /// </summary>
+    public void UpdateFlightDetails(
+        string? fromAirport, string? toAirport,
+        DateTime? departureAt, DateTime? arrivalAt,
+        string? fromCity, string? toCity,
+        string? airline, string? flightNumber)
+    {
+        if (IsLocked && EntryType == TimelineEntryType.CustomFlight)
+            throw new DomainException("Cannot modify flight details of a locked timeline entry.");
+
+        if (!string.IsNullOrWhiteSpace(fromAirport))
+            FlightFromAirport = fromAirport.Trim();
+        if (!string.IsNullOrWhiteSpace(toAirport))
+            FlightToAirport = toAirport.Trim();
+        if (departureAt.HasValue)
+            FlightDepartureAt = departureAt.Value;
+        if (arrivalAt.HasValue)
+            FlightArrivalAt = arrivalAt.Value;
+        if (!string.IsNullOrWhiteSpace(fromCity))
+            FlightFromCity = fromCity.Trim();
+        if (!string.IsNullOrWhiteSpace(toCity))
+            FlightToCity = toCity.Trim();
+        if (!string.IsNullOrWhiteSpace(airline))
+            Airline = airline.Trim();
+        if (!string.IsNullOrWhiteSpace(flightNumber))
+            FlightNumber = flightNumber.Trim();
+
+        if (FlightDepartureAt.HasValue && FlightArrivalAt.HasValue && FlightArrivalAt.Value <= FlightDepartureAt.Value)
+            throw new DomainException("FlightArrivalAt must be after FlightDepartureAt.");
+    }
+
+    /// <summary>
+    /// Updates transport-specific fields. Throws if entry is locked.
+    /// </summary>
+    public void UpdateTransportDetails(
+        TransportMode? transportType, TimeOnly? startTime, int? durationMinutes,
+        string? fromStation, string? toStation, string? company)
+    {
+        if (IsLocked && EntryType == TimelineEntryType.CustomTransport)
+            throw new DomainException("Cannot modify transport details of a locked timeline entry.");
+
+        if (transportType.HasValue)
+            TransportType = transportType.Value;
+        if (startTime.HasValue)
+            StartTime = startTime.Value;
+        if (durationMinutes.HasValue)
+        {
+            if (durationMinutes.Value <= 0)
+                throw new DomainException("DurationMinutes must be greater than 0.");
+            DurationMinutes = durationMinutes.Value;
+        }
+        if (!string.IsNullOrWhiteSpace(fromStation))
+            TransportFromStation = fromStation.Trim();
+        if (!string.IsNullOrWhiteSpace(toStation))
+            TransportToStation = toStation.Trim();
+        if (!string.IsNullOrWhiteSpace(company))
+            TransportCompany = company.Trim();
+    }
+
+    /// <summary>
+    /// Updates accommodation-specific fields. Throws if entry is locked.
+    /// </summary>
+    public void UpdateAccommodationDetails(
+        DateTime? checkIn, DateTime? checkOut,
+        string? address, string? name)
+    {
+        if (IsLocked && EntryType == TimelineEntryType.CustomAccommodation)
+            throw new DomainException("Cannot modify accommodation details of a locked timeline entry.");
+
+        if (checkIn.HasValue)
+            AccommodationCheckIn = checkIn.Value;
+        if (checkOut.HasValue)
+            AccommodationCheckOut = checkOut.Value;
+        if (!string.IsNullOrWhiteSpace(address))
+            AccommodationAddress = address.Trim();
+        if (!string.IsNullOrWhiteSpace(name))
+            CustomName = name.Trim();
+
+        if (AccommodationCheckIn.HasValue && AccommodationCheckOut.HasValue && AccommodationCheckOut.Value <= AccommodationCheckIn.Value)
+            throw new DomainException("AccommodationCheckOut must be after AccommodationCheckIn.");
+    }
+
+    /// <summary>
+    /// Updates event-specific fields. Throws if entry is locked.
+    /// </summary>
+    public void UpdateEventDetails(
+        string? name, TimeOnly? startTime,
+        int? durationMinutes, PlaceCategory? category)
+    {
+        if (IsLocked && EntryType == TimelineEntryType.CustomEvent)
+            throw new DomainException("Cannot modify event details of a locked timeline entry.");
+
+        if (!string.IsNullOrWhiteSpace(name))
+            CustomName = name.Trim();
+        if (startTime.HasValue)
+            StartTime = startTime.Value;
+        if (durationMinutes.HasValue)
+        {
+            if (durationMinutes.Value <= 0)
+                throw new DomainException("DurationMinutes must be greater than 0.");
+            DurationMinutes = durationMinutes.Value;
+        }
+        if (category.HasValue)
+            CustomCategory = category.Value;
+    }
+
+    /// <summary>
+    /// Updates common fields that are always editable regardless of lock status.
+    /// </summary>
+    public void UpdateCommonFields(
+        decimal price, string? currencyCode, string? notes,
+        Guid? providerFlightId, Guid? providerHotelId)
+    {
+        Price = price;
+        if (!string.IsNullOrWhiteSpace(currencyCode))
+            CurrencyCode = currencyCode.Trim().ToUpper();
+        if (notes != null)
+            Notes = notes;
+        if (providerFlightId.HasValue)
+            ProviderFlightId = providerFlightId.Value;
+        if (providerHotelId.HasValue)
+            ProviderHotelId = providerHotelId.Value;
+    }
+
+    /// <summary>
+    /// Updates the destination and day assignment of the entry.
+    /// </summary>
+    public void UpdateDestinationAndDay(Guid destinationId, int dayNumber)
+    {
+        if (dayNumber <= 0)
+            throw new DomainException("DayNumber must be greater than 0.");
+
+        DestinationId = destinationId;
+        DayNumber = dayNumber;
+    }
+
+    // ------------------------------------------------------------------
     // Domain methods
     // ------------------------------------------------------------------
     public void MarkVisited()

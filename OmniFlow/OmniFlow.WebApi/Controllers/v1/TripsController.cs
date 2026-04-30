@@ -3,14 +3,16 @@ using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.SavedTrips.Commands.SaveTrip;
 using OmniFlow.Application.Features.SavedTrips.Commands.UnsaveTrip;
-using OmniFlow.Application.Features.Trips.Commands.ArchiveTrip;
 using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
+using OmniFlow.Application.Features.Trips.Commands.CreateTripWizard;
+using OmniFlow.Application.Features.Trips.Commands.ArchiveTrip;
 using OmniFlow.Application.Features.Trips.Commands.DeleteTrip;
 using OmniFlow.Application.Features.Trips.Commands.ForkTrip;
 using OmniFlow.Application.Features.Trips.Commands.PublishTrip;
 using OmniFlow.Application.Features.Trips.Commands.RemoveUpvoteTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpvoteTrip;
+using OmniFlow.Application.Features.Trips.Queries.GetBudgetSummary;
 using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
 using OmniFlow.Application.Features.Trips.Queries.GetTripById;
 using OmniFlow.Domain.Enums;
@@ -94,6 +96,48 @@ public class TripsController : BaseApiController
 
         var tripId = await Mediator.Send(command);
         return CreatedAtAction(nameof(GetById), new { id = tripId }, tripId);
+    }
+
+    /// <summary>Create a new trip via the full wizard flow (with up to 10 destinations).</summary>
+    [HttpPost("wizard")]
+    [ProducesResponseType(typeof(CreateTripWizardResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> CreateWizard([FromBody] CreateTripWizardRequest request)
+    {
+        var command = new CreateTripWizardCommand
+        {
+            Title = request.Title,
+            Description = request.Description,
+            Origin = request.Origin,
+            OriginCountry = request.OriginCountry,
+            PersonCount = request.PersonCount,
+            BudgetTier = request.BudgetTier,
+            TravelCompanion = request.TravelCompanion,
+            TravelStyles = request.TravelStyles,
+            Tempo = request.Tempo,
+            TransportPreference = request.TransportPreference,
+            ManualBudget = request.ManualBudget,
+            CoverPhotoUrl = request.CoverPhotoUrl,
+            Tags = request.Tags,
+            Destinations = request.Destinations
+        };
+
+        var result = await Mediator.Send(command);
+        return CreatedAtAction(nameof(GetById), new { id = result.TripId }, result);
+    }
+
+    /// <summary>Get real-time budget summary for a trip.</summary>
+    [HttpGet("{tripId:guid}/budget-summary")]
+    [ProducesResponseType(typeof(BudgetSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBudgetSummary([FromRoute] Guid tripId)
+    {
+        var query = new GetBudgetSummaryQuery { TripId = tripId };
+        var result = await Mediator.Send(query);
+        return Ok(result);
     }
 
     /// <summary>Update an existing trip (Draft only).</summary>

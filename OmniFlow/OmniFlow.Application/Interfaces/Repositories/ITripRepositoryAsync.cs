@@ -10,5 +10,6 @@ public interface ITripRepositoryAsync : IGenericRepositoryAsync<Trip>
     Task<IReadOnlyList<Trip>> GetPublishedByOwnerAsync(Guid ownerId);
     Task<Trip?> GetWithStopsAsync(Guid tripId);
     Task<Trip?> GetByIdWithOwnerAsync(Guid tripId);
+    Task<Trip?> GetByIdWithOwnerAndDestinationsAsync(Guid tripId);
     Task<Trip?> GetWithAllRelatedDataAsync(Guid tripId);
 }
