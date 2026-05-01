@@ -46,4 +46,7 @@ public class TripResponse
 
     // Multi-destination legs
     public List<TripDestinationResponse> Destinations { get; set; } = new();
+
+    // Timeline summary (daily entry counts)
+    public TimelineSummary? TimelineSummary { get; set; }
 }

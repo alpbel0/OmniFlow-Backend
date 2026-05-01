@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.TripDestinations;
 using OmniFlow.Application.DTOs.Trips;
@@ -10,13 +11,15 @@ namespace OmniFlow.WebApi.Controllers.v1;
 
 /// <summary>
 /// Trip Destination API endpoints — CRUD operations for trip legs.
+/// GET is public for published trips; POST/PUT/DELETE require auth and ownership.
 /// </summary>
 public class TripDestinationsController : BaseApiController
 {
-    /// <summary>Get all destinations for a trip (ordered by OrderIndex).</summary>
-    [HttpGet("api/v1/trips/{tripId:guid}/destinations")]
+    /// <summary>Get all destinations for a trip (ordered by OrderIndex). Published trips are public; Draft trips are owner-only.</summary>
+    [HttpGet("~/api/v1/trips/{tripId:guid}/destinations")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<TripDestinationResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByTrip([FromRoute] Guid tripId)
     {
@@ -26,7 +29,7 @@ public class TripDestinationsController : BaseApiController
     }
 
     /// <summary>Add a new destination to a draft trip.</summary>
-    [HttpPost("api/v1/trips/{tripId:guid}/destinations")]
+    [HttpPost("~/api/v1/trips/{tripId:guid}/destinations")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -51,7 +54,7 @@ public class TripDestinationsController : BaseApiController
     }
 
     /// <summary>Update an existing destination.</summary>
-    [HttpPut("api/v1/trips/{tripId:guid}/destinations/{destinationId:guid}")]
+    [HttpPut("~/api/v1/trips/{tripId:guid}/destinations/{destinationId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -77,7 +80,7 @@ public class TripDestinationsController : BaseApiController
     }
 
     /// <summary>Remove a destination from a trip (soft delete).</summary>
-    [HttpDelete("api/v1/trips/{tripId:guid}/destinations/{destinationId:guid}")]
+    [HttpDelete("~/api/v1/trips/{tripId:guid}/destinations/{destinationId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

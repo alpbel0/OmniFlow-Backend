@@ -123,7 +123,7 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Create_WithValidToken_Returns201()
+    public async Task Create_WithValidToken_ReturnsWizardResponse()
     {
         var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var authClient = CreateAuthenticatedClient(token);
@@ -133,6 +133,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Test Trip",
             Origin = "Antalya",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 6, 1),
+            EndDate = new DateOnly(2026, 6, 5),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
             TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
@@ -143,9 +145,13 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var body = await response.Content.ReadAsStringAsync();
-        var tripId = JsonSerializer.Deserialize<Guid>(body);
+        var result = JsonSerializer.Deserialize<CreateTripWizardResponse>(body, _json);
 
-        tripId.Should().NotBe(Guid.Empty);
+        result.Should().NotBeNull();
+        result!.TripId.Should().NotBe(Guid.Empty);
+        result.Status.Should().Be(TripStatus.Draft);
+        result.Destinations.Should().HaveCount(1);
+        result.Destinations[0].City.Should().Be("Antalya");
     }
 
     [Fact]
@@ -179,6 +185,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Invalid Trip",
             Origin = "Antalya",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 6, 10),
+            EndDate = new DateOnly(2026, 6, 5),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
             TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
@@ -248,6 +256,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Full Flow Trip",
             Origin = "Izmir",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 7, 1),
+            EndDate = new DateOnly(2026, 7, 5),
             PersonCount = 4,
             BudgetTier = BudgetTier.Premium,
             TravelStyles = new List<TravelStyle> { TravelStyle.Relax },
@@ -258,7 +268,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var createBody = await createResponse.Content.ReadAsStringAsync();
-        var tripId = JsonSerializer.Deserialize<Guid>(createBody);
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(createBody, _json);
+        var tripId = createResult!.TripId;
 
         // Get by Id
         var getResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}");
@@ -278,6 +289,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Updated Full Flow Trip",
             Origin = "Izmir",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 7, 1),
+            EndDate = new DateOnly(2026, 7, 5),
             PersonCount = 5,
             BudgetTier = BudgetTier.Premium,
             TravelStyles = new List<TravelStyle> { TravelStyle.Relax },
@@ -318,13 +331,16 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Test User Trip",
             Origin = "Antalya",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 8, 1),
+            EndDate = new DateOnly(2026, 8, 5),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
             TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
 
         var createResponse = await testUserClient.PostAsJsonAsync("/api/v1/trips", createRequest);
-        var tripId = JsonSerializer.Deserialize<Guid>(await createResponse.Content.ReadAsStringAsync());
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+        var tripId = createResult!.TripId;
 
         // Try to update with admin user
         var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
@@ -335,6 +351,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Hacked Trip",
             Origin = "Istanbul",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 8, 1),
+            EndDate = new DateOnly(2026, 8, 5),
             PersonCount = 2
         };
 
@@ -354,11 +372,14 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Test User Trip",
             Origin = "Antalya",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 9, 1),
+            EndDate = new DateOnly(2026, 9, 5),
             PersonCount = 2
         };
 
         var createResponse = await testUserClient.PostAsJsonAsync("/api/v1/trips", createRequest);
-        var tripId = JsonSerializer.Deserialize<Guid>(await createResponse.Content.ReadAsStringAsync());
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+        var tripId = createResult!.TripId;
 
         // Try to delete with admin user
         var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
@@ -399,11 +420,14 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Draft Trip",
             Origin = "Antalya",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 10, 1),
+            EndDate = new DateOnly(2026, 10, 5),
             PersonCount = 2
         };
 
         var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
-        var tripId = JsonSerializer.Deserialize<Guid>(await createResponse.Content.ReadAsStringAsync());
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+        var tripId = createResult!.TripId;
 
         // Try to fork draft trip
         var forkResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/fork", null);
@@ -479,6 +503,182 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         originalTripAfter!.ForkCount.Should().Be(originalForkCount + 1);
     }
 
+    // ── Task 4.1: Wizard + Budget + Recommendation + Timeline Summary Tests ─────────
+
+    [Fact]
+    public async Task CreateWizard_FullFlow_ReturnsBudgetMessagesAndDestinations()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        var request = new CreateTripWizardRequest
+        {
+            Title = "Wizard Trip",
+            Origin = "Istanbul",
+            OriginCountry = "Turkey",
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Premium,
+            TravelCompanion = TravelCompanion.Couple,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Romantic, TravelStyle.Cultural },
+            Tempo = Tempo.Moderate,
+            TransportPreference = TransportPreference.Walking,
+            ManualBudget = 500,
+            Destinations =
+            [
+                new OmniFlow.Application.DTOs.TripDestinations.CreateTripDestinationRequest
+                {
+                    City = "Paris",
+                    Country = "France",
+                    ArrivalDate = new DateOnly(2026, 6, 10),
+                    DepartureDate = new DateOnly(2026, 6, 15),
+                    OrderIndex = 1
+                }
+            ]
+        };
+
+        var response = await authClient.PostAsJsonAsync("/api/v1/trips/wizard", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<CreateTripWizardResponse>(body, _json);
+
+        result.Should().NotBeNull();
+        result!.TripId.Should().NotBe(Guid.Empty);
+        result.Destinations.Should().HaveCount(1);
+        result.Destinations[0].City.Should().Be("Paris");
+        result.BudgetMessages.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetBudgetSummary_ForOwnTrip_ReturnsCorrectSummary()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        // Create trip via old endpoint
+        var createRequest = new CreateTripRequest
+        {
+            Title = "Budget Test Trip",
+            Origin = "Rome",
+            OriginCountry = "Italy",
+            StartDate = new DateOnly(2026, 7, 1),
+            EndDate = new DateOnly(2026, 7, 5),
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural }
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+        var tripId = createResult!.TripId;
+
+        // Get budget summary
+        var budgetResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/budget-summary");
+        budgetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var budgetBody = await budgetResponse.Content.ReadAsStringAsync();
+        var budgetResult = JsonSerializer.Deserialize<BudgetSummaryResponse>(budgetBody, _json);
+
+        budgetResult.Should().NotBeNull();
+        budgetResult!.TotalCost.Should().BeGreaterThanOrEqualTo(0);
+        budgetResult.BudgetTier.Should().Be(BudgetTier.Standard);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsTimelineSummary_WhenEntriesExist()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        // Create trip
+        var createRequest = new CreateTripRequest
+        {
+            Title = "Timeline Summary Trip",
+            Origin = "Barcelona",
+            OriginCountry = "Spain",
+            StartDate = new DateOnly(2026, 8, 1),
+            EndDate = new DateOnly(2026, 8, 5),
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Economy,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Budget }
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+        var tripId = createResult!.TripId;
+
+        // Add timeline entries directly via DB context
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var dest = db.TripDestinations.First(d => d.TripId == tripId);
+
+        var entry1 = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000.0, "Event 1", new TimeOnly(10, 0), 60);
+        var entry2 = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1001.0, "Event 2", new TimeOnly(12, 0), 60);
+        var entry3 = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 2, 1000.0, "Event 3", new TimeOnly(10, 0), 60);
+
+        db.TimelineEntries.Add(entry1);
+        db.TimelineEntries.Add(entry2);
+        db.TimelineEntries.Add(entry3);
+        await db.SaveChangesAsync();
+
+        // Get trip by id
+        var getResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var getBody = await getResponse.Content.ReadAsStringAsync();
+        var trip = JsonSerializer.Deserialize<TripResponse>(getBody, _json);
+
+        trip.Should().NotBeNull();
+        trip!.TimelineSummary.Should().NotBeNull();
+        trip.TimelineSummary!.TotalEntryCount.Should().Be(3);
+        trip.TimelineSummary.DailyCounts.Should().HaveCount(2);
+        trip.TimelineSummary.DailyCounts.Should().Contain(d => d.DayNumber == 1 && d.EntryCount == 2);
+        trip.TimelineSummary.DailyCounts.Should().Contain(d => d.DayNumber == 2 && d.EntryCount == 1);
+    }
+
+    [Fact]
+    public async Task GetRecommendPlaces_ForPublishedTrip_ReturnsOk()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        // Create and publish trip
+        var tripId = await CreateAndPublishTripAsync(authClient);
+
+        // Seed a place for the destination city
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var dest = db.TripDestinations.First(d => d.TripId == tripId);
+
+        var place = new Place
+        {
+            City = dest.City,
+            Country = dest.Country,
+            Name = "Test Place",
+            Category = PlaceCategory.Museum,
+            Latitude = 41.0,
+            Longitude = 28.0,
+            Rating = 4.5m,
+            IsFree = false,
+            EstimatedPrice = 20,
+            PhotoUrl = "https://example.com/photo.jpg",
+            BudgetTiers = new List<BudgetTier> { BudgetTier.Standard },
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural }
+        };
+        db.Places.Add(place);
+        await db.SaveChangesAsync();
+
+        // Get recommendations
+        var recResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/recommend-places?destinationId={dest.Id}");
+        recResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var recBody = await recResponse.Content.ReadAsStringAsync();
+        var recResult = JsonSerializer.Deserialize<RecommendedPlacesResult>(recBody, _json);
+
+        recResult.Should().NotBeNull();
+    }
+
     // ── Helper Methods ─────────────────────────────────────────────────────────────
 
     private async Task<Guid> CreateAndPublishTripAsync(HttpClient authClient, int entryCount = 1)
@@ -489,23 +689,21 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Title = "Publishable Trip",
             Origin = "Antalya",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 11, 1),
+            EndDate = new DateOnly(2026, 11, 5),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
             TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
         };
 
         var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
-        var tripId = JsonSerializer.Deserialize<Guid>(await createResponse.Content.ReadAsStringAsync());
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+        var tripId = createResult!.TripId;
 
         // Add timeline entries via DB context
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-        var dest = new TripDestination(DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), "TestCity", "TestCountry", 1)
-        {
-            TripId = tripId
-        };
-        await db.TripDestinations.AddAsync(dest);
-        await db.SaveChangesAsync();
+        var dest = db.TripDestinations.First(d => d.TripId == tripId);
 
         for (int i = 0; i < entryCount; i++)
         {

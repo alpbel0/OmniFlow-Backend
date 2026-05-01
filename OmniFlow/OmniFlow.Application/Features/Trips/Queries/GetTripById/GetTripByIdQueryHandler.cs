@@ -1,7 +1,9 @@
 using AutoMapper;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Exceptions;
+using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 
 namespace OmniFlow.Application.Features.Trips.Queries.GetTripById;
@@ -9,11 +11,16 @@ namespace OmniFlow.Application.Features.Trips.Queries.GetTripById;
 public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripResponse>
 {
     private readonly ITripRepositoryAsync _tripRepository;
+    private readonly IApplicationDbContext _context;
     private readonly IMapper _mapper;
 
-    public GetTripByIdQueryHandler(ITripRepositoryAsync tripRepository, IMapper mapper)
+    public GetTripByIdQueryHandler(
+        ITripRepositoryAsync tripRepository,
+        IApplicationDbContext context,
+        IMapper mapper)
     {
         _tripRepository = tripRepository;
+        _context = context;
         _mapper = mapper;
     }
 
@@ -27,6 +34,29 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
             throw new EntityNotFoundException("Trip", request.TripId);
         }
 
-        return _mapper.Map<TripResponse>(trip);
+        var response = _mapper.Map<TripResponse>(trip);
+
+        // Lightweight projection: daily entry counts via GROUP BY
+        var dailyCounts = await _context.TimelineEntries
+            .Where(e => e.TripId == request.TripId && e.DeletedAt == null)
+            .GroupBy(e => e.DayNumber)
+            .Select(g => new DailyEntryCount
+            {
+                DayNumber = g.Key,
+                EntryCount = g.Count()
+            })
+            .OrderBy(d => d.DayNumber)
+            .ToListAsync(cancellationToken);
+
+        if (dailyCounts.Count > 0)
+        {
+            response.TimelineSummary = new TimelineSummary
+            {
+                TotalEntryCount = dailyCounts.Sum(d => d.EntryCount),
+                DailyCounts = dailyCounts
+            };
+        }
+
+        return response;
     }
 }

@@ -41,7 +41,8 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.OwnerUsername, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Username : string.Empty))
             .ForMember(dest => dest.OwnerProfilePhotoUrl, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.ProfilePhotoUrl : null))
             .ForMember(dest => dest.IsUpvoted, opt => opt.Ignore())
-            .ForMember(dest => dest.IsSaved, opt => opt.Ignore());
+            .ForMember(dest => dest.IsSaved, opt => opt.Ignore())
+            .ForMember(dest => dest.TimelineSummary, opt => opt.Ignore());
 
         CreateMap<Trip, FeaturedTripResponse>()
             .ForMember(dest => dest.OwnerId, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.Id : Guid.Empty))
@@ -66,6 +67,7 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.Destinations, opt => opt.Ignore()); // Handled manually in CreateTripWizardCommandHandler
 
         CreateMap<Trip, CreateTripWizardResponse>()
+            .ForMember(dest => dest.TripId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.BudgetMessages, opt => opt.Ignore())
             .ForMember(dest => dest.Destinations, opt => opt.MapFrom(src => src.Destinations.OrderBy(d => d.OrderIndex)));
 
