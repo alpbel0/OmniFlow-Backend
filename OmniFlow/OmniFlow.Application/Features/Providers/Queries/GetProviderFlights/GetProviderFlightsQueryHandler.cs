@@ -66,6 +66,11 @@ public class GetProviderFlightsQueryHandler : IRequestHandler<GetProviderFlights
 
         var flights = await _flightRepository.GetByRouteAsync(fromCity, toCity, date);
 
+        if (request.IsReturn && !flights.Any())
+        {
+            flights = await _flightRepository.GetByRouteAsync(fromCity, toCity);
+        }
+
         if (!flights.Any())
             return new List<ProviderFlightResponse>();
 

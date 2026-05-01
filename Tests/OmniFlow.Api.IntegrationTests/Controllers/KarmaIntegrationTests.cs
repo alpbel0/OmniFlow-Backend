@@ -68,28 +68,22 @@ public class KarmaIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 			Title = title,
 			Origin = "Antalya",
 			OriginCountry = "Turkey",
+			StartDate = new DateOnly(2026, 11, 1),
+			EndDate = new DateOnly(2026, 11, 5),
 			PersonCount = 2,
 			BudgetTier = BudgetTier.Standard,
 			TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
 		});
 		createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-		return JsonSerializer.Deserialize<Guid>(await createResponse.Content.ReadAsStringAsync());
+		var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+		return createResult!.TripId;
 	}
 
 	private async Task AddTimelineEntryAndPublishAsync(HttpClient authClient, Guid tripId)
 	{
 		using var scope = _factory.Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-		var dest = db.TripDestinations.FirstOrDefault(d => d.TripId == tripId);
-		if (dest == null)
-		{
-			dest = new TripDestination(DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), "TestCity", "TestCountry", 1)
-			{
-				TripId = tripId
-			};
-			await db.TripDestinations.AddAsync(dest);
-			await db.SaveChangesAsync();
-		}
+		var dest = db.TripDestinations.First(d => d.TripId == tripId);
 		var entry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
 		await db.TimelineEntries.AddAsync(entry);
 		await db.SaveChangesAsync();

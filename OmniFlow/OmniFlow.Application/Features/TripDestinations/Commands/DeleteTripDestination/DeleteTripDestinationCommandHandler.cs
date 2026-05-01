@@ -44,6 +44,7 @@ public class DeleteTripDestinationCommandHandler : IRequestHandler<DeleteTripDes
                 throw new ApiException("Only draft trips can be modified.");
 
             destination.DeletedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
 
             var toShift = trip.Destinations
                 .Where(d => d.Id != destination.Id && d.OrderIndex > deletedOrderIndex && d.DeletedAt == null)

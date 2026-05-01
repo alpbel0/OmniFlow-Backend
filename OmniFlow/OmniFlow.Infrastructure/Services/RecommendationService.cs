@@ -32,7 +32,10 @@ public class RecommendationService : IRecommendationService
         TravelCompanion companion,
         List<TravelStyle> travelStyles,
         Tempo tempo,
+        TransportPreference transportPreference,
         List<Guid> excludedPlaceIds,
+        double? hubLatitude = null,
+        double? hubLongitude = null,
         CancellationToken cancellationToken = default)
     {
         // 1. Fetch places from DB filtered by city and budget tier
@@ -46,11 +49,25 @@ public class RecommendationService : IRecommendationService
                 .ToList();
         }
 
-        // 3. Score and sort
+        // 3. Score
         var scoredResults = _scoringService.ScoreAndSortPlaces(
             places.ToList(),
             companion,
             travelStyles ?? new List<TravelStyle>());
+
+        var rankedResults = scoredResults
+            .Select(scored => new
+            {
+                Scored = scored,
+                DistanceKm = TryCalculateDistanceKm(scored.Place, hubLatitude, hubLongitude),
+                AdjustedScore = scored.FinalScore - CalculateDistancePenaltyKm(
+                    TryCalculateDistanceKm(scored.Place, hubLatitude, hubLongitude),
+                    transportPreference)
+            })
+            .OrderByDescending(x => x.AdjustedScore)
+            .ThenBy(x => x.DistanceKm ?? double.MaxValue)
+            .ThenBy(x => x.Scored.Place.Name)
+            .ToList();
 
         // 4. Group into 3 visibility buckets
         var result = new RecommendedPlacesResult
@@ -58,27 +75,82 @@ public class RecommendationService : IRecommendationService
             DailyCapacity = _timelineService.GetDailyCapacity(tempo)
         };
 
-        foreach (var scored in scoredResults)
+        foreach (var ranked in rankedResults)
         {
+            var scored = ranked.Scored;
             var response = _mapper.Map<ScoredPlaceResponse>(scored.Place);
-            response.FinalScore = scored.FinalScore;
+            response.FinalScore = ranked.AdjustedScore;
             response.GroupScore = scored.GroupScore;
             response.StyleScoreAvg = scored.StyleScoreAvg;
             response.GoogleMatchBonus = scored.GoogleMatchBonus;
 
-            if (scored.FinalScore > 0)
+            if (ranked.AdjustedScore > 0)
                 result.Recommended.Add(response);
-            else if (scored.FinalScore == 0)
+            else if (ranked.AdjustedScore == 0)
                 result.Neutral.Add(response);
             else
                 result.Other.Add(response);
         }
 
-        // Other: sort by descending (least negative first)
-        result.Other = result.Other
-            .OrderByDescending(r => r.FinalScore)
-            .ToList();
-
         return result;
     }
+
+    private static double? TryCalculateDistanceKm(Place place, double? hubLatitude, double? hubLongitude)
+    {
+        if (!hubLatitude.HasValue || !hubLongitude.HasValue)
+            return null;
+
+        if (Math.Abs(place.Latitude) < double.Epsilon && Math.Abs(place.Longitude) < double.Epsilon)
+            return null;
+
+        return CalculateDistanceKm(hubLatitude.Value, hubLongitude.Value, place.Latitude, place.Longitude);
+    }
+
+    private static int CalculateDistancePenaltyKm(double? distanceKm, TransportPreference transportPreference)
+    {
+        if (!distanceKm.HasValue)
+            return 0;
+
+        return transportPreference switch
+        {
+            TransportPreference.Walking => distanceKm.Value switch
+            {
+                <= 2 => 0,
+                <= 5 => 8,
+                <= 10 => 18,
+                _ => 30
+            },
+            TransportPreference.PublicTransport => distanceKm.Value switch
+            {
+                <= 5 => 0,
+                <= 10 => 5,
+                <= 20 => 12,
+                _ => 20
+            },
+            TransportPreference.CarRental => distanceKm.Value switch
+            {
+                <= 20 => 0,
+                <= 50 => 4,
+                <= 100 => 10,
+                _ => 18
+            },
+            _ => 0
+        };
+    }
+
+    private static double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double earthRadiusKm = 6371.0;
+
+        var dLat = DegreesToRadians(lat2 - lat1);
+        var dLon = DegreesToRadians(lon2 - lon1);
+        var a =
+            Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+            Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+            Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return earthRadiusKm * c;
+    }
+
+    private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;
 }

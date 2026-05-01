@@ -23,12 +23,23 @@ public class ProviderFlightRepositoryAsync : GenericRepositoryAsync<ProviderFlig
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<ProviderFlight>> GetDistinctDepartureCitiesAsync()
+    public async Task<IReadOnlyList<ProviderFlight>> GetByRouteAsync(string fromCity, string toCity)
     {
         return await _dbSet
+            .Where(f => f.DepartureCity == fromCity
+                     && f.ArrivalCity == toCity)
+            .OrderBy(f => f.DepartureTime)
+            .ThenBy(f => f.Price)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<ProviderFlight>> GetDistinctDepartureCitiesAsync()
+    {
+        var flights = await _dbSet.ToListAsync();
+        return flights
             .GroupBy(f => new { f.DepartureCity, f.DepartureAirportCode })
             .Select(g => g.First())
             .OrderBy(f => f.DepartureCity)
-            .ToListAsync();
+            .ToList();
     }
 }

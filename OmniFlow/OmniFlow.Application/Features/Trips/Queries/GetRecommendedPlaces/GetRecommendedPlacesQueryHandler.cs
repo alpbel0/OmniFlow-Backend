@@ -48,6 +48,39 @@ public class GetRecommendedPlacesQueryHandler : IRequestHandler<GetRecommendedPl
             .Distinct()
             .ToListAsync(cancellationToken);
 
+        var destinationTimelineEntries = await _context.TimelineEntries
+            .Where(e => e.TripId == request.TripId && e.DestinationId == request.DestinationId && e.DeletedAt == null)
+            .OrderBy(e => e.DayNumber)
+            .ThenBy(e => e.OrderIndex)
+            .ToListAsync(cancellationToken);
+
+        var hubEntry = destinationTimelineEntries
+            .FirstOrDefault(e =>
+                e.EntryType == TimelineEntryType.CustomAccommodation &&
+                e.CustomLatitude.HasValue &&
+                e.CustomLongitude.HasValue);
+
+        double? hubLatitude = hubEntry?.CustomLatitude;
+        double? hubLongitude = hubEntry?.CustomLongitude;
+
+        if ((!hubLatitude.HasValue || !hubLongitude.HasValue) &&
+            destinationTimelineEntries.Any(e => e.EntryType == TimelineEntryType.CustomAccommodation && e.ProviderHotelId.HasValue))
+        {
+            var providerHotelIds = destinationTimelineEntries
+                .Where(e => e.EntryType == TimelineEntryType.CustomAccommodation && e.ProviderHotelId.HasValue)
+                .Select(e => e.ProviderHotelId!.Value)
+                .Distinct()
+                .ToList();
+
+            var providerHotel = await _context.ProviderHotels
+                .Where(h => providerHotelIds.Contains(h.Id) && h.Latitude.HasValue && h.Longitude.HasValue)
+                .OrderBy(h => h.ValidDate)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            hubLatitude = providerHotel?.Latitude;
+            hubLongitude = providerHotel?.Longitude;
+        }
+
         var budgetTier = trip.AdjustedBudgetTier ?? trip.BudgetTier;
 
         var result = await _recommendationService.GetRecommendedPlacesAsync(
@@ -56,7 +89,10 @@ public class GetRecommendedPlacesQueryHandler : IRequestHandler<GetRecommendedPl
             trip.TravelCompanion,
             trip.TravelStyles.ToList(),
             trip.Tempo,
+            trip.TransportPreference,
             excludedPlaceIds,
+            hubLatitude,
+            hubLongitude,
             cancellationToken);
 
         return result;

@@ -51,7 +51,7 @@ public class RecommendationServiceTests
         // Act
         var result = await sut.GetRecommendedPlacesAsync(
             "Rome", BudgetTier.Standard, TravelCompanion.Solo,
-            new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, new List<Guid>());
+            new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, TransportPreference.Walking, new List<Guid>());
 
         // Assert
         result.Recommended.Should().HaveCount(2);
@@ -91,7 +91,7 @@ public class RecommendationServiceTests
         // Act
         var result = await sut.GetRecommendedPlacesAsync(
             "Rome", BudgetTier.Standard, TravelCompanion.Solo,
-            new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, new List<Guid>());
+            new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, TransportPreference.Walking, new List<Guid>());
 
         // Assert
         result.Recommended.Should().HaveCount(1);
@@ -130,7 +130,7 @@ public class RecommendationServiceTests
         // Act
         var result = await sut.GetRecommendedPlacesAsync(
             "Rome", BudgetTier.Standard, TravelCompanion.Solo,
-            new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate,
+            new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, TransportPreference.Walking,
             new List<Guid> { excludedId });
 
         // Assert
@@ -153,7 +153,7 @@ public class RecommendationServiceTests
         // Act
         var result = await sut.GetRecommendedPlacesAsync(
             "EmptyCity", BudgetTier.Standard, TravelCompanion.Solo,
-            new List<TravelStyle>(), Tempo.Fast, new List<Guid>());
+            new List<TravelStyle>(), Tempo.Fast, TransportPreference.Walking, new List<Guid>());
 
         // Assert
         result.Recommended.Should().BeEmpty();
@@ -193,7 +193,7 @@ public class RecommendationServiceTests
         // Act
         var result = await sut.GetRecommendedPlacesAsync(
             "Rome", BudgetTier.Standard, TravelCompanion.Solo,
-            new List<TravelStyle>(), Tempo.Moderate, new List<Guid>());
+            new List<TravelStyle>(), Tempo.Moderate, TransportPreference.Walking, new List<Guid>());
 
         // Assert
         result.Other.Should().HaveCount(3);
@@ -217,10 +217,48 @@ public class RecommendationServiceTests
         // Act
         await sut.GetRecommendedPlacesAsync(
             "Rome", BudgetTier.Premium, TravelCompanion.Couple,
-            new List<TravelStyle>(), Tempo.Slow, new List<Guid>());
+            new List<TravelStyle>(), Tempo.Slow, TransportPreference.PublicTransport, new List<Guid>());
 
         // Assert
         _placeRepoMock.Verify(r => r.GetByCityAndBudgetTierAsync("Rome", BudgetTier.Premium), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetRecommendedPlaces_WithWalkingPreference_PenalizesFarPlaces()
+    {
+        var nearPlace = CreatePlace(Guid.NewGuid(), "Near Museum", PlaceCategory.Museum);
+        nearPlace.Latitude = 41.005;
+        nearPlace.Longitude = 28.978;
+
+        var farPlace = CreatePlace(Guid.NewGuid(), "Far Museum", PlaceCategory.Museum);
+        farPlace.Latitude = 41.090;
+        farPlace.Longitude = 29.200;
+
+        var places = new List<Place> { farPlace, nearPlace };
+        var scored = new List<ScoredPlaceResult>
+        {
+            new() { Place = farPlace, FinalScore = 20, GroupScore = 10, StyleScoreAvg = 5, GoogleMatchBonus = 5 },
+            new() { Place = nearPlace, FinalScore = 20, GroupScore = 10, StyleScoreAvg = 5, GoogleMatchBonus = 5 }
+        };
+
+        _placeRepoMock.Setup(r => r.GetByCityAndBudgetTierAsync("Rome", BudgetTier.Standard))
+            .ReturnsAsync(places);
+        _scoringMock.Setup(s => s.ScoreAndSortPlaces(places, TravelCompanion.Solo, It.IsAny<List<TravelStyle>>()))
+            .Returns(scored);
+        _timelineMock.Setup(t => t.GetDailyCapacity(Tempo.Moderate)).Returns(5);
+
+        SetupMapperForPlaces(places, scored);
+
+        var sut = CreateSut();
+
+        var result = await sut.GetRecommendedPlacesAsync(
+            "Rome", BudgetTier.Standard, TravelCompanion.Solo,
+            new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, TransportPreference.Walking,
+            new List<Guid>(), 41.0082, 28.9784);
+
+        result.Recommended.Should().HaveCount(1);
+        result.Recommended[0].Name.Should().Be("Near Museum");
+        result.Other.Should().ContainSingle(r => r.Name == "Far Museum");
     }
 
     #endregion

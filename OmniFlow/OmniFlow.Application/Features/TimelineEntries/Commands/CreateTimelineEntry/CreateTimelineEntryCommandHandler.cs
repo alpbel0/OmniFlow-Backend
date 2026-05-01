@@ -15,6 +15,8 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
     private readonly IApplicationDbContext _context;
     private readonly ITimelineEntryRepositoryAsync _timelineRepo;
     private readonly ITimelineService _timelineService;
+    private readonly IProviderFlightRepositoryAsync _providerFlightRepo;
+    private readonly IProviderHotelRepositoryAsync _providerHotelRepo;
     private readonly IAuthenticatedUserService _authService;
     private readonly IMapper _mapper;
 
@@ -22,20 +24,25 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
         IApplicationDbContext context,
         ITimelineEntryRepositoryAsync timelineRepo,
         ITimelineService timelineService,
+        IProviderFlightRepositoryAsync providerFlightRepo,
+        IProviderHotelRepositoryAsync providerHotelRepo,
         IAuthenticatedUserService authService,
         IMapper mapper)
     {
         _context = context;
         _timelineRepo = timelineRepo;
         _timelineService = timelineService;
+        _providerFlightRepo = providerFlightRepo;
+        _providerHotelRepo = providerHotelRepo;
         _authService = authService;
         _mapper = mapper;
     }
 
     public async Task<TimelineEntryResponse> Handle(CreateTimelineEntryCommand request, CancellationToken cancellationToken)
     {
-        // 1. Load trip
+        // 1. Load trip with destinations
         var trip = await _context.Trips
+            .Include(t => t.Destinations)
             .FirstOrDefaultAsync(t => t.Id == request.TripId && t.DeletedAt == null, cancellationToken)
             ?? throw new EntityNotFoundException("Trip", request.TripId);
 
@@ -53,7 +60,7 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
             ?? throw new EntityNotFoundException("TripDestination", request.DestinationId);
 
         // 5. Factory by EntryType
-        TimelineEntry entry = CreateEntryFromRequest(request);
+        TimelineEntry entry = await CreateEntryFromRequestAsync(request, destination);
 
         // 6. LexoRank
         var lastEntry = await _timelineRepo.GetLastEntryInDayAsync(request.TripId, request.DestinationId, request.DayNumber);
@@ -79,8 +86,73 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
         return _mapper.Map<TimelineEntryResponse>(entry);
     }
 
-    private static TimelineEntry CreateEntryFromRequest(CreateTimelineEntryCommand request)
+    private async Task<TimelineEntry> CreateEntryFromRequestAsync(CreateTimelineEntryCommand request, TripDestination destination)
     {
+        if (request.ProviderFlightId.HasValue)
+        {
+            var providerFlight = await _providerFlightRepo.GetByIdAsync(request.ProviderFlightId.Value)
+                ?? throw new EntityNotFoundException("ProviderFlight", request.ProviderFlightId.Value);
+
+            var providerFlightEntry = TimelineEntry.CreateCustomFlightEntry(
+                request.TripId,
+                request.DestinationId,
+                request.DayNumber,
+                0,
+                providerFlight.DepartureAirportCode,
+                providerFlight.ArrivalAirportCode,
+                EnsureUtc(providerFlight.DepartureTime),
+                EnsureUtc(providerFlight.ArrivalTime),
+                providerFlight.DepartureCity,
+                providerFlight.ArrivalCity,
+                providerFlight.Airline,
+                providerFlight.FlightNumber,
+                providerFlight.Price,
+                request.Notes);
+
+            providerFlightEntry.UpdateCommonFields(
+                providerFlight.Price,
+                providerFlight.CurrencyCode,
+                request.Notes,
+                providerFlight.Id,
+                null);
+
+            return providerFlightEntry;
+        }
+
+        if (request.ProviderHotelId.HasValue)
+        {
+            var providerHotel = await _providerHotelRepo.GetByIdAsync(request.ProviderHotelId.Value)
+                ?? throw new EntityNotFoundException("ProviderHotel", request.ProviderHotelId.Value);
+
+            var checkIn = EnsureUtc(destination.ArrivalDate.ToDateTime(new TimeOnly(14, 0)));
+            var checkOut = EnsureUtc(destination.DepartureDate.ToDateTime(new TimeOnly(12, 0)));
+            var nightCount = Math.Max(destination.NightCount, 1);
+            var totalPrice = providerHotel.PricePerNight * nightCount;
+
+            var providerHotelEntry = TimelineEntry.CreateCustomAccommodationEntry(
+                request.TripId,
+                request.DestinationId,
+                request.DayNumber,
+                0,
+                checkIn,
+                checkOut,
+                providerHotel.HotelName,
+                request.AccommodationAddress ?? providerHotel.City,
+                providerHotel.Latitude,
+                providerHotel.Longitude,
+                totalPrice,
+                request.Notes);
+
+            providerHotelEntry.UpdateCommonFields(
+                totalPrice,
+                providerHotel.CurrencyCode,
+                request.Notes,
+                null,
+                providerHotel.Id);
+
+            return providerHotelEntry;
+        }
+
         return request.EntryType switch
         {
             TimelineEntryType.Place => TimelineEntry.CreatePlaceEntry(
@@ -117,6 +189,8 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
                 request.AccommodationCheckOut ?? throw new ApiException("AccommodationCheckOut is required for CustomAccommodation entries."),
                 request.CustomName ?? throw new ApiException("CustomName is required for CustomAccommodation entries."),
                 request.AccommodationAddress,
+                request.CustomLatitude,
+                request.CustomLongitude,
                 request.Price,
                 request.Notes),
 
@@ -130,6 +204,16 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
                 request.Notes),
 
             _ => throw new ApiException($"Unsupported EntryType: {request.EntryType}")
+        };
+    }
+
+    private static DateTime EnsureUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
         };
     }
 }
