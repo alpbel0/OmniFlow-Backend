@@ -1207,20 +1207,41 @@ Phase 4 tamamlanmış sayılır eğer:
 
 ### Task 4.3: TimelineController
 
-**Tahmini Süre:** 3 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 3 saat (Controller) + 4 saat (Integration Tests) = 7 saat  
+**Durum:** ✅ Tamamlandı  
+**Tamamlanma Tarihi:** 2026-05-01
 
-**Yapılacaklar:**
-- [ ] `WebApi/Controllers/v1/TimelineController.cs` oluştur
-- [ ] `GET    /api/v1/trips/{tripId}/timeline` — tüm timeline (destination+gün bazlı gruplandırılmış)
-- [ ] `GET    /api/v1/trips/{tripId}/timeline?destinationId={id}` — belirli destinasyon
-- [ ] `POST   /api/v1/trips/{tripId}/timeline/entry` — yeni entry ekle (5 tip)
-- [ ] `PUT    /api/v1/trips/{tripId}/timeline/entry/{entryId}` — entry güncelle
-- [ ] `DELETE /api/v1/trips/{tripId}/timeline/entry/{entryId}` — entry sil
-- [ ] `PUT    /api/v1/trips/{tripId}/timeline/reorder` — reorder
-- [ ] `PUT    /api/v1/trips/{tripId}/timeline/entry/{entryId}/visited` — visited işaretle
-- [ ] Ownership check + kilitli entry korumaları
-- [ ] Swagger XML comments
+**Kararlar:**
+- Route pattern: `~/api/v1/trips/{tripId}/timeline` (absolute route, `BaseApiController` override için `~` prefix)
+- Auth: GET `[AllowAnonymous]` (handler'da Published=public, Draft=owner-only), diğer endpoint'ler `[Authorize]`
+- Id merge: Route `entryId` authoritative, body'deki `Id`/`EntryId` override edilir
+- Response: Flat `List<TimelineEntryResponse>` (frontend grup by yapar)
+- `MarkVisitedRequest`: Controller'da anonim tip olarak tanımlandı (WebApi katmanında)
+
+**Yapılanlar:**
+- [x] `WebApi/Controllers/v1/TimelineController.cs` oluşturuldu
+  - `GET    ~/api/v1/trips/{tripId}/timeline` — `[AllowAnonymous]`, optional `destinationId` query param
+  - `POST   ~/api/v1/trips/{tripId}/timeline/entry` — `[Authorize]`, route `tripId` command'a atanır
+  - `PUT    ~/api/v1/trips/{tripId}/timeline/entry/{entryId}` — `[Authorize]`, route `entryId` command `Id`'ye atanır
+  - `DELETE ~/api/v1/trips/{tripId}/timeline/entry/{entryId}` — `[Authorize]`
+  - `PUT    ~/api/v1/trips/{tripId}/timeline/reorder` — `[Authorize]`, route `entryId` command `EntryId`'ye atanır
+  - `PUT    ~/api/v1/trips/{tripId}/timeline/entry/{entryId}/visited` — `[Authorize]`, body `MarkVisitedRequest`
+- [x] Swagger XML comments eklendi
+- [x] `Tests/OmniFlow.Api.IntegrationTests/Controllers/TimelineControllerTests.cs` oluşturuldu — 22 test:
+  - GET Timeline: Published=200 (no token, owner, other user), Draft=200 (owner), Draft=403 (other), NonExistent=404, DestinationFilter=200
+  - Create Entry: CustomFlight=201 (locked+buffer), CustomEvent=201, WithoutToken=401, Published=400, OtherUser=403
+  - Update Entry: Unlocked all fields=200, Locked type-specific=400, Locked common fields=200, OtherUser=403, Published=400
+  - Delete Entry: Unlocked=204, Locked=403, OtherUser=403
+  - Reorder: Between two entries=204
+  - Mark Visited: Mark=204, Unmark=204, OtherUser=403
+- [x] `dotnet build` — 0 error, pre-existing warnings only
+- [x] `dotnet test` (unit) — 406 passing, 1 skipped, 0 failed
+
+**Etkilenen Dosyalar:**
+- `OmniFlow.WebApi/Controllers/v1/TimelineController.cs` (yeni)
+- `Tests/OmniFlow.Api.IntegrationTests/Controllers/TimelineControllerTests.cs` (yeni — 22 test)
+- [ ] `dotnet build` — 0 error, 0 warning
+- [ ] `dotnet test` — tüm testler geçiyor
 
 ---
 
