@@ -26,7 +26,6 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
 
         try
         {
-            // 1. Load trip with destinations
             var trip = await _context.Trips
                 .Include(t => t.Destinations)
                 .FirstOrDefaultAsync(t => t.Id == request.TripId && t.DeletedAt == null, cancellationToken);
@@ -34,29 +33,20 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
             if (trip == null)
                 throw new EntityNotFoundException("Trip", request.TripId);
 
-            // 2. Ownership check
             var currentUserId = Guid.Parse(_authenticatedUserService.UserId);
             if (trip.OwnerId != currentUserId)
                 throw new ForbiddenException("You are not authorized to modify this trip.");
 
-            // 3. Only draft trips can be modified
             if (trip.Status != TripStatus.Draft)
                 throw new ApiException("Only draft trips can be modified.");
 
-            // 4. Shift existing destinations if OrderIndex conflict
-            // OrderByDescending: shift from highest index to lowest to avoid transient unique collisions
-            // (e.g., 4->5, 3->4, 2->3 — DB never sees a duplicate during the sequence)
-            var destinationsToShift = trip.Destinations
+            var toShift = trip.Destinations
                 .Where(d => d.OrderIndex >= request.OrderIndex && d.DeletedAt == null)
-                .OrderByDescending(d => d.OrderIndex)
                 .ToList();
 
-            foreach (var dest in destinationsToShift)
-            {
-                dest.OrderIndex++;
-            }
+            foreach (var dest in toShift)
+                dest.OrderIndex += 1;
 
-            // 5. Create destination
             var destination = new TripDestination(
                 request.ArrivalDate,
                 request.DepartureDate,
@@ -69,10 +59,8 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
 
             await _context.TripDestinations.AddAsync(destination, cancellationToken);
 
-            // 6. Recalculate trip dates
             trip.RecalculateFromDestinations();
 
-            // 7. Save and commit
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 

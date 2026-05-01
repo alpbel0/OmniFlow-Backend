@@ -49,6 +49,7 @@ public class TripDestinationConfiguration : IEntityTypeConfiguration<TripDestina
 
 		builder.HasIndex(d => new { d.TripId, d.OrderIndex })
 			.IsUnique()
+			.HasFilter("deleted_at IS NULL")
 			.HasDatabaseName("idx_trip_destinations_trip_order");
 
 		builder.HasIndex(d => d.City)

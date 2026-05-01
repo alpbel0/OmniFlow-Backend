@@ -1151,19 +1151,57 @@ Phase 4 tamamlanmış sayılır eğer:
 
 ---
 
-### Task 4.2: TripDestinationsController
+### Task 4.2: TripDestinationsController + Integration Tests
 
-**Tahmini Süre:** 2 saat  
-**Durum:** ⏳ Bekliyor
+**Tahmini Süre:** 2 saat (Controller) + 4 saat (Tests) = 6 saat  
+**Durum:** ✅ Tamamlandı
 
-**Yapılacaklar:**
-- [ ] `WebApi/Controllers/v1/TripDestinationsController.cs` oluştur
-- [ ] `GET    /api/v1/trips/{tripId}/destinations` — tüm destinasyonlar (sıralı)
-- [ ] `POST   /api/v1/trips/{tripId}/destinations` — yeni destinasyon ekle
-- [ ] `PUT    /api/v1/trips/{tripId}/destinations/{destId}` — güncelle
-- [ ] `DELETE /api/v1/trips/{tripId}/destinations/{destId}` — sil
-- [ ] Tüm endpoint'lerde ownership check
-- [ ] Swagger XML comments
+**Yapılanlar (Controller — 2026-05-01):**
+- [x] `WebApi/Controllers/v1/TripDestinationsController.cs` oluştur
+- [x] `GET    /api/v1/trips/{tripId}/destinations` — tüm destinasyonlar (sıralı)
+- [x] `POST   /api/v1/trips/{tripId}/destinations` — yeni destinasyon ekle
+- [x] `PUT    /api/v1/trips/{tripId}/destinations/{destId}` — güncelle
+- [x] `DELETE /api/v1/trips/{tripId}/destinations/{destId}` — sil
+- [x] Tüm endpoint'lerde ownership check
+- [x] Swagger XML comments
+
+**Yapılanlar (Handler Güncelleme):**
+- [x] `GetTripDestinationsQueryHandler` — `Include(d => d.Trip)` + owner/status check eklendi
+- [x] Published trip GET — no token → 200, owner → 200, other user → 200
+- [x] Draft trip GET — owner → 200, other user → 403, no token → 403
+
+**Yapılanlar (Integration Tests — 2026-05-01):**
+- [x] `Tests/.../TripDestinationsControllerTests.cs` oluştur — 20 test
+- [x] `GetDestinations_PublishedTrip_NoToken_Returns200`
+- [x] `GetDestinations_PublishedTrip_Owner_Returns200`
+- [x] `GetDestinations_PublishedTrip_OtherUser_Returns200`
+- [x] `GetDestinations_DraftTrip_Owner_Returns200`
+- [x] `GetDestinations_DraftTrip_OtherUser_Returns403`
+- [x] `GetDestinations_NonExistentTrip_Returns404`
+- [x] `CreateDestination_WithoutToken_Returns401`
+- [x] `CreateDestination_OwnerDraft_Returns201`
+- [x] `CreateDestination_Published_Returns400`
+- [x] `CreateDestination_OtherUser_Returns403`
+- [x] `CreateDestination_InvalidDates_Returns400`
+- [x] `CreateDestination_OrderIndexShift_Returns201`
+- [x] `UpdateDestination_WithoutToken_Returns401`
+- [x] `UpdateDestination_OwnerDraft_Returns204`
+- [x] `UpdateDestination_Published_Returns400`
+- [x] `UpdateDestination_OtherUser_Returns403`
+- [x] `UpdateDestination_OrderIndexShift_Returns204`
+- [x] `DeleteDestination_WithoutToken_Returns401`
+- [x] `DeleteDestination_OwnerDraft_Returns204`
+- [x] `DeleteDestination_OtherUser_Returns403`
+
+**Mimari Kararlar:**
+- **Published trip GET — herkese açık:** Mimari karar: Instagram/TripAdvisor sosyal medya mantığı. Published = herkese açık, Draft = owner-only.
+- **Handler'da `Include(d => d.Trip)`:** Update/Delete handler'larıyla tutarlılık sağlandı. `IAuthenticatedUserService` ile Draft trip kontrolü.
+- **OrderIndex shift doğrulama:** Create, Update, Delete sonrası DB'den çekilerek sıralama ve kaydırma kontrol edildi.
+- **Soft delete:** Delete sonrası `DeletedAt` set edilir, sonraki destinasyonlar `-1` kaydırılır.
+
+**Etkilenen Dosyalar:**
+- Güncelleme: `GetTripDestinationsQueryHandler.cs` (Include + auth check)
+- Yeni: `TripDestinationsControllerTests.cs` (20 integration test)
 
 ---
 
