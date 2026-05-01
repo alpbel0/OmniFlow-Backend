@@ -77,13 +77,13 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 	public async Task GetTopContributors_WithoutToken_Returns200AndExcludesSuspendedUsers()
 	{
 		var suffix = Guid.NewGuid().ToString("N")[..8];
-		var activeUser = await CreateUserAsync($"leader_{suffix}", 900, isSuspended: false, "https://cdn.example.com/leader.jpg");
-		var suspendedUser = await CreateUserAsync($"suspended_{suffix}", 1000, isSuspended: true);
+		var activeUser = await CreateUserAsync($"000_leader_{suffix}", 999_999, isSuspended: false, "https://cdn.example.com/leader.jpg");
+		var suspendedUser = await CreateUserAsync($"zzz_suspended_{suffix}", 1_000_000, isSuspended: true);
 
 		using (var scope = _factory.Services.CreateScope())
 		{
 			var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-			db.Trips.Add(new Trip
+			var trip = new Trip
 			{
 				Id = Guid.NewGuid(),
 				OwnerId = activeUser.Id,
@@ -93,8 +93,21 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 				OriginCountry = "Turkey",
 				PersonCount = 2,
 				BudgetTier = BudgetTier.Standard,
+				TravelCompanion = TravelCompanion.Friends,
+				Tempo = Tempo.Moderate,
+				TransportPreference = TransportPreference.PublicTransport,
 				TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
-			});
+			};
+
+			trip.Destinations.Add(new TripDestination(
+				arrivalDate: new DateOnly(2030, 1, 10),
+				departureDate: new DateOnly(2030, 1, 13),
+				city: "Paris",
+				country: "France",
+				orderIndex: 1));
+			trip.RecalculateFromDestinations();
+
+			db.Trips.Add(trip);
 			await db.SaveChangesAsync();
 		}
 

@@ -47,10 +47,20 @@ public class UpdateTripDestinationCommandHandler : IRequestHandler<UpdateTripDes
 
             if (oldOrderIndex != newOrderIndex)
             {
+                var allDestinations = await _context.TripDestinations
+                    .Where(d => d.TripId == destination.TripId && d.DeletedAt == null)
+                    .ToListAsync(cancellationToken);
+
+                // Move the updated row to a temporary slot first so the unique
+                // (trip_id, order_index) index does not see duplicate values
+                // while the remaining destinations are being shifted.
+                destination.OrderIndex = 10;
+                await _context.SaveChangesAsync(cancellationToken);
+
                 if (oldOrderIndex < newOrderIndex)
                 {
-                    var toShift = trip.Destinations
-                        .Where(d => d.Id != destination.Id && d.OrderIndex > oldOrderIndex && d.OrderIndex <= newOrderIndex && d.DeletedAt == null)
+                    var toShift = allDestinations
+                        .Where(d => d.Id != destination.Id && d.OrderIndex > oldOrderIndex && d.OrderIndex <= newOrderIndex)
                         .ToList();
 
                     foreach (var dest in toShift)
@@ -58,8 +68,8 @@ public class UpdateTripDestinationCommandHandler : IRequestHandler<UpdateTripDes
                 }
                 else
                 {
-                    var toShift = trip.Destinations
-                        .Where(d => d.Id != destination.Id && d.OrderIndex >= newOrderIndex && d.OrderIndex < oldOrderIndex && d.DeletedAt == null)
+                    var toShift = allDestinations
+                        .Where(d => d.Id != destination.Id && d.OrderIndex >= newOrderIndex && d.OrderIndex < oldOrderIndex)
                         .ToList();
 
                     foreach (var dest in toShift)

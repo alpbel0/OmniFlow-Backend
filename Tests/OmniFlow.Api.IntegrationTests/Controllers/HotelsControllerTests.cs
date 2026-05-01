@@ -4,7 +4,6 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
-using OmniFlow.Application.DTOs.Hotels;
 using OmniFlow.Application.Features.Hotels.Queries.GetHotelsByTrip;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Domain.Entities;
@@ -71,12 +70,11 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var hotel1Id = Guid.NewGuid();
         var hotel2Id = Guid.NewGuid();
 
-        // Helper functions for DateTime handling
         static DateTime GetLocalDateTime(int daysToAdd) =>
             DateTime.SpecifyKind(DateTime.Today.AddDays(daysToAdd), DateTimeKind.Unspecified);
         static DateTime GetUtcDateTime() => DateTime.UtcNow;
 
-        var hotel1 = new Hotel
+        dbContext.Hotels.Add(new Hotel
         {
             Id = hotel1Id,
             TripId = trip.Id,
@@ -94,9 +92,9 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Status = HotelStatus.Confirmed,
             DataSource = HotelDataSource.Mock,
             DataFetchedAt = GetUtcDateTime()
-        };
+        });
 
-        var hotel2 = new Hotel
+        dbContext.Hotels.Add(new Hotel
         {
             Id = hotel2Id,
             TripId = trip.Id,
@@ -114,10 +112,8 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Status = HotelStatus.Confirmed,
             DataSource = HotelDataSource.Mock,
             DataFetchedAt = GetUtcDateTime()
-        };
+        });
 
-        dbContext.Hotels.Add(hotel1);
-        dbContext.Hotels.Add(hotel2);
         await dbContext.SaveChangesAsync();
 
         return (trip.Id, new List<Guid> { hotel1Id, hotel2Id });
@@ -131,22 +127,17 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
         return user!.Id;
     }
 
-    // ── GET Hotels ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task GetHotels_PublishedTrip_ReturnsHotels()
     {
-        // Arrange
         var token = await GetAccessTokenAsync();
         var userId = await GetTestUserIdAsync();
         var (tripId, _) = await SeedTripWithHotelsAsync(userId, TripStatus.Published);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await _client.GetAsync($"/api/v1/trips/{tripId}/hotels");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadAsStringAsync();
@@ -159,177 +150,38 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetHotels_DraftTrip_OwnerCanAccess()
     {
-        // Arrange
         var token = await GetAccessTokenAsync();
         var userId = await GetTestUserIdAsync();
         var (tripId, _) = await SeedTripWithHotelsAsync(userId, TripStatus.Draft);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await _client.GetAsync($"/api/v1/trips/{tripId}/hotels");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task GetHotels_NonExistentTrip_Returns404()
     {
-        // Arrange
         var token = await GetAccessTokenAsync();
         var nonExistentTripId = Guid.NewGuid();
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await _client.GetAsync($"/api/v1/trips/{nonExistentTripId}/hotels");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task GetHotels_Unauthenticated_Returns401()
     {
-        // Arrange
         var userId = await GetTestUserIdAsync();
         var (tripId, _) = await SeedTripWithHotelsAsync(userId, TripStatus.Published);
 
-        // Act - No auth header
         var response = await _client.GetAsync($"/api/v1/trips/{tripId}/hotels");
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    // ── POST Select Hotel ────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task SelectHotel_ValidRequest_ReturnsNoContent()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, hotelIds) = await SeedTripWithHotelsAsync(userId, TripStatus.Draft);
-
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectHotelRequest
-        {
-            HotelId = hotelIds[0]
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/hotels/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-    }
-
-    [Fact]
-    public async Task SelectHotel_NonOwner_Returns403()
-    {
-        // Arrange - Create a trip owned by the test user
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, hotelIds) = await SeedTripWithHotelsAsync(userId, TripStatus.Draft);
-
-        // Login as a different user (admin) to test non-owner access
-        var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
-
-        var request = new SelectHotelRequest
-        {
-            HotelId = hotelIds[0]
-        };
-
-        // Act - Admin user tries to select hotel for test user's trip
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/hotels/select", request);
-
-        // Assert - Should be forbidden since admin is not the owner
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    [Fact]
-    public async Task SelectHotel_NonExistentHotel_Returns404()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, _) = await SeedTripWithHotelsAsync(userId, TripStatus.Draft);
-
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectHotelRequest
-        {
-            HotelId = Guid.NewGuid() // Non-existent hotel
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/hotels/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task SelectHotel_NonExistentTrip_Returns404()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectHotelRequest
-        {
-            HotelId = Guid.NewGuid()
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{Guid.NewGuid()}/hotels/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task SelectHotel_InvalidRequest_Returns400()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, _) = await SeedTripWithHotelsAsync(userId, TripStatus.Draft);
-
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectHotelRequest
-        {
-            HotelId = Guid.Empty // Invalid - empty GUID
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/hotels/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-    }
-
-    [Fact]
-    public async Task SelectHotel_Unauthenticated_Returns401()
-    {
-        // Arrange
-        var userId = await GetTestUserIdAsync();
-        var (tripId, hotelIds) = await SeedTripWithHotelsAsync(userId, TripStatus.Draft);
-
-        var request = new SelectHotelRequest
-        {
-            HotelId = hotelIds[0]
-        };
-
-        // Act - No auth header
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/hotels/select", request);
-
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

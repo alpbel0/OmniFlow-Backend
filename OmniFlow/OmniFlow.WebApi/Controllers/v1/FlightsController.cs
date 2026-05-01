@@ -1,8 +1,6 @@
-using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-using OmniFlow.Application.DTOs.Flights;
-using OmniFlow.Application.Features.Flights.Commands.SelectFlight;
 using OmniFlow.Application.Features.Flights.Queries.GetFlightsByTrip;
+using OmniFlow.Application.DTOs.Flights;
 
 namespace OmniFlow.WebApi.Controllers.v1;
 
@@ -15,13 +13,6 @@ namespace OmniFlow.WebApi.Controllers.v1;
 [Route("api/v1/trips/{tripId:guid}/flights")]
 public class FlightsController : BaseApiController
 {
-	private readonly IValidator<SelectFlightRequest> _selectValidator;
-
-	public FlightsController(IValidator<SelectFlightRequest> selectValidator)
-	{
-		_selectValidator = selectValidator;
-	}
-
 	/// <summary>Get all flights for a trip, grouped by direction (Outbound/Return).</summary>
     /// <remarks>
     /// Authorization: Published trips are public, Draft/Archived are owner-only.
@@ -36,30 +27,5 @@ public class FlightsController : BaseApiController
         var query = new GetFlightsByTripQuery(tripId);
         var result = await Mediator.Send(query);
         return Ok(result);
-    }
-
-    /// <summary>Select/book a flight for the trip.</summary>
-    /// <remarks>
-    /// If another flight of the same direction was previously booked, it will be unbooked automatically.
-    /// Only one flight per direction (Outbound/Return) can be booked at a time.
-    /// </remarks>
-    [HttpPost("select")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SelectFlight(
-        [FromRoute] Guid tripId,
-        [FromBody] SelectFlightRequest request)
-    {
-        var command = new SelectFlightCommand
-        {
-            TripId = tripId,
-            FlightId = request.FlightId
-        };
-
-        await Mediator.Send(command);
-        return NoContent();
     }
 }

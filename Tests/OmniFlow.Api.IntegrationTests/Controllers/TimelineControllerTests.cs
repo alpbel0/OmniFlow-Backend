@@ -31,6 +31,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
 
         using var scope = factory.Services.CreateScope();
         TestDatabaseSeeder.SeedAsync(scope.ServiceProvider).GetAwaiter().GetResult();
+        TestDatabaseSeeder.SeedProviderDataAsync(scope.ServiceProvider).GetAwaiter().GetResult();
     }
 
     // ── Helper Methods ─────────────────────────────────────────────────────────────
@@ -253,6 +254,73 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
+    public async Task CreateProviderFlightEntry_OwnerDraft_Returns201WithProviderReference()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+        var providerFlightId = Guid.Parse("a1111111-1111-1111-1111-111111111111");
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomFlight,
+            ProviderFlightId = providerFlightId
+        };
+
+        var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<TimelineEntryResponse>(body, _json);
+        result!.EntryType.Should().Be(TimelineEntryType.CustomFlight);
+        result.ProviderFlightId.Should().Be(providerFlightId);
+        result.FlightFromAirport.Should().Be("IST");
+        result.FlightToAirport.Should().Be("CDG");
+        result.FlightFromCity.Should().Be("Istanbul");
+        result.FlightToCity.Should().Be("Paris");
+        result.Price.Should().Be(200);
+        result.CurrencyCode.Should().Be("USD");
+        result.IsLocked.Should().BeTrue();
+        result.BufferMinutes.Should().Be(120);
+    }
+
+    [Fact]
+    public async Task CreateProviderHotelEntry_OwnerDraft_Returns201WithProviderReference()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+        var providerHotelId = Guid.Parse("b1111111-1111-1111-1111-111111111111");
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomAccommodation,
+            ProviderHotelId = providerHotelId
+        };
+
+        var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<TimelineEntryResponse>(body, _json);
+        result!.EntryType.Should().Be(TimelineEntryType.CustomAccommodation);
+        result.ProviderHotelId.Should().Be(providerHotelId);
+        result.CustomName.Should().Be("Budget Paris Inn");
+        result.AccommodationCheckIn.Should().Be(new DateTime(2026, 8, 10, 14, 0, 0, DateTimeKind.Utc));
+        result.AccommodationCheckOut.Should().Be(new DateTime(2026, 8, 13, 12, 0, 0, DateTimeKind.Utc));
+        result.Price.Should().Be(240);
+        result.CurrencyCode.Should().Be("USD");
+        result.IsLocked.Should().BeTrue();
+        result.BufferMinutes.Should().Be(0);
+    }
+
+    [Fact]
     public async Task CreateEntry_WithoutToken_Returns401()
     {
         var request = new CreateTimelineEntryRequest
@@ -318,7 +386,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
     // ── Update Entry Tests ──────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task UpdateUnlockedEntry_AllFields_Returns200()
+    public async Task UpdateEntry_CommonFields_OnUnlockedEntry_Returns200()
     {
         var token = await GetAccessTokenAsync();
         var authClient = CreateAuthenticatedClient(token);
@@ -341,6 +409,15 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         var createBody = await createResponse.Content.ReadAsStringAsync();
         var createResult = JsonSerializer.Deserialize<TimelineEntryResponse>(createBody, _json);
         var entryId = createResult!.Id;
+
+        // Unlock the entry so type-specific fields can also be updated
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var entry = db.TimelineEntries.First(e => e.Id == entryId);
+            entry.Unlock();
+            await db.SaveChangesAsync();
+        }
 
         var updateRequest = new UpdateTimelineEntryRequest
         {
@@ -396,6 +473,8 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
             DayNumber = 1,
             FlightFromAirport = "SAW",
             FlightToAirport = "CIA",
+            FlightDepartureAt = new DateTime(2026, 8, 11, 9, 0, 0, DateTimeKind.Utc),
+            FlightArrivalAt = new DateTime(2026, 8, 11, 11, 30, 0, DateTimeKind.Utc),
             Price = 250
         };
 
@@ -532,6 +611,15 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         var createResult = JsonSerializer.Deserialize<TimelineEntryResponse>(createBody, _json);
         var entryId = createResult!.Id;
 
+        // Unlock the entry so it can be deleted
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var entry = db.TimelineEntries.First(e => e.Id == entryId);
+            entry.Unlock();
+            await db.SaveChangesAsync();
+        }
+
         var deleteResponse = await authClient.DeleteAsync($"/api/v1/trips/{tripId}/timeline/entry/{entryId}");
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -635,6 +723,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
 
         var reorderRequest = new ReorderTimelineEntriesRequest
         {
+            TripId = tripId,
             DestinationId = destinationId,
             EntryId = entry2Id,
             BeforeEntryId = entry3Id,

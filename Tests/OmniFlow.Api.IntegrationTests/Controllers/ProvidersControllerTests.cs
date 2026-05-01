@@ -5,6 +5,8 @@ using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Providers;
 using OmniFlow.Application.DTOs.TripDestinations;
 using OmniFlow.Application.DTOs.Trips;
+using OmniFlow.Application.Interfaces;
+using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Api.IntegrationTests.Controllers;
@@ -19,6 +21,9 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
     {
         PropertyNameCaseInsensitive = true
     };
+
+    private static readonly DateOnly OutboundDate = TestDatabaseSeeder.ProviderSeedDate.AddDays(1);
+    private static readonly DateOnly ReturnDate = TestDatabaseSeeder.ProviderSeedDate.AddDays(4);
 
     public ProvidersControllerTests(CustomWebApplicationFactory factory)
     {
@@ -65,8 +70,8 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
                 {
                     City = "Paris",
                     Country = "France",
-                    ArrivalDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
-                    DepartureDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(4)),
+                    ArrivalDate = OutboundDate,
+                    DepartureDate = ReturnDate,
                     OrderIndex = 1
                 }
             ],
@@ -78,7 +83,7 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
             TransportPreference = TransportPreference.PublicTransport
         };
 
-        var response = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
+        var response = await authClient.PostAsJsonAsync("/api/v1/trips/wizard", createRequest);
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var body = await response.Content.ReadAsStringAsync();
@@ -86,8 +91,66 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
         result.Should().NotBeNull();
         result!.TripId.Should().NotBeEmpty();
 
+        await EnsureReturnFlightForTripAsync(result.TripId);
+
         var destinationId = result.Destinations.First().Id;
         return (result.TripId, destinationId);
+    }
+
+    private async Task EnsureReturnFlightForTripAsync(Guid tripId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        var trip = await dbContext.Trips.FindAsync(tripId);
+        trip.Should().NotBeNull();
+
+        var lastDestination = dbContext.TripDestinations
+            .Where(x => x.TripId == tripId)
+            .OrderByDescending(x => x.OrderIndex)
+            .FirstOrDefault();
+        lastDestination.Should().NotBeNull();
+
+        var flightId = Guid.Parse("a8888888-8888-8888-8888-888888888888");
+        var departureTime = lastDestination!.DepartureDate.ToDateTime(new TimeOnly(15, 30));
+        var existingFlight = await dbContext.ProviderFlights.FindAsync(flightId);
+
+        if (existingFlight is null)
+        {
+            dbContext.ProviderFlights.Add(new ProviderFlight
+            {
+                Id = flightId,
+                FlightNumber = "TK2999",
+                Airline = "Turkish Airlines",
+                DepartureCity = lastDestination.City,
+                ArrivalCity = trip!.Origin,
+                DepartureAirportCode = "CDG",
+                ArrivalAirportCode = "IST",
+                DepartureTime = departureTime,
+                ArrivalTime = departureTime.AddHours(3).AddMinutes(15),
+                DurationMinutes = 195,
+                Price = 260,
+                CurrencyCode = "USD",
+                AvailableSeats = 40,
+                ProviderName = "MockProvider"
+            });
+        }
+        else
+        {
+            existingFlight.DepartureCity = lastDestination.City;
+            existingFlight.ArrivalCity = trip!.Origin;
+            existingFlight.DepartureAirportCode = "CDG";
+            existingFlight.ArrivalAirportCode = "IST";
+            existingFlight.DepartureTime = departureTime;
+            existingFlight.ArrivalTime = departureTime.AddHours(3).AddMinutes(15);
+            existingFlight.DurationMinutes = 195;
+            existingFlight.Price = 260;
+            existingFlight.CurrencyCode = "USD";
+            existingFlight.AvailableSeats = 40;
+            existingFlight.ProviderName = "MockProvider";
+        }
+
+        await dbContext.SaveChangesAsync();
     }
 
     // ── GET Origin Cities ──────────────────────────────────────────────────────────
@@ -104,9 +167,9 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
 
         result.Should().NotBeNull();
         result!.Count.Should().BeGreaterThanOrEqualTo(3);
-        result.Select(c => c.City).Should().Contain("Istanbul");
-        result.Select(c => c.City).Should().Contain("Paris");
-        result.Select(c => c.City).Should().Contain("Rome");
+        result.Should().Contain(c => c.City == "Istanbul" && c.Country == "Turkey");
+        result.Should().Contain(c => c.City == "Paris" && c.Country == "France");
+        result.Should().Contain(c => c.City == "Rome" && c.Country == "Italy");
     }
 
     [Fact]
@@ -130,8 +193,7 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
     [Fact]
     public async Task GetFlights_Outbound_ReturnsSeasonAdjustedPrices()
     {
-        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
-        var response = await _client.GetAsync($"/api/v1/providers/flights?fromCity=Istanbul&toCity=Paris&date={date:yyyy-MM-dd}&personCount=2");
+        var response = await _client.GetAsync($"/api/v1/providers/flights?fromCity=Istanbul&toCity=Paris&date={OutboundDate:yyyy-MM-dd}&personCount=2");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -188,8 +250,7 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
     [Fact]
     public async Task GetFlights_NoFlights_ReturnsEmptyList()
     {
-        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
-        var response = await _client.GetAsync($"/api/v1/providers/flights?fromCity=Nowhere&toCity=Somewhere&date={date:yyyy-MM-dd}&personCount=1");
+        var response = await _client.GetAsync($"/api/v1/providers/flights?fromCity=Nowhere&toCity=Somewhere&date={OutboundDate:yyyy-MM-dd}&personCount=1");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -205,7 +266,7 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
     [Fact]
     public async Task GetHotels_ReturnsWithSegmentInfo()
     {
-        var checkIn = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var checkIn = OutboundDate;
         var checkOut = checkIn.AddDays(3);
 
         var response = await _client.GetAsync($"/api/v1/providers/hotels?city=Paris&checkIn={checkIn:yyyy-MM-dd}&checkOut={checkOut:yyyy-MM-dd}&personCount=2");
@@ -231,7 +292,7 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
     [Fact]
     public async Task GetHotels_BudgetTierFilter_ReturnsOnlyMatchingSegment()
     {
-        var checkIn = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var checkIn = OutboundDate;
         var checkOut = checkIn.AddDays(3);
 
         var response = await _client.GetAsync($"/api/v1/providers/hotels?city=Paris&checkIn={checkIn:yyyy-MM-dd}&checkOut={checkOut:yyyy-MM-dd}&budgetTier=Economy&personCount=1");
@@ -249,7 +310,7 @@ public class ProvidersControllerTests : IClassFixture<CustomWebApplicationFactor
     [Fact]
     public async Task GetHotels_NoHotels_ReturnsEmptyList()
     {
-        var checkIn = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var checkIn = OutboundDate;
         var checkOut = checkIn.AddDays(3);
 
         var response = await _client.GetAsync($"/api/v1/providers/hotels?city=Nowhere&checkIn={checkIn:yyyy-MM-dd}&checkOut={checkOut:yyyy-MM-dd}&personCount=1");

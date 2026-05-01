@@ -48,12 +48,15 @@ public class PlaceRepositoryAsync : GenericRepositoryAsync<Place>, IPlaceReposit
 
     public async Task<IReadOnlyList<Place>> GetByCityAndBudgetTierAsync(string city, BudgetTier budgetTier)
     {
-        return await _dbSet
+        var places = await _dbSet
             .AsNoTracking()
             .Where(p => p.IsActive)
             .Where(p => p.City.ToLower() == city.ToLower())
-            .Where(p => p.BudgetTiers.Any(b => b == budgetTier))
             .OrderBy(p => p.Name)
             .ToListAsync();
+
+        return places
+            .Where(p => p.BudgetTiers.Contains(budgetTier))
+            .ToList();
     }
 }

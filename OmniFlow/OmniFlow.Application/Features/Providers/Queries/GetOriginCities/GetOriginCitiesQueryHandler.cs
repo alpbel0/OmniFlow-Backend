@@ -6,6 +6,19 @@ namespace OmniFlow.Application.Features.Providers.Queries.GetOriginCities;
 
 public class GetOriginCitiesQueryHandler : IRequestHandler<GetOriginCitiesQuery, IReadOnlyList<OriginCityResponse>>
 {
+    private static readonly Dictionary<string, string> CityCountryMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Istanbul"] = "Turkey",
+        ["Paris"] = "France",
+        ["Rome"] = "Italy",
+        ["Berlin"] = "Germany",
+        ["Antalya"] = "Turkey",
+        ["Izmir"] = "Turkey",
+        ["Barcelona"] = "Spain",
+        ["Amsterdam"] = "Netherlands",
+        ["London"] = "United Kingdom",
+    };
+
     private readonly IProviderFlightRepositoryAsync _flightRepository;
 
     public GetOriginCitiesQueryHandler(IProviderFlightRepositoryAsync flightRepository)
@@ -21,12 +34,19 @@ public class GetOriginCitiesQueryHandler : IRequestHandler<GetOriginCitiesQuery,
             .Select(f => new OriginCityResponse
             {
                 City = f.DepartureCity,
-                Country = string.Empty,
+                Country = ResolveCountry(f.DepartureCity),
                 AirportCode = f.DepartureAirportCode
             })
             .GroupBy(c => c.City, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
             .OrderBy(c => c.City)
             .ToList();
+    }
+
+    private static string ResolveCountry(string city)
+    {
+        return CityCountryMap.TryGetValue(city, out var country)
+            ? country
+            : string.Empty;
     }
 }

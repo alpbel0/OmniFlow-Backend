@@ -15,7 +15,6 @@ namespace OmniFlow.Infrastructure.Migrations
             migrationBuilder.Sql(
                 @"CREATE UNIQUE INDEX idx_trip_destinations_trip_order 
                   ON trip_destinations (trip_id, order_index) 
-                  DEFERRABLE INITIALLY DEFERRED
                   WHERE deleted_at IS NULL");
         }
 

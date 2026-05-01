@@ -53,7 +53,7 @@ public static class ServiceRegistration
 		services.AddScoped<IEmailService, EmailService>();
 		services.AddScoped<IBlobService, BlobService>();
 		services.AddSingleton<IScoringService, ScoringService>();
-		services.AddSingleton<IBudgetCalculationService, BudgetCalculationService>();
+		services.AddScoped<IBudgetCalculationService, BudgetCalculationService>();
 		services.AddSingleton<ITimelineService, TimelineService>();
 		services.AddScoped<IRecommendationService, RecommendationService>();
 		services.AddMemoryCache();

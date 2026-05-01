@@ -48,8 +48,8 @@ public class GetRecommendedPlacesHandlerTests
 
         _recommendationServiceMock.Setup(x => x.GetRecommendedPlacesAsync(
             "Paris", BudgetTier.Standard, TravelCompanion.Couple,
-            It.IsAny<List<TravelStyle>>(), Tempo.Moderate,
-            It.IsAny<List<Guid>>(), It.IsAny<CancellationToken>()))
+            It.IsAny<List<TravelStyle>>(), Tempo.Moderate, TransportPreference.Walking,
+            It.IsAny<List<Guid>>(), null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         _authServiceMock.Setup(x => x.UserId).Returns(trip.OwnerId.ToString());
@@ -84,8 +84,8 @@ public class GetRecommendedPlacesHandlerTests
 
         _recommendationServiceMock.Setup(x => x.GetRecommendedPlacesAsync(
             "Paris", It.IsAny<BudgetTier>(), It.IsAny<TravelCompanion>(),
-            It.IsAny<List<TravelStyle>>(), It.IsAny<Tempo>(),
-            It.IsAny<List<Guid>>(), It.IsAny<CancellationToken>()))
+            It.IsAny<List<TravelStyle>>(), It.IsAny<Tempo>(), It.IsAny<TransportPreference>(),
+            It.IsAny<List<Guid>>(), It.IsAny<double?>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RecommendedPlacesResult { DailyCapacity = 5 });
 
         _authServiceMock.Setup(x => x.UserId).Returns(ownerId.ToString());
@@ -98,9 +98,9 @@ public class GetRecommendedPlacesHandlerTests
 
         _recommendationServiceMock.Verify(x => x.GetRecommendedPlacesAsync(
             "Paris", It.IsAny<BudgetTier>(), It.IsAny<TravelCompanion>(),
-            It.IsAny<List<TravelStyle>>(), It.IsAny<Tempo>(),
+            It.IsAny<List<TravelStyle>>(), It.IsAny<Tempo>(), It.IsAny<TransportPreference>(),
             It.Is<List<Guid>>(ids => ids.Contains(placeId)),
-            It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<double?>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -143,6 +143,54 @@ public class GetRecommendedPlacesHandlerTests
         Assert.Contains("Destination not found", ex.Message);
     }
 
+    [Fact]
+    public async Task UsesAccommodationCoordinatesAsHub()
+    {
+        var tripId = Guid.NewGuid();
+        var destId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var trip = CreateTripWithDestination(tripId, destId, TripStatus.Draft, ownerId);
+
+        _tripRepoMock.Setup(x => x.GetByIdWithOwnerAndDestinationsAsync(tripId))
+            .ReturnsAsync(trip);
+
+        var accommodationEntry = TimelineEntry.CreateCustomAccommodationEntry(
+            tripId,
+            destId,
+            1,
+            500,
+            new DateTime(2026, 8, 10, 14, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 13, 12, 0, 0, DateTimeKind.Utc),
+            "Hotel",
+            "Address",
+            48.8566,
+            2.3522);
+
+        var timelineEntries = MockDbSetHelper.CreateAsyncMockDbSet(new List<TimelineEntry> { accommodationEntry });
+        _contextMock.Setup(x => x.TimelineEntries).Returns(timelineEntries.Object);
+        _authServiceMock.Setup(x => x.UserId).Returns(ownerId.ToString());
+
+        _recommendationServiceMock.Setup(x => x.GetRecommendedPlacesAsync(
+            "Paris",
+            BudgetTier.Standard,
+            TravelCompanion.Couple,
+            It.IsAny<List<TravelStyle>>(),
+            Tempo.Moderate,
+            TransportPreference.Walking,
+            It.IsAny<List<Guid>>(),
+            48.8566,
+            2.3522,
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RecommendedPlacesResult { DailyCapacity = 5 });
+
+        var handler = new GetRecommendedPlacesQueryHandler(
+            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object);
+
+        await handler.Handle(new GetRecommendedPlacesQuery { TripId = tripId, DestinationId = destId }, CancellationToken.None);
+
+        _recommendationServiceMock.VerifyAll();
+    }
+
     private static Trip CreateTripWithDestination(Guid tripId, Guid destId, TripStatus status, Guid? ownerId = null)
     {
         var owner = ownerId ?? Guid.NewGuid();
@@ -158,6 +206,7 @@ public class GetRecommendedPlacesHandlerTests
             TravelCompanion = TravelCompanion.Couple,
             TravelStyles = new List<TravelStyle> { TravelStyle.Cultural, TravelStyle.Relax },
             Tempo = Tempo.Moderate,
+            TransportPreference = TransportPreference.Walking,
             Destinations = new List<TripDestination>
             {
                 new TripDestination(new DateOnly(2026, 8, 10), new DateOnly(2026, 8, 13), "Paris", "FR", 1)

@@ -30,6 +30,8 @@ public class TimelineEntry : AuditableBaseEntity
     public TimeOnly? StartTime { get; set; }
     public int? DurationMinutes { get; set; }
     public bool IsLocked { get; private set; }
+
+    public void Unlock() => IsLocked = false;
     public int? BufferMinutes { get; private set; }
 
     // === CustomFlight specific ===
@@ -210,6 +212,8 @@ public class TimelineEntry : AuditableBaseEntity
         DateTime checkOut,
         string name,
         string? address = null,
+        double? customLatitude = null,
+        double? customLongitude = null,
         decimal price = 0,
         string? notes = null)
     {
@@ -233,6 +237,8 @@ public class TimelineEntry : AuditableBaseEntity
             AccommodationCheckIn = checkIn,
             AccommodationCheckOut = checkOut,
             AccommodationAddress = address?.Trim(),
+            CustomLatitude = customLatitude,
+            CustomLongitude = customLongitude,
             IsLocked = true,
             BufferMinutes = 0,
             Price = price,
@@ -370,7 +376,9 @@ public class TimelineEntry : AuditableBaseEntity
     /// </summary>
     public void UpdateAccommodationDetails(
         DateTime? checkIn, DateTime? checkOut,
-        string? address, string? name)
+        string? address, string? name,
+        double? customLatitude = null,
+        double? customLongitude = null)
     {
         if (IsLocked && EntryType == TimelineEntryType.CustomAccommodation)
             throw new DomainException("Cannot modify accommodation details of a locked timeline entry.");
@@ -383,6 +391,10 @@ public class TimelineEntry : AuditableBaseEntity
             AccommodationAddress = address.Trim();
         if (!string.IsNullOrWhiteSpace(name))
             CustomName = name.Trim();
+        if (customLatitude.HasValue)
+            CustomLatitude = customLatitude.Value;
+        if (customLongitude.HasValue)
+            CustomLongitude = customLongitude.Value;
 
         if (AccommodationCheckIn.HasValue && AccommodationCheckOut.HasValue && AccommodationCheckOut.Value <= AccommodationCheckIn.Value)
             throw new DomainException("AccommodationCheckOut must be after AccommodationCheckIn.");

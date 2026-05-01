@@ -23,6 +23,8 @@ public class TimelineEntryHandlerTests
     private readonly Mock<IApplicationDbContext> _contextMock;
     private readonly Mock<ITimelineEntryRepositoryAsync> _timelineRepoMock;
     private readonly Mock<ITimelineService> _timelineServiceMock;
+    private readonly Mock<IProviderFlightRepositoryAsync> _providerFlightRepoMock;
+    private readonly Mock<IProviderHotelRepositoryAsync> _providerHotelRepoMock;
     private readonly Mock<IAuthenticatedUserService> _authServiceMock;
     private readonly Mock<IMapper> _mapperMock;
 
@@ -38,11 +40,19 @@ public class TimelineEntryHandlerTests
         _contextMock = new Mock<IApplicationDbContext>();
         _timelineRepoMock = new Mock<ITimelineEntryRepositoryAsync>();
         _timelineServiceMock = new Mock<ITimelineService>();
+        _providerFlightRepoMock = new Mock<IProviderFlightRepositoryAsync>();
+        _providerHotelRepoMock = new Mock<IProviderHotelRepositoryAsync>();
         _authServiceMock = new Mock<IAuthenticatedUserService>();
         _mapperMock = new Mock<IMapper>();
 
         _createHandler = new CreateTimelineEntryCommandHandler(
-            _contextMock.Object, _timelineRepoMock.Object, _timelineServiceMock.Object, _authServiceMock.Object, _mapperMock.Object);
+            _contextMock.Object,
+            _timelineRepoMock.Object,
+            _timelineServiceMock.Object,
+            _providerFlightRepoMock.Object,
+            _providerHotelRepoMock.Object,
+            _authServiceMock.Object,
+            _mapperMock.Object);
         _updateHandler = new UpdateTimelineEntryCommandHandler(
             _contextMock.Object, _timelineRepoMock.Object, _timelineServiceMock.Object, _authServiceMock.Object, _mapperMock.Object);
         _deleteHandler = new DeleteTimelineEntryCommandHandler(
@@ -148,6 +158,63 @@ public class TimelineEntryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_CreateProviderFlightEntry_UsesProviderDataAndLocksEntry()
+    {
+        var userId = Guid.NewGuid();
+        var trip = CreateTestTrip(userId);
+        var dest = new TripDestination(new DateOnly(2026, 8, 10), new DateOnly(2026, 8, 13), "Paris", "France", 1)
+        {
+            Id = Guid.NewGuid(),
+            TripId = trip.Id
+        };
+        trip.Destinations.Add(dest);
+
+        var providerFlight = new ProviderFlight
+        {
+            Id = Guid.NewGuid(),
+            DepartureAirportCode = "IST",
+            ArrivalAirportCode = "CDG",
+            DepartureCity = "Istanbul",
+            ArrivalCity = "Paris",
+            DepartureTime = new DateTime(2026, 8, 10, 8, 0, 0),
+            ArrivalTime = new DateTime(2026, 8, 10, 11, 30, 0),
+            Airline = "Turkish Airlines",
+            FlightNumber = "TK1001",
+            Price = 220,
+            CurrencyCode = "EUR"
+        };
+
+        _authServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+        _contextMock.Setup(x => x.Trips).Returns(CreateAsyncMockDbSet(new List<Trip> { trip }).Object);
+        _providerFlightRepoMock.Setup(x => x.GetByIdAsync(providerFlight.Id)).ReturnsAsync(providerFlight);
+        _timelineRepoMock.Setup(x => x.GetLastEntryInDayAsync(trip.Id, dest.Id, 1)).ReturnsAsync((TimelineEntry?)null);
+        _timelineRepoMock.Setup(x => x.GetByTripAndDayAsync(trip.Id, dest.Id, 1)).ReturnsAsync(new List<TimelineEntry>());
+        _timelineServiceMock.Setup(x => x.GetLexoRankBetween(null, null)).Returns(500.0);
+        _timelineServiceMock.Setup(x => x.ValidateNewEntry(It.IsAny<TimelineEntry>(), It.IsAny<IEnumerable<TimelineEntry>>(), It.IsAny<Tempo>(), It.IsAny<DateOnly>())).Returns(TimelineValidationResult.Valid());
+
+        var command = new CreateTimelineEntryCommand(
+            TripId: trip.Id, DestinationId: dest.Id, DayNumber: 1, EntryType: TimelineEntryType.CustomFlight,
+            PlaceId: null, CustomName: null, CustomCategory: null, CustomPhotoUrl: null, CustomLatitude: null, CustomLongitude: null, CustomDescription: null,
+            StartTime: null, DurationMinutes: null,
+            FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
+            TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
+            AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
+            Price: 0, CurrencyCode: "USD", ProviderFlightId: providerFlight.Id, ProviderHotelId: null, Notes: "Provider booking");
+
+        await _createHandler.Handle(command, CancellationToken.None);
+
+        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e =>
+            e.EntryType == TimelineEntryType.CustomFlight &&
+            e.ProviderFlightId == providerFlight.Id &&
+            e.FlightFromAirport == "IST" &&
+            e.FlightToAirport == "CDG" &&
+            e.Price == 220 &&
+            e.CurrencyCode == "EUR" &&
+            e.IsLocked &&
+            e.BufferMinutes == 120)), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_CreateCustomTransportEntry_SetsLockedAndBuffer()
     {
         var userId = Guid.NewGuid();
@@ -193,7 +260,7 @@ public class TimelineEntryHandlerTests
 
         var command = new CreateTimelineEntryCommand(
             TripId: trip.Id, DestinationId: dest.Id, DayNumber: 1, EntryType: TimelineEntryType.CustomAccommodation,
-            PlaceId: null, CustomName: "Hotel Artis", CustomCategory: null, CustomPhotoUrl: null, CustomLatitude: null, CustomLongitude: null, CustomDescription: null,
+            PlaceId: null, CustomName: "Hotel Artis", CustomCategory: null, CustomPhotoUrl: null, CustomLatitude: 41.9028, CustomLongitude: 12.4964, CustomDescription: null,
             StartTime: null, DurationMinutes: null,
             FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
@@ -202,7 +269,68 @@ public class TimelineEntryHandlerTests
 
         var result = await _createHandler.Handle(command, CancellationToken.None);
         result.Should().NotBeNull();
-        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e => e.IsLocked && e.BufferMinutes == 0)), Times.Once);
+        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e =>
+            e.IsLocked &&
+            e.BufferMinutes == 0 &&
+            e.CustomLatitude == 41.9028 &&
+            e.CustomLongitude == 12.4964)), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CreateProviderHotelEntry_UsesProviderDataAndLocksEntry()
+    {
+        var userId = Guid.NewGuid();
+        var trip = CreateTestTrip(userId);
+        var dest = new TripDestination(new DateOnly(2026, 8, 10), new DateOnly(2026, 8, 13), "Paris", "France", 1)
+        {
+            Id = Guid.NewGuid(),
+            TripId = trip.Id
+        };
+        trip.Destinations.Add(dest);
+
+        var providerHotel = new ProviderHotel
+        {
+            Id = Guid.NewGuid(),
+            HotelName = "Budget Paris Inn",
+            City = "Paris",
+            Country = "France",
+            Latitude = 48.8566,
+            Longitude = 2.3522,
+            PricePerNight = 80,
+            CurrencyCode = "USD"
+        };
+
+        _authServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+        _contextMock.Setup(x => x.Trips).Returns(CreateAsyncMockDbSet(new List<Trip> { trip }).Object);
+        _providerHotelRepoMock.Setup(x => x.GetByIdAsync(providerHotel.Id)).ReturnsAsync(providerHotel);
+        _timelineRepoMock.Setup(x => x.GetLastEntryInDayAsync(trip.Id, dest.Id, 1)).ReturnsAsync((TimelineEntry?)null);
+        _timelineRepoMock.Setup(x => x.GetByTripAndDayAsync(trip.Id, dest.Id, 1)).ReturnsAsync(new List<TimelineEntry>());
+        _timelineServiceMock.Setup(x => x.GetLexoRankBetween(null, null)).Returns(500.0);
+        _timelineServiceMock.Setup(x => x.ValidateNewEntry(It.IsAny<TimelineEntry>(), It.IsAny<IEnumerable<TimelineEntry>>(), It.IsAny<Tempo>(), It.IsAny<DateOnly>())).Returns(TimelineValidationResult.Valid());
+
+        var command = new CreateTimelineEntryCommand(
+            TripId: trip.Id, DestinationId: dest.Id, DayNumber: 1, EntryType: TimelineEntryType.CustomAccommodation,
+            PlaceId: null, CustomName: null, CustomCategory: null, CustomPhotoUrl: null, CustomLatitude: null, CustomLongitude: null, CustomDescription: null,
+            StartTime: null, DurationMinutes: null,
+            FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
+            TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
+            AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
+            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: providerHotel.Id, Notes: "Provider hotel");
+
+        await _createHandler.Handle(command, CancellationToken.None);
+
+        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e =>
+            e.EntryType == TimelineEntryType.CustomAccommodation &&
+            e.ProviderHotelId == providerHotel.Id &&
+            e.CustomName == "Budget Paris Inn" &&
+            e.CustomLatitude == 48.8566 &&
+            e.CustomLongitude == 2.3522 &&
+            e.AccommodationCheckIn == new DateTime(2026, 8, 10, 14, 0, 0, DateTimeKind.Utc) &&
+            e.AccommodationCheckOut == new DateTime(2026, 8, 13, 12, 0, 0, DateTimeKind.Utc) &&
+            e.Price == 240 &&
+            e.CurrencyCode == "USD" &&
+            e.IsLocked &&
+            e.BufferMinutes == 0)), Times.Once);
     }
 
     [Fact]

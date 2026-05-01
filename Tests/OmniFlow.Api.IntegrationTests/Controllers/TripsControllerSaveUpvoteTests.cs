@@ -65,6 +65,8 @@ public class TripsControllerSaveUpvoteTests : IClassFixture<CustomWebApplication
             Title = "Test Trip",
             Origin = "Antalya",
             OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 11, 1),
+            EndDate = new DateOnly(2026, 11, 5),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
             TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
@@ -74,27 +76,23 @@ public class TripsControllerSaveUpvoteTests : IClassFixture<CustomWebApplication
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var createBody = await createResponse.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<Guid>(createBody);
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(createBody, _json);
+        return createResult!.TripId;
     }
 
     /// <summary>
-    /// Creates a trip, adds a stop, and publishes it.
+    /// Creates a trip, adds a timeline entry, and publishes it.
     /// Returns the published trip ID.
     /// </summary>
     private async Task<Guid> CreatePublishedTripAsync(HttpClient authClient)
     {
-        // 1. Create trip
+        // 1. Create trip (wizard creates destination automatically)
         var tripId = await CreateTripAsync(authClient);
 
         // 2. Add a timeline entry (required for publishing)
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-        var dest = new TripDestination(DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), "TestCity", "TestCountry", 1)
-        {
-            TripId = tripId
-        };
-        await db.TripDestinations.AddAsync(dest);
-        await db.SaveChangesAsync();
+        var dest = db.TripDestinations.First(d => d.TripId == tripId);
 
         var entry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
         await db.TimelineEntries.AddAsync(entry);

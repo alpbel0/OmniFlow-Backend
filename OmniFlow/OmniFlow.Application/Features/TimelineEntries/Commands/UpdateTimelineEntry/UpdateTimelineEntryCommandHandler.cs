@@ -40,6 +40,7 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
 
         // 2. Load trip with destinations
         var trip = await _context.Trips
+            .Include(t => t.Destinations)
             .FirstOrDefaultAsync(t => t.Id == entry.TripId && t.DeletedAt == null, cancellationToken)
             ?? throw new EntityNotFoundException("Trip", entry.TripId);
 
@@ -123,7 +124,8 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
                 || request.TransportFromStation != null || request.TransportToStation != null || request.TransportCompany != null,
             TimelineEntryType.CustomAccommodation =>
                 request.AccommodationCheckIn.HasValue || request.AccommodationCheckOut.HasValue
-                || request.AccommodationAddress != null || request.CustomName != null,
+                || request.AccommodationAddress != null || request.CustomName != null
+                || request.CustomLatitude.HasValue || request.CustomLongitude.HasValue,
             TimelineEntryType.CustomEvent =>
                 request.CustomName != null || request.StartTime.HasValue || request.DurationMinutes.HasValue || request.CustomCategory.HasValue
                 || request.CustomPhotoUrl != null || request.CustomDescription != null
@@ -162,7 +164,8 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
                 case TimelineEntryType.CustomAccommodation:
                     entry.UpdateAccommodationDetails(
                         request.AccommodationCheckIn, request.AccommodationCheckOut,
-                        request.AccommodationAddress, request.CustomName);
+                        request.AccommodationAddress, request.CustomName,
+                        request.CustomLatitude, request.CustomLongitude);
                     break;
 
                 case TimelineEntryType.CustomEvent:

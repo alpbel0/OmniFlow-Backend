@@ -467,8 +467,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         forkedTripId.Should().NotBe(Guid.Empty);
     }
 
-    [Fact(Skip = "TODO: Update fork test for TimelineEntry after Phase 3/4")]
-    public async Task Fork_CopiesStopsAndResetsCounters()
+    [Fact]
+    public async Task Fork_CopiesDestinationsAndTimelineEntriesAndResetsCounters()
     {
         var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var authClient = CreateAuthenticatedClient(token);
@@ -487,6 +487,29 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var forkResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/fork", null);
         var forkedTripId = JsonSerializer.Deserialize<Guid>(await forkResponse.Content.ReadAsStringAsync());
 
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        var originalDestinations = db.TripDestinations
+            .Where(d => d.TripId == tripId && d.DeletedAt == null)
+            .OrderBy(d => d.OrderIndex)
+            .ToList();
+        var forkedDestinations = db.TripDestinations
+            .Where(d => d.TripId == forkedTripId && d.DeletedAt == null)
+            .OrderBy(d => d.OrderIndex)
+            .ToList();
+
+        var originalTimelineEntries = db.TimelineEntries
+            .Where(e => e.TripId == tripId && e.DeletedAt == null)
+            .OrderBy(e => e.DayNumber)
+            .ThenBy(e => e.OrderIndex)
+            .ToList();
+        var forkedTimelineEntries = db.TimelineEntries
+            .Where(e => e.TripId == forkedTripId && e.DeletedAt == null)
+            .OrderBy(e => e.DayNumber)
+            .ThenBy(e => e.OrderIndex)
+            .ToList();
+
         // Verify forked trip
         var getForkedResponse = await authClient.GetAsync($"/api/v1/trips/{forkedTripId}");
         var forkedTrip = JsonSerializer.Deserialize<TripResponse>(await getForkedResponse.Content.ReadAsStringAsync(), _json);
@@ -496,6 +519,14 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         forkedTrip.UpvoteCount.Should().Be(0);
         forkedTrip.ViewCount.Should().Be(0);
         forkedTrip.ForkedFromId.Should().Be(tripId);
+        forkedDestinations.Should().HaveCount(originalDestinations.Count);
+        forkedDestinations.Select(d => (d.City, d.Country, d.ArrivalDate, d.DepartureDate, d.OrderIndex))
+            .Should().BeEquivalentTo(originalDestinations.Select(d => (d.City, d.Country, d.ArrivalDate, d.DepartureDate, d.OrderIndex)));
+        forkedTimelineEntries.Should().HaveCount(originalTimelineEntries.Count);
+        forkedTimelineEntries.Select(e => (e.DayNumber, e.OrderIndex, e.EntryType, e.CustomName, e.IsVisited))
+            .Should().BeEquivalentTo(originalTimelineEntries.Select(e => (e.DayNumber, e.OrderIndex, e.EntryType, e.CustomName, IsVisited: false)));
+        forkedTimelineEntries.Should().OnlyContain(e => !e.IsVisited);
+        forkedTimelineEntries.Select(e => e.DestinationId).Distinct().Should().OnlyContain(id => forkedDestinations.Select(d => d.Id).Contains(id));
 
         // Verify original trip fork count incremented
         var getOriginalAfterResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}");
@@ -677,6 +708,116 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var recResult = JsonSerializer.Deserialize<RecommendedPlacesResult>(recBody, _json);
 
         recResult.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetRecommendPlaces_WithAccommodationHub_PrioritizesNearbyPlaceForWalking()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        var createRequest = new CreateTripWizardRequest
+        {
+            Title = "Walking Hub Trip",
+            Origin = "Istanbul",
+            OriginCountry = "Turkey",
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelCompanion = TravelCompanion.Couple,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural },
+            Tempo = Tempo.Moderate,
+            TransportPreference = TransportPreference.Walking,
+            Destinations =
+            [
+                new OmniFlow.Application.DTOs.TripDestinations.CreateTripDestinationRequest
+                {
+                    City = "Paris",
+                    Country = "France",
+                    ArrivalDate = new DateOnly(2026, 6, 10),
+                    DepartureDate = new DateOnly(2026, 6, 15),
+                    OrderIndex = 1
+                }
+            ]
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips/wizard", createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(await createResponse.Content.ReadAsStringAsync(), _json);
+        var tripId = createResult!.TripId;
+        var destinationId = createResult.Destinations.Single().Id;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+            var accommodationEntry = TimelineEntry.CreateCustomAccommodationEntry(
+                tripId,
+                destinationId,
+                1,
+                1000,
+                new DateTime(2026, 6, 10, 14, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 6, 15, 12, 0, 0, DateTimeKind.Utc),
+                "Paris Hub Hotel",
+                "1 Rue de Hub",
+                48.8566,
+                2.3522);
+
+            db.TimelineEntries.Add(accommodationEntry);
+
+            db.Places.Add(new Place
+            {
+                Name = "Near Museum",
+                City = "Paris",
+                Country = "France",
+                Category = PlaceCategory.Museum,
+                Latitude = 48.8570,
+                Longitude = 2.3530,
+                Rating = 4.6m,
+                IsFree = false,
+                EstimatedPrice = 25,
+                PhotoUrl = "https://example.com/near.jpg",
+                BudgetTiers = new List<BudgetTier> { BudgetTier.Standard },
+                TravelStyles = new List<TravelStyle> { TravelStyle.Cultural }
+            });
+
+            db.Places.Add(new Place
+            {
+                Name = "Far Museum",
+                City = "Paris",
+                Country = "France",
+                Category = PlaceCategory.Museum,
+                Latitude = 48.9350,
+                Longitude = 2.5000,
+                Rating = 4.6m,
+                IsFree = false,
+                EstimatedPrice = 25,
+                PhotoUrl = "https://example.com/far.jpg",
+                BudgetTiers = new List<BudgetTier> { BudgetTier.Standard },
+                TravelStyles = new List<TravelStyle> { TravelStyle.Cultural }
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        var publishResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);
+        publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var recResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/recommend-places?destinationId={destinationId}");
+        recResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var recBody = await recResponse.Content.ReadAsStringAsync();
+        var recResult = JsonSerializer.Deserialize<RecommendedPlacesResult>(recBody, _json);
+
+        recResult.Should().NotBeNull();
+        var orderedNames = recResult!.Recommended
+            .Concat(recResult.Neutral)
+            .Concat(recResult.Other)
+            .Select(p => p.Name)
+            .ToList();
+
+        orderedNames.Should().Contain("Near Museum");
+        orderedNames.Should().Contain("Far Museum");
+        orderedNames.IndexOf("Near Museum").Should().BeLessThan(orderedNames.IndexOf("Far Museum"));
     }
 
     // ── Helper Methods ─────────────────────────────────────────────────────────────

@@ -51,8 +51,11 @@ public class ProviderQueryHandlerTests
 
         Assert.Equal(3, result.Count);
         Assert.Equal("Istanbul", result[0].City);
+        Assert.Equal("Turkey", result[0].Country);
         Assert.Equal("Paris", result[1].City);
+        Assert.Equal("France", result[1].Country);
         Assert.Equal("Rome", result[2].City);
+        Assert.Equal("Italy", result[2].Country);
     }
 
     [Fact]

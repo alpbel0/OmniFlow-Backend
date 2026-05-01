@@ -22,6 +22,9 @@ public interface IRecommendationService
         TravelCompanion companion,
         List<TravelStyle> travelStyles,
         Tempo tempo,
+        TransportPreference transportPreference,
         List<Guid> excludedPlaceIds,
+        double? hubLatitude = null,
+        double? hubLongitude = null,
         CancellationToken cancellationToken = default);
 }

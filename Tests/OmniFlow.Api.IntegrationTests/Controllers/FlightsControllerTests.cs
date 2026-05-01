@@ -4,7 +4,6 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
-using OmniFlow.Application.DTOs.Flights;
 using OmniFlow.Application.Features.Flights.Queries.GetFlightsByTrip;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Domain.Entities;
@@ -71,12 +70,11 @@ public class FlightsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var outboundFlightId = Guid.NewGuid();
         var returnFlightId = Guid.NewGuid();
 
-        // Helper functions for DateTime handling
         static DateTime GetLocalDateTime(int daysToAdd) =>
             DateTime.SpecifyKind(DateTime.Today.AddDays(daysToAdd), DateTimeKind.Unspecified);
         static DateTime GetUtcDateTime() => DateTime.UtcNow;
 
-        var outboundFlight = new Flight
+        dbContext.Flights.Add(new Flight
         {
             Id = outboundFlightId,
             TripId = trip.Id,
@@ -98,9 +96,9 @@ public class FlightsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Status = FlightStatus.Scheduled,
             DataSource = FlightDataSource.Mock,
             DataFetchedAt = GetUtcDateTime()
-        };
+        });
 
-        var returnFlight = new Flight
+        dbContext.Flights.Add(new Flight
         {
             Id = returnFlightId,
             TripId = trip.Id,
@@ -122,10 +120,8 @@ public class FlightsControllerTests : IClassFixture<CustomWebApplicationFactory>
             Status = FlightStatus.Scheduled,
             DataSource = FlightDataSource.Mock,
             DataFetchedAt = GetUtcDateTime()
-        };
+        });
 
-        dbContext.Flights.Add(outboundFlight);
-        dbContext.Flights.Add(returnFlight);
         await dbContext.SaveChangesAsync();
 
         return (trip.Id, new List<Guid> { outboundFlightId, returnFlightId });
@@ -139,22 +135,17 @@ public class FlightsControllerTests : IClassFixture<CustomWebApplicationFactory>
         return user!.Id;
     }
 
-    // ── GET Flights ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task GetFlights_PublishedTrip_ReturnsFlights()
     {
-        // Arrange
         var token = await GetAccessTokenAsync();
         var userId = await GetTestUserIdAsync();
         var (tripId, _) = await SeedTripWithFlightsAsync(userId, TripStatus.Published);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await _client.GetAsync($"/api/v1/trips/{tripId}/flights");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadAsStringAsync();
@@ -168,177 +159,38 @@ public class FlightsControllerTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetFlights_DraftTrip_OwnerCanAccess()
     {
-        // Arrange
         var token = await GetAccessTokenAsync();
         var userId = await GetTestUserIdAsync();
         var (tripId, _) = await SeedTripWithFlightsAsync(userId, TripStatus.Draft);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await _client.GetAsync($"/api/v1/trips/{tripId}/flights");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task GetFlights_NonExistentTrip_Returns404()
     {
-        // Arrange
         var token = await GetAccessTokenAsync();
         var nonExistentTripId = Guid.NewGuid();
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await _client.GetAsync($"/api/v1/trips/{nonExistentTripId}/flights");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task GetFlights_Unauthenticated_Returns401()
     {
-        // Arrange
         var userId = await GetTestUserIdAsync();
         var (tripId, _) = await SeedTripWithFlightsAsync(userId, TripStatus.Published);
 
-        // Act - No auth header
         var response = await _client.GetAsync($"/api/v1/trips/{tripId}/flights");
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    // ── POST Select Flight ────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task SelectFlight_ValidRequest_ReturnsNoContent()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, flightIds) = await SeedTripWithFlightsAsync(userId, TripStatus.Draft);
-
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectFlightRequest
-        {
-            FlightId = flightIds[0] // Outbound flight
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/flights/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-    }
-
-    [Fact]
-    public async Task SelectFlight_NonOwner_Returns403()
-    {
-        // Arrange - Create a trip owned by the test user
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, flightIds) = await SeedTripWithFlightsAsync(userId, TripStatus.Draft);
-
-        // Login as a different user (admin) to test non-owner access
-        var adminToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
-
-        var request = new SelectFlightRequest
-        {
-            FlightId = flightIds[0]
-        };
-
-        // Act - Admin user tries to select flight for test user's trip
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/flights/select", request);
-
-        // Assert - Should be forbidden since admin is not the owner
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    [Fact]
-    public async Task SelectFlight_NonExistentFlight_Returns404()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, _) = await SeedTripWithFlightsAsync(userId, TripStatus.Draft);
-
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectFlightRequest
-        {
-            FlightId = Guid.NewGuid() // Non-existent flight
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/flights/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task SelectFlight_NonExistentTrip_Returns404()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectFlightRequest
-        {
-            FlightId = Guid.NewGuid()
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{Guid.NewGuid()}/flights/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task SelectFlight_InvalidRequest_Returns400()
-    {
-        // Arrange
-        var token = await GetAccessTokenAsync();
-        var userId = await GetTestUserIdAsync();
-        var (tripId, _) = await SeedTripWithFlightsAsync(userId, TripStatus.Draft);
-
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var request = new SelectFlightRequest
-        {
-            FlightId = Guid.Empty // Invalid - empty GUID
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/flights/select", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-    }
-
-    [Fact]
-    public async Task SelectFlight_Unauthenticated_Returns401()
-    {
-        // Arrange
-        var userId = await GetTestUserIdAsync();
-        var (tripId, flightIds) = await SeedTripWithFlightsAsync(userId, TripStatus.Draft);
-
-        var request = new SelectFlightRequest
-        {
-            FlightId = flightIds[0]
-        };
-
-        // Act - No auth header
-        var response = await _client.PostAsJsonAsync($"/api/v1/trips/{tripId}/flights/select", request);
-
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

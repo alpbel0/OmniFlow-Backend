@@ -56,8 +56,8 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 		builder.Property(p => p.Cuisine).HasColumnName("cuisine");
 
 		var budgetTierConverter = new ValueConverter<List<BudgetTier>, string[]>(
-			v => v.Select(x => x.ToString()).ToArray(),
-			v => v.Select(x => Enum.Parse<BudgetTier>(x)).ToList());
+			v => v.Select(SerializeBudgetTier).ToArray(),
+			v => v.Select(ParseBudgetTier).ToList());
 		var budgetTierComparer = new ValueComparer<List<BudgetTier>>(
 			(a, b) => a != null && b != null && a.SequenceEqual(b),
 			v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
@@ -120,5 +120,30 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 		builder.HasIndex(p => p.City)
 			.HasFilter("is_active = TRUE")
 			.HasDatabaseName("idx_places_city");
+	}
+
+	private static string SerializeBudgetTier(BudgetTier budgetTier) => budgetTier switch
+	{
+		BudgetTier.Economy => "Economy",
+		BudgetTier.Standard => "Standard",
+		BudgetTier.Premium => "Premium",
+		_ => throw new ArgumentOutOfRangeException(nameof(budgetTier), budgetTier, "Unsupported budget tier value.")
+	};
+
+	private static BudgetTier ParseBudgetTier(string value)
+	{
+		if (Enum.TryParse<BudgetTier>(value, ignoreCase: true, out var parsedTier))
+		{
+			return parsedTier;
+		}
+
+		return value.Trim() switch
+		{
+			"Budget" => BudgetTier.Economy,
+			"Mid-Range" => BudgetTier.Standard,
+			"Midrange" => BudgetTier.Standard,
+			"Luxury" => BudgetTier.Premium,
+			_ => throw new ArgumentException($"Unsupported budget tier value '{value}'.", nameof(value))
+		};
 	}
 }
