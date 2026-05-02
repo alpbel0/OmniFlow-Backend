@@ -36,6 +36,22 @@ public class PostRepositoryAsync : GenericRepositoryAsync<Post>, IPostRepository
 		return new PagedResponse<Post>(items, parameter.PageNumber, parameter.PageSize, totalCount);
 	}
 
+	public async Task<PagedResponse<Post>> GetVisibleByUserAsync(Guid userId, RequestParameter parameter)
+	{
+		var query = _dbSet
+			.Include(p => p.User)
+			.Where(p => p.UserId == userId && p.DeletedAt == null && p.IsVisible)
+			.OrderByDescending(p => p.CreatedAt);
+
+		var totalCount = await query.CountAsync();
+		var items = await query
+			.Skip((parameter.PageNumber - 1) * parameter.PageSize)
+			.Take(parameter.PageSize)
+			.ToListAsync();
+
+		return new PagedResponse<Post>(items, parameter.PageNumber, parameter.PageSize, totalCount);
+	}
+
 	public async Task<PagedResponse<Post>> GetVisibleAsync(RequestParameter parameter)
 	{
 		var query = _dbSet

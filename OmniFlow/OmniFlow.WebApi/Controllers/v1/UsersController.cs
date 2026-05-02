@@ -5,6 +5,7 @@ using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
 using OmniFlow.Application.Features.Users.Queries.GetTopContributors;
 using OmniFlow.Application.Features.Users.Queries.GetUserProfile;
 using OmniFlow.Application.Interfaces;
+using OmniFlow.Application.Wrappers;
 
 namespace OmniFlow.WebApi.Controllers.v1;
 
