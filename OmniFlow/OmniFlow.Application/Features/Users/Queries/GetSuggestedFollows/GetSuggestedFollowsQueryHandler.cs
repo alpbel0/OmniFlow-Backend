@@ -27,6 +27,14 @@ public class GetSuggestedFollowsQueryHandler : IRequestHandler<GetSuggestedFollo
 		var excludeIds = request.ExcludeUserIds?.ToHashSet() ?? new HashSet<Guid>();
 		var reasonMap = new Dictionary<Guid, string>();
 
+	// ─── Yardımcı: mevcut kullanıcının takip ettiği kişiler ────────────────────
+		var currentUserFollowingIds = await _context.Follows
+			.AsNoTracking()
+			.Where(f => f.FollowerId == _currentUserId)
+			.Select(f => f.FollowingId)
+			.ToListAsync(cancellationToken);
+		var currentUserFollowingSet = currentUserFollowingIds.ToHashSet();
+
 		// ─── Tier 1: Paylaşımlarını beğendin ───────────────────────────────────
 		var upvotedPostIds = await _context.PostUpvotes
 			.AsNoTracking()
@@ -57,7 +65,9 @@ public class GetSuggestedFollowsQueryHandler : IRequestHandler<GetSuggestedFollo
 		var tier1Ids = upvotedOwnerIds
 			.Concat(commentedOwnerIds)
 			.Distinct()
-			.Where(id => id != _currentUserId && !excludeIds.Contains(id))
+			.Where(id => id != _currentUserId
+				&& !excludeIds.Contains(id)
+				&& !currentUserFollowingSet.Contains(id))
 			.ToList();
 
 		foreach (var id in tier1Ids)
@@ -71,6 +81,7 @@ public class GetSuggestedFollowsQueryHandler : IRequestHandler<GetSuggestedFollo
 			.Where(f => !_context.Follows.Any(f2 =>
 				f2.FollowerId == _currentUserId && f2.FollowingId == f.FollowerId))
 			.Where(f => !excludeIds.Contains(f.FollowerId))
+			.Where(f => !currentUserFollowingSet.Contains(f.FollowerId))
 			.Select(f => f.FollowerId)
 			.ToListAsync(cancellationToken);
 
