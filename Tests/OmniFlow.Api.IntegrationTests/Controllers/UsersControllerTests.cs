@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
+using OmniFlow.Application.DTOs.Posts;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.Interfaces;
+using OmniFlow.Application.Wrappers;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 using OmniFlow.Infrastructure.Models;
@@ -69,6 +71,24 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 		if (!db.Blocks.Any(x => x.BlockerId == blockerId && x.BlockedUserId == blockedUserId))
 		{
 			db.Blocks.Add(new Block { BlockerId = blockerId, BlockedUserId = blockedUserId });
+			await db.SaveChangesAsync();
+		}
+	}
+
+	private async Task RemoveBlockRelationAsync(Guid blockerId, Guid blockedUserId)
+	{
+		using var scope = _factory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+		var blocks = db.Blocks
+			.Where(x =>
+				(x.BlockerId == blockerId && x.BlockedUserId == blockedUserId) ||
+				(x.BlockerId == blockedUserId && x.BlockedUserId == blockerId))
+			.ToList();
+
+		if (blocks.Count > 0)
+		{
+			db.Blocks.RemoveRange(blocks);
 			await db.SaveChangesAsync();
 		}
 	}
@@ -196,6 +216,107 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 		result.Should().NotBeNull();
 		result!.Username.Should().Be(TestDatabaseSeeder.TestUserUsername);
 		result.IsFollowing.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task GetPostsByUser_WithValidToken_ReturnsOnlyVisibleNonDeletedPosts()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+		var currentUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
+		var targetUserId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
+		await RemoveBlockRelationAsync(currentUserId, targetUserId);
+
+		using (var scope = _factory.Services.CreateScope())
+		{
+			var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+			db.PostUpvotes.RemoveRange(db.PostUpvotes);
+			db.Posts.RemoveRange(db.Posts);
+
+			var visiblePostId = Guid.NewGuid();
+			db.Posts.AddRange(
+				new Post
+				{
+					Id = visiblePostId,
+					UserId = targetUserId,
+					Content = "Visible public post",
+					IsVisible = true
+				},
+				new Post
+				{
+					Id = Guid.NewGuid(),
+					UserId = targetUserId,
+					Content = "Hidden post",
+					IsVisible = false
+				},
+				new Post
+				{
+					Id = Guid.NewGuid(),
+					UserId = targetUserId,
+					Content = "Deleted post",
+					IsVisible = true,
+					DeletedAt = DateTime.UtcNow
+				});
+
+			db.PostUpvotes.Add(new PostUpvote
+			{
+				PostId = visiblePostId,
+				UserId = currentUserId
+			});
+
+			await db.SaveChangesAsync();
+		}
+
+		var response = await authClient.GetAsync($"/api/v1/users/{targetUserId}/posts?pageNumber=1&pageSize=20");
+
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<PagedResponse<PostResponse>>(body, _json);
+
+		result.Should().NotBeNull();
+		result!.TotalCount.Should().Be(1);
+		result.Data.Should().HaveCount(1);
+		result.Data[0].Content.Should().Be("Visible public post");
+		result.Data[0].IsVisible.Should().BeTrue();
+		result.Data[0].IsUpvoted.Should().BeTrue();
+	}
+
+	[Fact]
+	public async Task GetPostsByUser_WhenBlockedRelationshipExists_ReturnsEmptyPage()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+		var currentUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
+		var targetUserId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
+
+		await EnsureBlockRelationAsync(currentUserId, targetUserId);
+
+		var response = await authClient.GetAsync($"/api/v1/users/{targetUserId}/posts?pageNumber=1&pageSize=20");
+
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<PagedResponse<PostResponse>>(body, _json);
+
+		result.Should().NotBeNull();
+		result!.Data.Should().BeEmpty();
+		result.TotalCount.Should().Be(0);
+	}
+
+	[Fact]
+	public async Task SwaggerDocument_ShouldIncludeGetPostsByUserEndpoint()
+	{
+		var response = await _client.GetAsync("/swagger/v1/swagger.json");
+
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		using var document = JsonDocument.Parse(body);
+		var paths = document.RootElement.GetProperty("paths");
+
+		paths.TryGetProperty("/api/v1/users/{userId}/posts", out var pathItem).Should().BeTrue();
+		pathItem.TryGetProperty("get", out _).Should().BeTrue();
 	}
 
 	[Fact]

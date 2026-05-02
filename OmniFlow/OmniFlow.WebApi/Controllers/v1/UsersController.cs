@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Posts;
-using OmniFlow.Application.Features.Posts.Queries.GetMyPosts;
-using OmniFlow.Application.DTOs.Posts;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.Features.Posts.Queries.GetMyPosts;
 using OmniFlow.Application.Features.Posts.Queries.GetPostsByUser;
@@ -10,6 +8,7 @@ using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
 using OmniFlow.Application.Features.Users.Queries.GetTopContributors;
 using OmniFlow.Application.Features.Users.Queries.GetUserProfile;
 using OmniFlow.Application.Interfaces;
+using OmniFlow.Application.Wrappers;
 
 namespace OmniFlow.WebApi.Controllers.v1;
 
