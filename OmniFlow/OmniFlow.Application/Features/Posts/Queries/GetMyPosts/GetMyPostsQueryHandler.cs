@@ -49,10 +49,11 @@ public class GetMyPostsQueryHandler : IRequestHandler<GetMyPostsQuery, PagedResp
 
         var upvotedPostIds = postIds.Count == 0
             ? new HashSet<Guid>()
-            : await _context.PostUpvotes
+            : (await _context.PostUpvotes
                 .Where(upvote => upvote.UserId == currentUserId && postIds.Contains(upvote.PostId))
                 .Select(upvote => upvote.PostId)
-                .ToHashSetAsync(cancellationToken);
+                .ToListAsync(cancellationToken))
+                .ToHashSet();
 
         foreach (var response in responses)
         {
