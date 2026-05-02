@@ -5,6 +5,7 @@ using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.Features.Posts.Queries.GetMyPosts;
 using OmniFlow.Application.Features.Posts.Queries.GetPostsByUser;
 using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
+using OmniFlow.Application.Features.Users.Queries.GetSuggestedFollows;
 using OmniFlow.Application.Features.Users.Queries.GetTopContributors;
 using OmniFlow.Application.Features.Users.Queries.GetUserProfile;
 using OmniFlow.Application.Interfaces;
@@ -84,6 +85,29 @@ public class UsersController : BaseApiController
 	public async Task<IActionResult> GetTopContributors([FromQuery] int limit = 10)
 	{
 		var result = await Mediator.Send(new GetTopContributorsQuery { Limit = limit });
+		return Ok(result);
+	}
+
+	[HttpGet("suggested-follows")]
+	[Authorize]
+	[ProducesResponseType(typeof(IReadOnlyList<SuggestedFollowResponse>), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	public async Task<IActionResult> GetSuggestedFollows(
+		[FromQuery] int limit = 6,
+		[FromQuery] string? excludeUserIds = null)
+	{
+		var excludeIds = string.IsNullOrWhiteSpace(excludeUserIds)
+			? new List<Guid>()
+			: excludeUserIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+				.Select(s => Guid.TryParse(s.Trim(), out var g) ? g : Guid.Empty)
+				.Where(g => g != Guid.Empty)
+				.ToList();
+
+		var result = await Mediator.Send(new GetSuggestedFollowsQuery
+		{
+			Limit = limit,
+			ExcludeUserIds = excludeIds
+		});
 		return Ok(result);
 	}
 
