@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OmniFlow.Application.DTOs.Posts;
-using OmniFlow.Application.Features.Posts.Queries.GetMyPosts;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
 using OmniFlow.Application.Features.Users.Queries.GetTopContributors;
@@ -37,20 +35,6 @@ public class UsersController : BaseApiController
 		};
 
 		var result = await Mediator.Send(query);
-		return Ok(result);
-	}
-
-	[HttpGet("me/posts")]
-	[ProducesResponseType(typeof(OmniFlow.Application.Wrappers.PagedResponse<PostResponse>), StatusCodes.Status200OK)]
-	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
-	public async Task<IActionResult> MyPosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
-	{
-		var result = await Mediator.Send(new GetMyPostsQuery
-		{
-			PageNumber = pageNumber,
-			PageSize = pageSize
-		});
-
 		return Ok(result);
 	}
 
