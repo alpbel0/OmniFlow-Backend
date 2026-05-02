@@ -94,6 +94,7 @@ public class GetSuggestedFollowsQueryHandler : IRequestHandler<GetSuggestedFollo
 		var alreadySuggested = tier1Ids
 			.Concat(tier2Ids)
 			.Concat(excludeIds)
+			.Concat(currentUserFollowingIds)
 			.Concat(new[] { _currentUserId })
 			.ToHashSet();
 
@@ -103,6 +104,7 @@ public class GetSuggestedFollowsQueryHandler : IRequestHandler<GetSuggestedFollo
 			.AsNoTracking()
 			.Where(u => !u.IsSuspended)
 			.Where(u => !alreadySuggested.Contains(u.Id))
+			.Where(u => !currentUserFollowingSet.Contains(u.Id))
 			.Where(u => !_context.Blocks.Any(b =>
 				(b.BlockerId == _currentUserId && b.BlockedUserId == u.Id) ||
 				(b.BlockedUserId == _currentUserId && b.BlockerId == u.Id)))
