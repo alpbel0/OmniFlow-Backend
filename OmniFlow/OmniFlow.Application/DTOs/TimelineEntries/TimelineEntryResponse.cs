@@ -14,6 +14,10 @@ public class TimelineEntryResponse
 
     // Place
     public Guid? PlaceId { get; set; }
+    public string? PlaceName { get; set; }
+    public double? PlaceLatitude { get; set; }
+    public double? PlaceLongitude { get; set; }
+    public string? PlacePhotoUrl { get; set; }
 
     // Custom common
     public string? CustomName { get; set; }

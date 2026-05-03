@@ -74,7 +74,11 @@ public class GeneralProfile : Profile
         CreateMap<UpdateTripCommand, Trip>();
 
         // TimelineEntry mappings
-        CreateMap<TimelineEntry, TimelineEntryResponse>();
+        CreateMap<TimelineEntry, TimelineEntryResponse>()
+            .ForMember(dest => dest.PlaceName, opt => opt.MapFrom(src => src.Place != null ? src.Place.Name : null))
+            .ForMember(dest => dest.PlaceLatitude, opt => opt.MapFrom(src => src.Place != null ? src.Place.Latitude : (double?)null))
+            .ForMember(dest => dest.PlaceLongitude, opt => opt.MapFrom(src => src.Place != null ? src.Place.Longitude : (double?)null))
+            .ForMember(dest => dest.PlacePhotoUrl, opt => opt.MapFrom(src => src.Place != null ? src.Place.PhotoUrl : null));
         CreateMap<CreateTimelineEntryRequest, TimelineEntry>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.OrderIndex, opt => opt.Ignore())
