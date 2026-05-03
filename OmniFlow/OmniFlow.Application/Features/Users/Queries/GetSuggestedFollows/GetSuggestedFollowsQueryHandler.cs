@@ -67,7 +67,10 @@ public class GetSuggestedFollowsQueryHandler : IRequestHandler<GetSuggestedFollo
 			.Distinct()
 			.Where(id => id != _currentUserId
 				&& !excludeIds.Contains(id)
-				&& !currentUserFollowingSet.Contains(id))
+				&& !currentUserFollowingSet.Contains(id)
+				&& !_context.Blocks.Any(b =>
+					(b.BlockerId == _currentUserId && b.BlockedUserId == id) ||
+					(b.BlockedUserId == _currentUserId && b.BlockerId == id)))
 			.ToList();
 
 		foreach (var id in tier1Ids)
@@ -82,6 +85,9 @@ public class GetSuggestedFollowsQueryHandler : IRequestHandler<GetSuggestedFollo
 				f2.FollowerId == _currentUserId && f2.FollowingId == f.FollowerId))
 			.Where(f => !excludeIds.Contains(f.FollowerId))
 			.Where(f => !currentUserFollowingSet.Contains(f.FollowerId))
+			.Where(f => !_context.Blocks.Any(b =>
+				(b.BlockerId == _currentUserId && b.BlockedUserId == f.FollowerId) ||
+				(b.BlockedUserId == _currentUserId && b.BlockerId == f.FollowerId)))
 			.Select(f => f.FollowerId)
 			.ToListAsync(cancellationToken);
 
