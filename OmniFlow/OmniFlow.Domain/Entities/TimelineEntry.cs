@@ -31,6 +31,7 @@ public class TimelineEntry : AuditableBaseEntity
     public int? DurationMinutes { get; set; }
     public bool IsLocked { get; private set; }
 
+    public void Lock() => IsLocked = true;
     public void Unlock() => IsLocked = false;
     public int? BufferMinutes { get; private set; }
 

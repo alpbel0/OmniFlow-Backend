@@ -55,4 +55,5 @@ public class UpdateTimelineEntryRequest : ITimelineEntryValidationProperties
     // Extra
     public string? Notes { get; set; }
     public bool IsVisited { get; set; }
+    public bool? IsLocked { get; set; }
 }

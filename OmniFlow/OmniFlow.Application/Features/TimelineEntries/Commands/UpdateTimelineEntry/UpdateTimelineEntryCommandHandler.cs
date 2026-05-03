@@ -64,6 +64,14 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
             entry.UpdateDestinationAndDay(request.DestinationId, request.DayNumber);
         }
 
+        if (request.IsLocked.HasValue)
+        {
+            if (request.IsLocked.Value)
+                entry.Lock();
+            else
+                entry.Unlock();
+        }
+
         // 6. EntryType-specific updates
         if (entry.IsLocked)
         {

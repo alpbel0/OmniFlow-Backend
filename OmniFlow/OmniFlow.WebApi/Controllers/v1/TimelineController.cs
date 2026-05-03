@@ -126,7 +126,8 @@ public class TimelineController : BaseApiController
             CurrencyCode: request.CurrencyCode,
             ProviderFlightId: request.ProviderFlightId,
             ProviderHotelId: request.ProviderHotelId,
-            Notes: request.Notes
+            Notes: request.Notes,
+            IsLocked: request.IsLocked
         );
 
         var result = await Mediator.Send(command);

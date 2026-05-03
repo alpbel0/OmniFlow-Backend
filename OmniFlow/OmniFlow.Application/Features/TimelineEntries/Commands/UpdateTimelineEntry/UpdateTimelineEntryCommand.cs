@@ -43,5 +43,6 @@ public record UpdateTimelineEntryCommand(
     Guid? ProviderFlightId,
     Guid? ProviderHotelId,
 
-    string? Notes
+    string? Notes,
+    bool? IsLocked
 ) : IRequest<OmniFlow.Application.DTOs.TimelineEntries.TimelineEntryResponse>;
