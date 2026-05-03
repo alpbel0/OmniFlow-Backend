@@ -75,8 +75,8 @@ public class ReorderTimelineEntriesCommandHandler : IRequestHandler<ReorderTimel
         if (afterEntry != null && (afterEntry.DestinationId != entry.DestinationId || afterEntry.DayNumber != entry.DayNumber))
             throw new ApiException("AfterEntry must belong to the same destination and day.");
 
-        // 8. Calculate new LexoRank
-        entry.OrderIndex = _timelineService.GetLexoRankBetween(afterEntry?.OrderIndex, beforeEntry?.OrderIndex);
+        // 8. Calculate new LexoRank using previous and next neighbors in visual order
+        entry.OrderIndex = _timelineService.GetLexoRankBetween(beforeEntry?.OrderIndex, afterEntry?.OrderIndex);
 
         await _context.SaveChangesAsync(cancellationToken);
 
