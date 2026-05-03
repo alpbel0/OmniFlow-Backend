@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Posts;
 using OmniFlow.Application.Features.Posts.Commands.CreatePost;
@@ -6,6 +7,7 @@ using OmniFlow.Application.Features.Posts.Commands.RemoveUpvotePost;
 using OmniFlow.Application.Features.Posts.Commands.UpdatePost;
 using OmniFlow.Application.Features.Posts.Commands.UpvotePost;
 using OmniFlow.Application.Features.Posts.Queries.GetPostById;
+using OmniFlow.Application.Features.Posts.Queries.GetTrendingTags;
 
 namespace OmniFlow.WebApi.Controllers.v1;
 
@@ -25,6 +27,22 @@ public class PostsController : BaseApiController
 		var query = new GetPostByIdQuery
 		{
 			PostId = id
+		};
+
+		var result = await Mediator.Send(query);
+		return Ok(result);
+	}
+
+	/// <summary>Get trending tags for the last N days.</summary>
+	[AllowAnonymous]
+	[HttpGet("trending-tags")]
+	[ProducesResponseType(typeof(IReadOnlyList<TrendingTagResponse>), StatusCodes.Status200OK)]
+	public async Task<IActionResult> GetTrendingTags([FromQuery] int limit = 6, [FromQuery] int days = 7)
+	{
+		var query = new GetTrendingTagsQuery
+		{
+			Limit = limit,
+			Days = days
 		};
 
 		var result = await Mediator.Send(query);
