@@ -31,7 +31,7 @@ public class GetProviderHotelsQueryHandler : IRequestHandler<GetProviderHotelsQu
 
         var personCount = request.PersonCount < 1 ? 1 : request.PersonCount;
 
-        var hotels = await _hotelRepository.GetByCityAsync(request.City);
+        var hotels = await _hotelRepository.GetByCityAndDateAsync(request.City, request.CheckIn);
 
         var availableHotels = hotels.Where(h => h.IsAvailable).ToList();
 

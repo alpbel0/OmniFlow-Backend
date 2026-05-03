@@ -60,7 +60,7 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
             ?? throw new EntityNotFoundException("TripDestination", request.DestinationId);
 
         // 5. Factory by EntryType
-        TimelineEntry entry = await CreateEntryFromRequestAsync(request, destination);
+        TimelineEntry entry = await CreateEntryFromRequestAsync(request, trip, destination);
 
         // 6. LexoRank
         var lastEntry = await _timelineRepo.GetLastEntryInDayAsync(request.TripId, request.DestinationId, request.DayNumber);
@@ -86,7 +86,10 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
         return _mapper.Map<TimelineEntryResponse>(entry);
     }
 
-    private async Task<TimelineEntry> CreateEntryFromRequestAsync(CreateTimelineEntryCommand request, TripDestination destination)
+    private async Task<TimelineEntry> CreateEntryFromRequestAsync(
+        CreateTimelineEntryCommand request,
+        Trip trip,
+        TripDestination destination)
     {
         if (request.ProviderFlightId.HasValue)
         {
@@ -124,10 +127,23 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
             var providerHotel = await _providerHotelRepo.GetByIdAsync(request.ProviderHotelId.Value)
                 ?? throw new EntityNotFoundException("ProviderHotel", request.ProviderHotelId.Value);
 
-            var checkIn = EnsureUtc(destination.ArrivalDate.ToDateTime(new TimeOnly(14, 0)));
-            var checkOut = EnsureUtc(destination.DepartureDate.ToDateTime(new TimeOnly(12, 0)));
-            var nightCount = Math.Max(destination.NightCount, 1);
-            var totalPrice = providerHotel.PricePerNight * nightCount;
+            var stayOffset = Math.Max(request.DayNumber - 1, 0);
+            var nightlyCheckInDate = destination.ArrivalDate.AddDays(stayOffset);
+            var nightlyCheckOutDate = nightlyCheckInDate.AddDays(1);
+            if (nightlyCheckOutDate > destination.DepartureDate)
+            {
+                nightlyCheckOutDate = destination.DepartureDate;
+            }
+
+            if (nightlyCheckOutDate <= nightlyCheckInDate)
+            {
+                nightlyCheckOutDate = nightlyCheckInDate.AddDays(1);
+            }
+
+            var checkIn = EnsureUtc(nightlyCheckInDate.ToDateTime(new TimeOnly(14, 0)));
+            var checkOut = EnsureUtc(nightlyCheckOutDate.ToDateTime(new TimeOnly(12, 0)));
+            var personCount = trip.PersonCount < 1 ? 1 : trip.PersonCount;
+            var totalPrice = providerHotel.PricePerNight * personCount;
 
             var providerHotelEntry = TimelineEntry.CreateCustomAccommodationEntry(
                 request.TripId,

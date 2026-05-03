@@ -28,4 +28,12 @@ public class ProviderHotelRepositoryAsync : GenericRepositoryAsync<ProviderHotel
             .OrderBy(h => h.PricePerNight)
             .ToListAsync();
     }
+
+    public async Task<IReadOnlyList<ProviderHotel>> GetByCityAndDateAsync(string city, DateOnly validDate)
+    {
+        return await _dbSet
+            .Where(h => h.City == city && h.ValidDate == validDate)
+            .OrderBy(h => h.PricePerNight)
+            .ToListAsync();
+    }
 }

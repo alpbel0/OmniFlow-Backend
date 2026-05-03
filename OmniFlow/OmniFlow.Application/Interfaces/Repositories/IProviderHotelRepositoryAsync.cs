@@ -6,4 +6,5 @@ public interface IProviderHotelRepositoryAsync : IGenericRepositoryAsync<Provide
 {
     Task<IReadOnlyList<decimal>> GetDistinctPricesByCityAsync(string city);
     Task<IReadOnlyList<ProviderHotel>> GetByCityAsync(string city);
+    Task<IReadOnlyList<ProviderHotel>> GetByCityAndDateAsync(string city, DateOnly validDate);
 }
