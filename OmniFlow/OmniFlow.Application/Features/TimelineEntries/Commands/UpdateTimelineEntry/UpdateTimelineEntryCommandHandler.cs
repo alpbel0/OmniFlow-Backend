@@ -64,12 +64,17 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
             entry.UpdateDestinationAndDay(request.DestinationId, request.DayNumber);
         }
 
+        var lockAfterUpdate = false;
         if (request.IsLocked.HasValue)
         {
-            if (request.IsLocked.Value)
-                entry.Lock();
-            else
+            if (!request.IsLocked.Value)
+            {
                 entry.Unlock();
+            }
+            else if (!entry.IsLocked)
+            {
+                lockAfterUpdate = true;
+            }
         }
 
         // 6. EntryType-specific updates
@@ -104,6 +109,11 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
             var validation = _timelineService.CheckConflict(entry, otherEntries, targetDestination.ArrivalDate);
             if (!validation.IsValid)
                 throw new ApiException(validation.ErrorMessage ?? "Timeline conflict detected after update.");
+        }
+
+        if (lockAfterUpdate)
+        {
+            entry.Lock();
         }
 
         // 9. Save
