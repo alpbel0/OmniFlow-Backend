@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
+using OmniFlow.Application.DTOs.TimelineEntries;
+using OmniFlow.Application.DTOs.TripDestinations;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
 using OmniFlow.Application.Interfaces;
@@ -614,6 +616,73 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         budgetResult.Should().NotBeNull();
         budgetResult!.TotalCost.Should().BeGreaterThanOrEqualTo(0);
         budgetResult.BudgetTier.Should().Be(BudgetTier.Standard);
+    }
+
+    [Fact]
+    public async Task GetBudgetSummary_ForProviderHotelEntry_UsesEntryNightCount()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        var createRequest = new CreateTripWizardRequest
+        {
+            Title = "Provider Hotel Night Count Trip",
+            Origin = "Rome",
+            OriginCountry = "Italy",
+            PersonCount = 1,
+            BudgetTier = BudgetTier.Standard,
+            Destinations =
+            [
+                new CreateTripDestinationRequest
+                {
+                    City = "Paris",
+                    Country = "France",
+                    ArrivalDate = new DateOnly(2026, 9, 10),
+                    DepartureDate = new DateOnly(2026, 9, 15),
+                    OrderIndex = 1
+                }
+            ]
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips/wizard", createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(
+            await createResponse.Content.ReadAsStringAsync(),
+            _json);
+
+        createResult.Should().NotBeNull();
+
+        var tripId = createResult!.TripId;
+        var destinationId = createResult.Destinations.Single().Id;
+
+        var timelineCreateRequest = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomAccommodation,
+            ProviderHotelId = Guid.Parse("b1111111-1111-1111-1111-111111111111"),
+            CurrencyCode = "USD",
+            Notes = "Single night provider hotel"
+        };
+
+        var timelineResponse = await authClient.PostAsJsonAsync(
+            $"/api/v1/trips/{tripId}/timeline/entry",
+            timelineCreateRequest);
+
+        timelineResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var budgetResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/budget-summary");
+        budgetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var budgetResult = JsonSerializer.Deserialize<BudgetSummaryResponse>(
+            await budgetResponse.Content.ReadAsStringAsync(),
+            _json);
+
+        budgetResult.Should().NotBeNull();
+        budgetResult!.TotalHotelCost.Should().Be(80);
+        budgetResult.TotalCost.Should().Be(80);
     }
 
     [Fact]

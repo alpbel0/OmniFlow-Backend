@@ -75,7 +75,7 @@ public class GetBudgetSummaryQueryHandler : IRequestHandler<GetBudgetSummaryQuer
                 case TimelineEntryType.CustomAccommodation:
                     if (entry.ProviderHotelId.HasValue)
                     {
-                        var nightCount = destination?.NightCount ?? 1;
+                        var nightCount = GetAccommodationNightCount(entry);
                         try
                         {
                             totalHotelCost += _budgetService.CalculateHotelCost(
@@ -145,5 +145,17 @@ public class GetBudgetSummaryQueryHandler : IRequestHandler<GetBudgetSummaryQuer
             return destination.ArrivalDate.AddDays(entry.DayNumber - 1);
 
         return DateOnly.FromDateTime(DateTime.UtcNow);
+    }
+
+    private static int GetAccommodationNightCount(Domain.Entities.TimelineEntry entry)
+    {
+        if (!entry.AccommodationCheckIn.HasValue || !entry.AccommodationCheckOut.HasValue)
+            return 1;
+
+        var checkIn = DateOnly.FromDateTime(entry.AccommodationCheckIn.Value);
+        var checkOut = DateOnly.FromDateTime(entry.AccommodationCheckOut.Value);
+        var nightCount = checkOut.DayNumber - checkIn.DayNumber;
+
+        return Math.Max(nightCount, 1);
     }
 }
