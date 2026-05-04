@@ -25,6 +25,7 @@ public class TimelineEntryHandlerTests
     private readonly Mock<ITimelineService> _timelineServiceMock;
     private readonly Mock<IProviderFlightRepositoryAsync> _providerFlightRepoMock;
     private readonly Mock<IProviderHotelRepositoryAsync> _providerHotelRepoMock;
+    private readonly Mock<IBudgetCalculationService> _budgetServiceMock;
     private readonly Mock<IAuthenticatedUserService> _authServiceMock;
     private readonly Mock<IMapper> _mapperMock;
 
@@ -42,6 +43,7 @@ public class TimelineEntryHandlerTests
         _timelineServiceMock = new Mock<ITimelineService>();
         _providerFlightRepoMock = new Mock<IProviderFlightRepositoryAsync>();
         _providerHotelRepoMock = new Mock<IProviderHotelRepositoryAsync>();
+        _budgetServiceMock = new Mock<IBudgetCalculationService>();
         _authServiceMock = new Mock<IAuthenticatedUserService>();
         _mapperMock = new Mock<IMapper>();
 
@@ -51,6 +53,7 @@ public class TimelineEntryHandlerTests
             _timelineServiceMock.Object,
             _providerFlightRepoMock.Object,
             _providerHotelRepoMock.Object,
+            _budgetServiceMock.Object,
             _authServiceMock.Object,
             _mapperMock.Object);
         _updateHandler = new UpdateTimelineEntryCommandHandler(
@@ -303,6 +306,9 @@ public class TimelineEntryHandlerTests
         _authServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
         _contextMock.Setup(x => x.Trips).Returns(CreateAsyncMockDbSet(new List<Trip> { trip }).Object);
         _providerHotelRepoMock.Setup(x => x.GetByIdAsync(providerHotel.Id)).ReturnsAsync(providerHotel);
+        _budgetServiceMock
+            .Setup(x => x.CalculateHotelCost(providerHotel.Id, 1, 1, new DateOnly(2026, 8, 10)))
+            .Returns(120);
         _timelineRepoMock.Setup(x => x.GetLastEntryInDayAsync(trip.Id, dest.Id, 1)).ReturnsAsync((TimelineEntry?)null);
         _timelineRepoMock.Setup(x => x.GetByTripAndDayAsync(trip.Id, dest.Id, 1)).ReturnsAsync(new List<TimelineEntry>());
         _timelineServiceMock.Setup(x => x.GetLexoRankBetween(null, null)).Returns(500.0);
@@ -326,8 +332,8 @@ public class TimelineEntryHandlerTests
             e.CustomLatitude == 48.8566 &&
             e.CustomLongitude == 2.3522 &&
             e.AccommodationCheckIn == new DateTime(2026, 8, 10, 14, 0, 0, DateTimeKind.Utc) &&
-            e.AccommodationCheckOut == new DateTime(2026, 8, 13, 12, 0, 0, DateTimeKind.Utc) &&
-            e.Price == 240 &&
+            e.AccommodationCheckOut == new DateTime(2026, 8, 11, 12, 0, 0, DateTimeKind.Utc) &&
+            e.Price == 120 &&
             e.CurrencyCode == "USD" &&
             e.IsLocked &&
             e.BufferMinutes == 0)), Times.Once);

@@ -17,6 +17,7 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
     private readonly ITimelineService _timelineService;
     private readonly IProviderFlightRepositoryAsync _providerFlightRepo;
     private readonly IProviderHotelRepositoryAsync _providerHotelRepo;
+    private readonly IBudgetCalculationService _budgetService;
     private readonly IAuthenticatedUserService _authService;
     private readonly IMapper _mapper;
 
@@ -26,6 +27,7 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
         ITimelineService timelineService,
         IProviderFlightRepositoryAsync providerFlightRepo,
         IProviderHotelRepositoryAsync providerHotelRepo,
+        IBudgetCalculationService budgetService,
         IAuthenticatedUserService authService,
         IMapper mapper)
     {
@@ -34,6 +36,7 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
         _timelineService = timelineService;
         _providerFlightRepo = providerFlightRepo;
         _providerHotelRepo = providerHotelRepo;
+        _budgetService = budgetService;
         _authService = authService;
         _mapper = mapper;
     }
@@ -143,7 +146,11 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
             var checkIn = EnsureUtc(nightlyCheckInDate.ToDateTime(new TimeOnly(14, 0)));
             var checkOut = EnsureUtc(nightlyCheckOutDate.ToDateTime(new TimeOnly(12, 0)));
             var personCount = trip.PersonCount < 1 ? 1 : trip.PersonCount;
-            var totalPrice = providerHotel.PricePerNight * personCount;
+            var totalPrice = _budgetService.CalculateHotelCost(
+                providerHotel.Id,
+                personCount,
+                1,
+                nightlyCheckInDate);
 
             var providerHotelEntry = TimelineEntry.CreateCustomAccommodationEntry(
                 request.TripId,

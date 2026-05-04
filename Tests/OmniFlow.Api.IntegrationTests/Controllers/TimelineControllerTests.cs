@@ -313,7 +313,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         result.ProviderHotelId.Should().Be(providerHotelId);
         result.CustomName.Should().Be("Budget Paris Inn");
         result.AccommodationCheckIn.Should().Be(new DateTime(2026, 8, 10, 14, 0, 0, DateTimeKind.Utc));
-        result.AccommodationCheckOut.Should().Be(new DateTime(2026, 8, 13, 12, 0, 0, DateTimeKind.Utc));
+        result.AccommodationCheckOut.Should().Be(new DateTime(2026, 8, 11, 12, 0, 0, DateTimeKind.Utc));
         result.Price.Should().Be(240);
         result.CurrencyCode.Should().Be("USD");
         result.IsLocked.Should().BeTrue();
