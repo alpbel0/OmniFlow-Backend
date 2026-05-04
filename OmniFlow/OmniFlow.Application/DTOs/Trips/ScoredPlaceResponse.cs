@@ -12,12 +12,18 @@ public class ScoredPlaceResponse
     public List<string> PhotoUrls { get; set; } = new();
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+    public string? Address { get; set; }
     public string City { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
     public decimal EstimatedPrice { get; set; }
+    public string CurrencyCode { get; set; } = "USD";
+    public int? PriceLevel { get; set; }
     public decimal? Rating { get; set; }
+    public int? ReviewCount { get; set; }
     public int? DurationMinutes { get; set; }
     public bool IsFree { get; set; }
+    public string? WebsiteUrl { get; set; }
+    public string? Cuisine { get; set; }
     public List<BudgetTier> BudgetTiers { get; set; } = new();
     public List<string> GoogleTags { get; set; } = new();
 
