@@ -77,12 +77,12 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
 
         if (cursorInfo != null)
         {
-            var cursorCreatedAtTicks = cursorInfo.CreatedAtTicks;
+            var cursorCreatedAt = cursorInfo.CreatedAt;
             var cursorId = cursorInfo.Id;
 
             query = query.Where(post =>
-                post.CreatedAt.Ticks < cursorCreatedAtTicks ||
-                (post.CreatedAt.Ticks == cursorCreatedAtTicks && post.Id.CompareTo(cursorId) < 0));
+                post.CreatedAt < cursorCreatedAt ||
+                (post.CreatedAt == cursorCreatedAt && post.Id.CompareTo(cursorId) < 0));
         }
 
         var items = await query
@@ -110,7 +110,7 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
         var nextCursor = hasMore && resultItems.Any()
             ? EncodeCursor(new FeedCursorInfo
             {
-                CreatedAtTicks = resultItems.Last().CreatedAt.Ticks,
+                CreatedAt = resultItems.Last().CreatedAt,
                 Id = resultItems.Last().Id
             })
             : null;
@@ -150,6 +150,6 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
 
 internal sealed class FeedCursorInfo
 {
-    public long CreatedAtTicks { get; set; }
+    public DateTime CreatedAt { get; set; }
     public Guid Id { get; set; }
 }
