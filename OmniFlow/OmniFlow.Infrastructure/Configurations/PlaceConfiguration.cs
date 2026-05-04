@@ -69,7 +69,7 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 
 		var travelStyleConverter = new ValueConverter<List<TravelStyle>, string[]>(
 			v => v.Select(x => x.ToString()).ToArray(),
-			v => v.Select(x => Enum.Parse<TravelStyle>(x)).ToList());
+			v => v.Select(ParseTravelStyle).ToList());
 		var travelStyleComparer = new ValueComparer<List<TravelStyle>>(
 			(a, b) => a != null && b != null && a.SequenceEqual(b),
 			v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
@@ -144,6 +144,32 @@ public class PlaceConfiguration : IEntityTypeConfiguration<Place>
 			"Midrange" => BudgetTier.Standard,
 			"Luxury" => BudgetTier.Premium,
 			_ => throw new ArgumentException($"Unsupported budget tier value '{value}'.", nameof(value))
+		};
+	}
+
+	private static TravelStyle ParseTravelStyle(string value)
+	{
+		if (Enum.TryParse<TravelStyle>(value, ignoreCase: true, out var parsedStyle))
+		{
+			return parsedStyle;
+		}
+
+		return value.Trim() switch
+		{
+			"Family" => TravelStyle.Local,
+			"Entertainment" => TravelStyle.Nightlife,
+			"Food & Drink" => TravelStyle.Gastronomy,
+			"Hiking" => TravelStyle.Adventure,
+			"Historical" => TravelStyle.Cultural,
+			"Relaxation" => TravelStyle.Relax,
+			"Beach" => TravelStyle.Nature,
+			"Art" => TravelStyle.Cultural,
+			"City" => TravelStyle.Local,
+			"Educational" => TravelStyle.Cultural,
+			"Photography" => TravelStyle.Influencer,
+			"Solo" => TravelStyle.Budget,
+			"Luxury" => TravelStyle.Relax,
+			_ => throw new ArgumentException($"Unsupported travel style value '{value}'.", nameof(value))
 		};
 	}
 }
