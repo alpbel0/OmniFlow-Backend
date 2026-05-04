@@ -50,21 +50,9 @@ public class DeleteTimelineEntryCommandHandler : IRequestHandler<DeleteTimelineE
         // 6. Soft delete
         entry.DeletedAt = DateTime.UtcNow;
 
-        // 7. Shift OrderIndex of subsequent entries in the same day/destination
-        var subsequentEntries = await _context.TimelineEntries
-            .Where(e => e.TripId == entry.TripId
-                && e.DestinationId == entry.DestinationId
-                && e.DayNumber == entry.DayNumber
-                && e.OrderIndex > entry.OrderIndex
-                && e.DeletedAt == null)
-            .OrderBy(e => e.OrderIndex)
-            .ToListAsync(cancellationToken);
-
-        foreach (var subsequent in subsequentEntries)
-        {
-            subsequent.OrderIndex -= 1.0;
-        }
-
+        // LexoRank ordering does not require compaction after deletes.
+        // Leaving neighboring order indexes untouched avoids unnecessary writes
+        // and prevents delete failures caused by transient reordering conflicts.
         await _context.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
