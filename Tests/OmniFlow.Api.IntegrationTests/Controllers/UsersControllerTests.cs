@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.DTOs.Posts;
+using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.DTOs.Users;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Wrappers;
@@ -91,6 +92,110 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 			db.Blocks.RemoveRange(blocks);
 			await db.SaveChangesAsync();
 		}
+	}
+
+	[Fact]
+	public async Task GetTripsByUser_WithValidToken_ReturnsOnlyPublishedNonForkedTrips()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var authClient = CreateAuthenticatedClient(token);
+		var currentUserId = await GetUserIdAsync(TestDatabaseSeeder.TestUserEmail);
+		var targetUserId = await GetUserIdAsync(TestDatabaseSeeder.AdminEmail);
+		await RemoveBlockRelationAsync(currentUserId, targetUserId);
+
+		using (var scope = _factory.Services.CreateScope())
+		{
+			var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+			db.TripDestinations.RemoveRange(db.TripDestinations);
+			db.Trips.RemoveRange(db.Trips);
+
+			var publishedTrip = new Trip
+			{
+				Id = Guid.NewGuid(),
+				OwnerId = targetUserId,
+				Title = "Published public trip",
+				Status = TripStatus.Published,
+				Origin = "Antalya",
+				OriginCountry = "Turkey",
+				PersonCount = 2,
+				BudgetTier = BudgetTier.Standard,
+				TravelCompanion = TravelCompanion.Friends,
+				Tempo = Tempo.Moderate,
+				TransportPreference = TransportPreference.PublicTransport,
+				TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
+			};
+			publishedTrip.Destinations.Add(new TripDestination(
+				new DateOnly(2030, 1, 10),
+				new DateOnly(2030, 1, 13),
+				"Paris",
+				"France",
+				1));
+			publishedTrip.RecalculateFromDestinations();
+
+			var forkedTrip = new Trip
+			{
+				Id = Guid.NewGuid(),
+				OwnerId = targetUserId,
+				Title = "Forked public trip",
+				Status = TripStatus.Published,
+				ForkedFromId = publishedTrip.Id,
+				Origin = "Izmir",
+				OriginCountry = "Turkey",
+				PersonCount = 2,
+				BudgetTier = BudgetTier.Standard,
+				TravelCompanion = TravelCompanion.Friends,
+				Tempo = Tempo.Moderate,
+				TransportPreference = TransportPreference.PublicTransport,
+				TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
+			};
+			forkedTrip.Destinations.Add(new TripDestination(
+				new DateOnly(2030, 2, 10),
+				new DateOnly(2030, 2, 13),
+				"Rome",
+				"Italy",
+				1));
+			forkedTrip.RecalculateFromDestinations();
+
+			var draftTrip = new Trip
+			{
+				Id = Guid.NewGuid(),
+				OwnerId = targetUserId,
+				Title = "Draft trip",
+				Status = TripStatus.Draft,
+				Origin = "Ankara",
+				OriginCountry = "Turkey",
+				PersonCount = 2,
+				BudgetTier = BudgetTier.Standard,
+				TravelCompanion = TravelCompanion.Friends,
+				Tempo = Tempo.Moderate,
+				TransportPreference = TransportPreference.PublicTransport,
+				TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
+			};
+			draftTrip.Destinations.Add(new TripDestination(
+				new DateOnly(2030, 3, 10),
+				new DateOnly(2030, 3, 13),
+				"Berlin",
+				"Germany",
+				1));
+			draftTrip.RecalculateFromDestinations();
+
+			db.Trips.AddRange(publishedTrip, forkedTrip, draftTrip);
+			await db.SaveChangesAsync();
+		}
+
+		var response = await authClient.GetAsync($"/api/v1/users/{targetUserId}/trips?pageNumber=1&pageSize=20");
+
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<PagedResponse<TripResponse>>(body, _json);
+
+		result.Should().NotBeNull();
+		result!.TotalCount.Should().Be(1);
+		result.Data.Should().HaveCount(1);
+		result.Data[0].Title.Should().Be("Published public trip");
+		result.Data[0].ForkedFromId.Should().BeNull();
+		result.Data[0].Status.Should().Be(TripStatus.Published);
 	}
 
 	[Fact]
@@ -316,6 +421,21 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 		var paths = document.RootElement.GetProperty("paths");
 
 		paths.TryGetProperty("/api/v1/users/{userId}/posts", out var pathItem).Should().BeTrue();
+		pathItem.TryGetProperty("get", out _).Should().BeTrue();
+	}
+
+	[Fact]
+	public async Task SwaggerDocument_ShouldIncludeGetTripsByUserEndpoint()
+	{
+		var response = await _client.GetAsync("/swagger/v1/swagger.json");
+
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		using var document = JsonDocument.Parse(body);
+		var paths = document.RootElement.GetProperty("paths");
+
+		paths.TryGetProperty("/api/v1/users/{userId}/trips", out var pathItem).Should().BeTrue();
 		pathItem.TryGetProperty("get", out _).Should().BeTrue();
 	}
 

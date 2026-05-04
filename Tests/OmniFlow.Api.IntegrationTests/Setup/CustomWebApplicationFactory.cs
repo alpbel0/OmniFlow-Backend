@@ -32,7 +32,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(_connectionString));
 
-            // Ensure test DB is created and migrations applied
+            // Ensure test DB schema is up to date.
             using var scope = services.BuildServiceProvider().CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             db.Database.Migrate();

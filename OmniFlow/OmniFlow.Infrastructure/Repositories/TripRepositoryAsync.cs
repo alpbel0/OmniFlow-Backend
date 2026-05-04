@@ -30,11 +30,35 @@ public class TripRepositoryAsync : GenericRepositoryAsync<Trip>, ITripRepository
         return new PagedResponse<Trip>(items, parameter.PageNumber, parameter.PageSize, totalCount);
     }
 
+    public async Task<PagedResponse<Trip>> GetPublishedByOwnerAsync(Guid ownerId, RequestParameter parameter)
+    {
+        var query = _dbSet
+            .Include(t => t.Owner)
+            .Where(t =>
+                t.OwnerId == ownerId &&
+                t.Status == TripStatus.Published &&
+                t.ForkedFromId == null &&
+                t.DeletedAt == null)
+            .OrderByDescending(t => t.CreatedAt);
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .Skip((parameter.PageNumber - 1) * parameter.PageSize)
+            .Take(parameter.PageSize)
+            .ToListAsync();
+
+        return new PagedResponse<Trip>(items, parameter.PageNumber, parameter.PageSize, totalCount);
+    }
+
     public async Task<IReadOnlyList<Trip>> GetPublishedByOwnerAsync(Guid ownerId)
     {
         return await _dbSet
             .Include(t => t.Owner)
-            .Where(t => t.OwnerId == ownerId && t.Status == TripStatus.Published && t.DeletedAt == null)
+            .Where(t =>
+                t.OwnerId == ownerId &&
+                t.Status == TripStatus.Published &&
+                t.ForkedFromId == null &&
+                t.DeletedAt == null)
             .ToListAsync();
     }
 
