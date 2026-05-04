@@ -23,7 +23,7 @@ public class RecommendationServiceTests
     #region GetRecommendedPlacesAsync
 
     [Fact]
-    public async Task GetRecommendedPlaces_AllPositiveScores_ReturnsOnlyRecommended()
+    public async Task GetRecommendedPlaces_TwoRankedPlaces_SplitsAcrossRecommendedAndNeutral()
     {
         // Arrange
         var places = new List<Place>
@@ -54,14 +54,14 @@ public class RecommendationServiceTests
             new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, TransportPreference.Walking, new List<Guid>());
 
         // Assert
-        result.Recommended.Should().HaveCount(2);
-        result.Neutral.Should().BeEmpty();
+        result.Recommended.Should().HaveCount(1);
+        result.Neutral.Should().HaveCount(1);
         result.Other.Should().BeEmpty();
         result.DailyCapacity.Should().Be(5);
     }
 
     [Fact]
-    public async Task GetRecommendedPlaces_MixedScores_ReturnsThreeGroups()
+    public async Task GetRecommendedPlaces_FourRankedPlaces_SplitsAcrossThreeBucketsByPercentile()
     {
         // Arrange
         var places = new List<Place>
@@ -69,6 +69,7 @@ public class RecommendationServiceTests
             CreatePlace(Guid.NewGuid(), "Colosseum", PlaceCategory.Historical),
             CreatePlace(Guid.NewGuid(), "InfoCenter", PlaceCategory.Information),
             CreatePlace(Guid.NewGuid(), "Supermarket", PlaceCategory.Supermarket),
+            CreatePlace(Guid.NewGuid(), "Zoo", PlaceCategory.Zoo),
         };
 
         var scored = new List<ScoredPlaceResult>
@@ -76,6 +77,7 @@ public class RecommendationServiceTests
             new() { Place = places[0], FinalScore = 30, GroupScore = 10, StyleScoreAvg = 10, GoogleMatchBonus = 10 },
             new() { Place = places[1], FinalScore = 0, GroupScore = 0, StyleScoreAvg = 0, GoogleMatchBonus = 0 },
             new() { Place = places[2], FinalScore = -30, GroupScore = -10, StyleScoreAvg = -10, GoogleMatchBonus = -10 },
+            new() { Place = places[3], FinalScore = -40, GroupScore = -20, StyleScoreAvg = -10, GoogleMatchBonus = -10 },
         };
 
         _placeRepoMock.Setup(r => r.GetByCityAndBudgetTierAsync("Rome", BudgetTier.Standard))
@@ -94,9 +96,10 @@ public class RecommendationServiceTests
             new List<TravelStyle> { TravelStyle.Cultural }, Tempo.Moderate, TransportPreference.Walking, new List<Guid>());
 
         // Assert
-        result.Recommended.Should().HaveCount(1);
+        result.Recommended.Should().HaveCount(2);
         result.Neutral.Should().HaveCount(1);
         result.Other.Should().HaveCount(1);
+        result.Other[0].Name.Should().Be("Zoo");
     }
 
     [Fact]
@@ -163,21 +166,31 @@ public class RecommendationServiceTests
     }
 
     [Fact]
-    public async Task GetRecommendedPlaces_OtherSortedDesc()
+    public async Task GetRecommendedPlaces_LastQuartileFlowsIntoOtherBucketInRankOrder()
     {
         // Arrange
         var places = new List<Place>
         {
-            CreatePlace(Guid.NewGuid(), "Bad1", PlaceCategory.Supermarket),
-            CreatePlace(Guid.NewGuid(), "Bad2", PlaceCategory.Mall),
-            CreatePlace(Guid.NewGuid(), "Bad3", PlaceCategory.Zoo),
+            CreatePlace(Guid.NewGuid(), "Top1", PlaceCategory.Historical),
+            CreatePlace(Guid.NewGuid(), "Top2", PlaceCategory.Museum),
+            CreatePlace(Guid.NewGuid(), "Mid1", PlaceCategory.Cafe),
+            CreatePlace(Guid.NewGuid(), "Mid2", PlaceCategory.Park),
+            CreatePlace(Guid.NewGuid(), "Low1", PlaceCategory.Mall),
+            CreatePlace(Guid.NewGuid(), "Low2", PlaceCategory.Supermarket),
+            CreatePlace(Guid.NewGuid(), "Other1", PlaceCategory.Zoo),
+            CreatePlace(Guid.NewGuid(), "Other2", PlaceCategory.ThemePark),
         };
 
         var scored = new List<ScoredPlaceResult>
         {
-            new() { Place = places[0], FinalScore = -30, GroupScore = -10, StyleScoreAvg = -10, GoogleMatchBonus = -10 },
-            new() { Place = places[1], FinalScore = -5, GroupScore = -5, StyleScoreAvg = 0, GoogleMatchBonus = 0 },
-            new() { Place = places[2], FinalScore = -20, GroupScore = -10, StyleScoreAvg = -10, GoogleMatchBonus = 0 },
+            new() { Place = places[0], FinalScore = 40, GroupScore = 20, StyleScoreAvg = 10, GoogleMatchBonus = 10 },
+            new() { Place = places[1], FinalScore = 35, GroupScore = 20, StyleScoreAvg = 10, GoogleMatchBonus = 5 },
+            new() { Place = places[2], FinalScore = 20, GroupScore = 10, StyleScoreAvg = 10, GoogleMatchBonus = 0 },
+            new() { Place = places[3], FinalScore = 15, GroupScore = 10, StyleScoreAvg = 5, GoogleMatchBonus = 0 },
+            new() { Place = places[4], FinalScore = 5, GroupScore = 5, StyleScoreAvg = 0, GoogleMatchBonus = 0 },
+            new() { Place = places[5], FinalScore = 0, GroupScore = 0, StyleScoreAvg = 0, GoogleMatchBonus = 0 },
+            new() { Place = places[6], FinalScore = -10, GroupScore = -10, StyleScoreAvg = 0, GoogleMatchBonus = 0 },
+            new() { Place = places[7], FinalScore = -20, GroupScore = -10, StyleScoreAvg = -10, GoogleMatchBonus = 0 },
         };
 
         _placeRepoMock.Setup(r => r.GetByCityAndBudgetTierAsync("Rome", BudgetTier.Standard))
@@ -196,10 +209,11 @@ public class RecommendationServiceTests
             new List<TravelStyle>(), Tempo.Moderate, TransportPreference.Walking, new List<Guid>());
 
         // Assert
-        result.Other.Should().HaveCount(3);
-        result.Other[0].FinalScore.Should().Be(-5);   // least negative first
-        result.Other[1].FinalScore.Should().Be(-20);
-        result.Other[2].FinalScore.Should().Be(-30);  // most negative last
+        result.Recommended.Should().HaveCount(4);
+        result.Neutral.Should().HaveCount(2);
+        result.Other.Should().HaveCount(2);
+        result.Other[0].Name.Should().Be("Other1");
+        result.Other[1].Name.Should().Be("Other2");
     }
 
     [Fact]
@@ -258,7 +272,7 @@ public class RecommendationServiceTests
 
         result.Recommended.Should().HaveCount(1);
         result.Recommended[0].Name.Should().Be("Near Museum");
-        result.Other.Should().ContainSingle(r => r.Name == "Far Museum");
+        result.Neutral.Should().ContainSingle(r => r.Name == "Far Museum");
     }
 
     #endregion

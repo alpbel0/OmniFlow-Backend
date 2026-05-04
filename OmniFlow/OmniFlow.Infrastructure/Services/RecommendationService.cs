@@ -75,8 +75,9 @@ public class RecommendationService : IRecommendationService
             DailyCapacity = _timelineService.GetDailyCapacity(tempo)
         };
 
-        foreach (var ranked in rankedResults)
+        for (var index = 0; index < rankedResults.Count; index++)
         {
+            var ranked = rankedResults[index];
             var scored = ranked.Scored;
             var response = _mapper.Map<ScoredPlaceResponse>(scored.Place);
             response.FinalScore = ranked.AdjustedScore;
@@ -84,15 +85,37 @@ public class RecommendationService : IRecommendationService
             response.StyleScoreAvg = scored.StyleScoreAvg;
             response.GoogleMatchBonus = scored.GoogleMatchBonus;
 
-            if (ranked.AdjustedScore > 0)
-                result.Recommended.Add(response);
-            else if (ranked.AdjustedScore == 0)
-                result.Neutral.Add(response);
-            else
-                result.Other.Add(response);
+            switch (ResolveVisibilityBucket(index, rankedResults.Count))
+            {
+                case RecommendationVisibilityBucket.Recommended:
+                    result.Recommended.Add(response);
+                    break;
+                case RecommendationVisibilityBucket.Neutral:
+                    result.Neutral.Add(response);
+                    break;
+                default:
+                    result.Other.Add(response);
+                    break;
+            }
         }
 
         return result;
+    }
+
+    private static RecommendationVisibilityBucket ResolveVisibilityBucket(int index, int totalCount)
+    {
+        if (totalCount <= 0)
+            return RecommendationVisibilityBucket.Recommended;
+
+        var percentile = (double)index / totalCount;
+
+        if (percentile < 0.40)
+            return RecommendationVisibilityBucket.Recommended;
+
+        if (percentile < 0.75)
+            return RecommendationVisibilityBucket.Neutral;
+
+        return RecommendationVisibilityBucket.Other;
     }
 
     private static double? TryCalculateDistanceKm(Place place, double? hubLatitude, double? hubLongitude)
@@ -153,4 +176,11 @@ public class RecommendationService : IRecommendationService
     }
 
     private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;
+
+    private enum RecommendationVisibilityBucket
+    {
+        Recommended,
+        Neutral,
+        Other
+    }
 }
