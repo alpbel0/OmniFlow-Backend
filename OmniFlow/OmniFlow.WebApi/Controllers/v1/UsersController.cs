@@ -156,7 +156,9 @@ public class UsersController : BaseApiController
 		var command = new UpdateProfileCommand
 		{
 			Bio = request.Bio,
-			ProfilePhotoUrl = request.ProfilePhotoUrl
+			UpdateBio = true,
+			ProfilePhotoUrl = request.ProfilePhotoUrl,
+			UpdateProfilePhotoUrl = true
 		};
 
 		await Mediator.Send(command);
@@ -193,7 +195,11 @@ public class UsersController : BaseApiController
 			cancellationToken);
 
 		await Mediator.Send(
-			new UpdateProfileCommand { ProfilePhotoUrl = url },
+			new UpdateProfileCommand
+			{
+				ProfilePhotoUrl = url,
+				UpdateProfilePhotoUrl = true
+			},
 			cancellationToken);
 
 		return Ok(new UploadProfilePhotoResponse { ProfilePhotoUrl = url });

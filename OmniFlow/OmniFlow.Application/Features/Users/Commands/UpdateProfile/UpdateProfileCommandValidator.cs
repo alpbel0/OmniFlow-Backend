@@ -8,6 +8,6 @@ public class UpdateProfileCommandValidator : AbstractValidator<UpdateProfileComm
 	{
 		RuleFor(command => command.Bio)
 			.MaximumLength(300)
-			.When(command => command.Bio != null);
+			.When(command => command.UpdateBio && command.Bio != null);
 	}
 }

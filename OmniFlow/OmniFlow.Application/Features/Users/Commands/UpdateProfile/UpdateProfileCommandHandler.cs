@@ -28,14 +28,18 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
 			throw new EntityNotFoundException("User", currentUserId);
 		}
 
-		if (request.Bio != null)
+		if (request.UpdateBio)
 		{
-			user.Bio = request.Bio.Trim();
+			user.Bio = string.IsNullOrWhiteSpace(request.Bio)
+				? null
+				: request.Bio.Trim();
 		}
 
-		if (request.ProfilePhotoUrl != null)
+		if (request.UpdateProfilePhotoUrl)
 		{
-			user.ProfilePhotoUrl = request.ProfilePhotoUrl.Trim();
+			user.ProfilePhotoUrl = string.IsNullOrWhiteSpace(request.ProfilePhotoUrl)
+				? null
+				: request.ProfilePhotoUrl.Trim();
 		}
 
 		await _userRepository.UpdateAsync(user);
