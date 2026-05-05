@@ -129,11 +129,11 @@ public class GeneralProfile : Profile
         CreateMap<UpdatePostCommand, Post>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.UserId, opt => opt.Ignore())
-            .ForMember(dest => dest.TripId, opt => opt.Ignore())
-            .ForMember(dest => dest.PlaceId, opt => opt.Ignore())
-            .ForMember(dest => dest.PostType, opt => opt.Ignore())
-            .ForMember(dest => dest.Photos, opt => opt.Ignore())
-            .ForMember(dest => dest.AiTags, opt => opt.Ignore())
+            .ForMember(dest => dest.TripId, opt => opt.MapFrom(src => src.TripId == Guid.Empty ? (Guid?)null : src.TripId))
+            .ForMember(dest => dest.PlaceId, opt => opt.MapFrom(src => src.PlaceId == Guid.Empty ? (Guid?)null : src.PlaceId))
+            .ForMember(dest => dest.PostType, opt => opt.Condition((src, dest, srcMember) => src.PostType.HasValue))
+            .ForMember(dest => dest.Photos, opt => opt.Condition((src, dest, srcMember) => srcMember != null))
+            .ForMember(dest => dest.AiTags, opt => opt.Condition((src, dest, srcMember) => srcMember != null))
             .ForMember(dest => dest.LocationLatitude, opt => opt.Ignore())
             .ForMember(dest => dest.LocationLongitude, opt => opt.Ignore())
             .ForMember(dest => dest.City, opt => opt.Ignore())
@@ -148,7 +148,8 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.Trip, opt => opt.Ignore())
             .ForMember(dest => dest.Place, opt => opt.Ignore())
             .ForMember(dest => dest.Comments, opt => opt.Ignore())
-            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+            .ForMember(dest => dest.Content, opt => opt.Condition((src, dest, srcMember) => srcMember != null))
+            .ForMember(dest => dest.Tags, opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
         // Comment mappings
         CreateMap<Comment, CommentResponse>()

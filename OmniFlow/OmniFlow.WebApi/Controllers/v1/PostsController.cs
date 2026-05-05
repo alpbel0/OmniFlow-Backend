@@ -109,7 +109,12 @@ public class PostsController : BaseApiController
 		{
 			PostId = id,
 			Content = request.Content,
-			Tags = request.Tags
+			Tags = request.Tags,
+			TripId = request.TripId,
+			PlaceId = request.PlaceId,
+			PostType = request.PostType,
+			Photos = request.Photos,
+			AiTags = request.AiTags
 		};
 
 		await Mediator.Send(command);
