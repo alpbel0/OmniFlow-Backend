@@ -42,10 +42,10 @@ public class SaveTripCommandHandler : IRequestHandler<SaveTripCommand, Unit>
             throw new EntityNotFoundException("Trip", request.TripId);
         }
 
-        // 3. Check trip status (must be Published)
-        if (trip.Status != TripStatus.Published)
+        // 3. Check trip status (must be Published or Draft)
+        if (trip.Status != TripStatus.Published && trip.Status != TripStatus.Draft)
         {
-            throw new ApiException("Only published trips can be saved.", 400);
+            throw new ApiException("Only published or draft trips can be saved.", 400);
         }
 
         // 4. Get current user ID

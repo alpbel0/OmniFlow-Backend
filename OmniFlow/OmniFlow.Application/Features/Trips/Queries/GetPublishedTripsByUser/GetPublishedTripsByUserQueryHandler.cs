@@ -71,6 +71,22 @@ public class GetPublishedTripsByUserQueryHandler : IRequestHandler<GetPublishedT
 			});
 
 		var responses = _mapper.Map<List<TripResponse>>(tripsPage.Data);
+
+		// Set IsSaved using batch query if current user is authenticated
+		if (currentUserId.HasValue)
+		{
+			var tripIds = tripsPage.Data.Select(t => t.Id).ToList();
+			var savedTripIds = await _context.SavedTrips
+				.Where(s => s.UserId == currentUserId.Value && tripIds.Contains(s.TripId))
+				.Select(s => s.TripId)
+				.ToListAsync(cancellationToken);
+
+			foreach (var response in responses)
+			{
+				response.IsSaved = savedTripIds.Contains(response.Id);
+			}
+		}
+
 		return new PagedResponse<TripResponse>(
 			responses,
 			tripsPage.PageNumber,

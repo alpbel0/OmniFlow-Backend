@@ -12,15 +12,18 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
 {
     private readonly ITripRepositoryAsync _tripRepository;
     private readonly IApplicationDbContext _context;
+    private readonly IAuthenticatedUserService _authenticatedUserService;
     private readonly IMapper _mapper;
 
     public GetTripByIdQueryHandler(
         ITripRepositoryAsync tripRepository,
         IApplicationDbContext context,
+        IAuthenticatedUserService authenticatedUserService,
         IMapper mapper)
     {
         _tripRepository = tripRepository;
         _context = context;
+        _authenticatedUserService = authenticatedUserService;
         _mapper = mapper;
     }
 
@@ -55,6 +58,22 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
                 TotalEntryCount = dailyCounts.Sum(d => d.EntryCount),
                 DailyCounts = dailyCounts
             };
+        }
+
+        if (Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId))
+        {
+            response.IsUpvoted = await _context.TripUpvotes.AnyAsync(
+                upvote => upvote.TripId == request.TripId && upvote.UserId == currentUserId,
+                cancellationToken);
+
+            response.IsSaved = await _context.SavedTrips.AnyAsync(
+                savedTrip => savedTrip.TripId == request.TripId && savedTrip.UserId == currentUserId,
+                cancellationToken);
+        }
+        else
+        {
+            response.IsUpvoted = null;
+            response.IsSaved = null;
         }
 
         return response;
