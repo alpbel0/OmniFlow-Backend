@@ -6,6 +6,7 @@ using OmniFlow.Application.Features.Posts.Commands.DeletePost;
 using OmniFlow.Application.Features.Posts.Commands.RemoveUpvotePost;
 using OmniFlow.Application.Features.Posts.Commands.UpdatePost;
 using OmniFlow.Application.Features.Posts.Commands.UpvotePost;
+using OmniFlow.Application.Features.Posts.Queries.GetLikedPosts;
 using OmniFlow.Application.Features.Posts.Queries.GetPostById;
 using OmniFlow.Application.Features.Posts.Queries.GetTrendingTags;
 
@@ -27,6 +28,24 @@ public class PostsController : BaseApiController
 		var query = new GetPostByIdQuery
 		{
 			PostId = id
+		};
+
+		var result = await Mediator.Send(query);
+		return Ok(result);
+	}
+
+	/// <summary>Get posts liked by the authenticated user.</summary>
+	[HttpGet("liked")]
+	[ProducesResponseType(typeof(OmniFlow.Application.Wrappers.PagedResponse<PostResponse>), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	public async Task<IActionResult> GetLikedPosts(
+		[FromQuery] int pageNumber = 1,
+		[FromQuery] int pageSize = 20)
+	{
+		var query = new GetLikedPostsQuery
+		{
+			PageNumber = pageNumber,
+			PageSize = pageSize
 		};
 
 		var result = await Mediator.Send(query);

@@ -5,6 +5,7 @@ using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.DTOs.Posts;
 using OmniFlow.Application.Interfaces;
+using OmniFlow.Application.Wrappers;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
@@ -97,6 +98,36 @@ public class PostsControllerTests : IClassFixture<CustomWebApplicationFactory>
 		var response = await _client.GetAsync($"/api/v1/posts/{Guid.NewGuid()}");
 
 		response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	public async Task GetLikedPosts_WithoutToken_Returns401()
+	{
+		var response = await _client.GetAsync("/api/v1/posts/liked");
+
+		response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	public async Task GetLikedPosts_WithValidToken_ReturnsLikedPosts()
+	{
+		var likerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		var likerClient = CreateAuthenticatedClient(likerToken);
+		var postId = await CreatePostAsync(likerClient);
+
+		var upvoteResponse = await likerClient.PostAsync($"/api/v1/posts/{postId}/upvote", null);
+		upvoteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+		var response = await likerClient.GetAsync("/api/v1/posts/liked?pageNumber=1&pageSize=10");
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<PagedResponse<PostResponse>>(body, _json);
+
+		result.Should().NotBeNull();
+		result!.Data.Should().ContainSingle(post => post.Id == postId);
+		result.TotalCount.Should().BeGreaterThanOrEqualTo(1);
+		result.Data[0].IsUpvoted.Should().BeTrue();
 	}
 
 	[Fact]
