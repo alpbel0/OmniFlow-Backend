@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  name: 'YIGITALP' # Senin localindeki Agent'ın ismi (YIGITALP ise oraya bak)
+  name: 'Default' # Senin localindeki Agent'ın ismi (YIGITALP ise oraya bak)
 
 variables:
   buildConfiguration: 'Release'
