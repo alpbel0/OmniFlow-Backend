@@ -43,6 +43,6 @@ steps:
   displayName: 'Deploy to Azure Web App'
   inputs:
     azureSubscription: 'OmniFlow-Azure-Conn' 
-    WebAppName: 'omniflow-backend1'
+    WebAppName: 'omniflow-backend'
     # Burayı daha spesifik hale getirelim kanka:
     packageForLinux: '$(Build.ArtifactStagingDirectory)/*.zip'
