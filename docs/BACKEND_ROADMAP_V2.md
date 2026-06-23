@@ -290,12 +290,28 @@ Kişisel düzenleme ve keşif katmanı. Mevcut saved-trips üzerine koleksiyonla
 - [ ] Endpoint'ler: `GET/POST/PUT/DELETE /api/v1/trips/{tripId}/memories`
 - [ ] Medya için mevcut `BlobService` kullanılır
 
+### Task B4.5: App Link Uyumlu Email Verify URL + assetlinks
+
+**Tahmini Süre:** 2 saat
+**Durum:** [ ] Bekliyor
+
+> **Bağlam:** Şu an `AccountService` email doğrulama URL'ini `_mailSettings.FrontendVerifyUrl` ile **web frontend'ine** üretiyor; maildeki link tarayıcıda açılıyor. Bu task, mobil tarafın (`MOBILE_ROADMAP.md → Task 10.6`) doğrulama linkini **doğrudan app içinde** açabilmesi için backend desteğini ekler.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M10 / Task 10.6`
+
+- [ ] Android App Links için `assetlinks.json` (Digital Asset Links) doğrulama domaininde host'lanır (frontend host'u veya backend `/.well-known/assetlinks.json`)
+- [ ] Doğrulama URL stratejisi App Link ile uyumlu hale getirilir: aynı link hem web hem app tarafından handle edilebilsin (universal link mantığı) — `FrontendVerifyUrl` buna göre ayarlanır/yeni bir setting eklenir
+- [ ] `verify-email` akışının token formatı/encoding'i değişmeden korunur (mevcut `email` + `token` query parametreleri)
+- [ ] Fallback: app kurulu değil / domain doğrulanmadıysa link web doğrulama sayfasına düşmeye devam eder
+- [ ] Mobil ekiple koordinasyon: package name + SHA-256 imza parmak izi `assetlinks.json`'a eklenir
+
 ### Definition of Done (B4)
 
 - [ ] Kullanıcı koleksiyon oluşturup trip ekleyebiliyor
 - [ ] Tek arama kutusundan çok tipte sonuç dönüyor
 - [ ] Trip linki paylaşıldığında önizleme verisi var
 - [ ] Gezi günlüğü (not + foto) eklenebiliyor
+- [ ] Email doğrulama linki App Link uyumlu; app kuruluysa doğrudan app'te, değilse web'de açılıyor
 
 ---
 

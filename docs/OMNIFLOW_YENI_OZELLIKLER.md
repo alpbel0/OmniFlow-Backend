@@ -113,6 +113,7 @@
 16. Timezone normalization
 17. Audit log / admin action history
 18. Provider freshness / data quality alanlari
+19. App Link uyumlu email verify URL + assetlinks (maildeki dogrulama linkinin dogrudan mobil app'te acilmasi) - Roadmap V2 Task B4.5
 
 ## Ozet: Sadece Mobile/UI Isi Olanlar
 
