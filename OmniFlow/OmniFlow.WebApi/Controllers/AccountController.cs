@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Settings;
@@ -169,7 +170,10 @@ public class AccountController : ControllerBase
 
 	/// <summary>Request a password reset email.</summary>
 	[HttpPost("forgot-password")]
+	[EnableRateLimiting("forgot-password")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+	[ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
 	public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
 	{
 		await _accountService.ForgotPasswordAsync(request.Email);

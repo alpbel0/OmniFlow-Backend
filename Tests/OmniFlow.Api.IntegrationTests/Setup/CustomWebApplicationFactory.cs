@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using OmniFlow.Application.Interfaces;
 using OmniFlow.Infrastructure.Contexts;
 
 namespace OmniFlow.Api.IntegrationTests.Setup;
@@ -9,6 +11,7 @@ namespace OmniFlow.Api.IntegrationTests.Setup;
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
+    public TestEmailService EmailService { get; } = new();
 
     public CustomWebApplicationFactory()
     {
@@ -31,6 +34,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(_connectionString));
+
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<IEmailService>(EmailService);
 
             // Ensure test DB schema is up to date.
             using var scope = services.BuildServiceProvider().CreateScope();

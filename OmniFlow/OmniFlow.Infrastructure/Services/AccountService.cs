@@ -313,9 +313,6 @@ public class AccountService : IAccountService
 		if (applicationUser is null)
 			return;
 
-		if (!applicationUser.EmailConfirmed)
-			return;
-
 		var now = DateTime.UtcNow;
 
 		var lastDispatch = await _context.Set<EmailVerificationDispatch>()
@@ -340,9 +337,6 @@ public class AccountService : IAccountService
 			.Where(t => t.UserId == applicationUser.Id && t.UsedAt == null && t.ExpiresAt > now)
 			.ToListAsync();
 
-		foreach (var t in existingTokens)
-			t.UsedAt = DateTime.UtcNow;
-
 		var rawToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 		var hashedToken = HashToken(rawToken);
 
@@ -354,11 +348,16 @@ public class AccountService : IAccountService
 			ExpiresAt = now.AddHours(1)
 		};
 
-		_context.Set<PasswordResetToken>().Add(passwordResetToken);
-
 		var resetUrl = $"{_mailSettings.FrontendResetUrl}?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(rawToken)}";
 
 		await _emailService.SendPasswordResetEmailAsync(email, resetUrl);
+
+		await using var transaction = await _context.Database.BeginTransactionAsync();
+
+		foreach (var token in existingTokens)
+			token.UsedAt = now;
+
+		_context.Set<PasswordResetToken>().Add(passwordResetToken);
 
 		_context.Set<EmailVerificationDispatch>().Add(new EmailVerificationDispatch
 		{
@@ -369,6 +368,7 @@ public class AccountService : IAccountService
 		});
 
 		await _context.SaveChangesAsync();
+		await transaction.CommitAsync();
 	}
 
 	public async Task ResetPasswordAsync(ResetPasswordRequest request)
@@ -389,7 +389,8 @@ public class AccountService : IAccountService
 		if (passwordResetToken is null)
 			throw new ApiException("Invalid or expired reset token.");
 
-		passwordResetToken.UsedAt = DateTime.UtcNow;
+		var now = DateTime.UtcNow;
+		await using var transaction = await _context.Database.BeginTransactionAsync();
 
 		var result = await _userManager.RemovePasswordAsync(applicationUser);
 		if (!result.Succeeded)
@@ -405,7 +406,27 @@ public class AccountService : IAccountService
 			throw new ApiException($"Password reset failed: {errors}");
 		}
 
+		applicationUser.EmailConfirmed = true;
+		result = await _userManager.UpdateAsync(applicationUser);
+		if (!result.Succeeded)
+		{
+			var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+			throw new ApiException($"Email confirmation failed: {errors}");
+		}
+
+		var activeRefreshTokens = await _context.RefreshTokens
+			.Where(token => token.UserId == applicationUser.Id
+				&& token.RevokedAt == null
+				&& token.ExpiresAt > now)
+			.ToListAsync();
+
+		foreach (var refreshToken in activeRefreshTokens)
+			refreshToken.RevokedAt = now;
+
+		passwordResetToken.UsedAt = now;
+
 		await _context.SaveChangesAsync();
+		await transaction.CommitAsync();
 	}
 
 	private string GenerateJwtToken(ApplicationUser user, string role)

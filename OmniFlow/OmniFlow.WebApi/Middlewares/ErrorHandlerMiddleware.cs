@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Mail;
 using System.Text.Json;
 using OmniFlow.Application.Exceptions;
 using OmniFlow.Application.Wrappers;
@@ -36,7 +37,7 @@ public class ErrorHandlerMiddleware
 		ErrorResponse response;
 		int statusCode;
 
-		switch (exception)
+			switch (exception)
 		{
 			case Application.Exceptions.ValidationException validationEx:
 				statusCode = (int)HttpStatusCode.UnprocessableEntity;
@@ -52,6 +53,11 @@ public class ErrorHandlerMiddleware
 			case ApiException apiEx:
 				statusCode = apiEx.StatusCode;
 				response = new ErrorResponse(apiEx.Message);
+				break;
+
+			case SmtpException:
+				statusCode = (int)HttpStatusCode.ServiceUnavailable;
+				response = new ErrorResponse("Email service is temporarily unavailable. Please try again later.");
 				break;
 
 			case EntityNotFoundException notFoundEx:

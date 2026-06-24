@@ -21,11 +21,12 @@ public class EmailService : IEmailService
 	public async Task SendVerificationEmailAsync(string email, string verificationUrl)
 	{
 		if (string.IsNullOrWhiteSpace(_mailSettings.SmtpHost)
+			|| _mailSettings.SmtpPort <= 0
 			|| string.IsNullOrWhiteSpace(_mailSettings.SenderEmail)
 			|| string.IsNullOrWhiteSpace(_mailSettings.FrontendVerifyUrl))
 		{
-			_logger.LogInformation("Verification email skipped because mail settings are incomplete for {Email}.", email);
-			return;
+			_logger.LogError("Verification email delivery is unavailable because mail settings are incomplete.");
+			throw new SmtpException("Mail service configuration is incomplete.");
 		}
 
 		var smtpUsername = _mailSettings.SmtpUsername?.Trim();
@@ -44,7 +45,7 @@ public class EmailService : IEmailService
 			};
 			message.To.Add(email);
 
-			using var client = new SmtpClient(_mailSettings.SmtpHost, 587)
+			using var client = new SmtpClient(_mailSettings.SmtpHost, _mailSettings.SmtpPort)
 			{
 				EnableSsl = _mailSettings.EnableSsl,
 				DeliveryMethod = SmtpDeliveryMethod.Network,
@@ -63,7 +64,7 @@ public class EmailService : IEmailService
 				"Sending verification email to {Email} via {SmtpHost}:{SmtpPort}.",
 				email,
 				_mailSettings.SmtpHost,
-				587);
+				_mailSettings.SmtpPort);
 
 			await client.SendMailAsync(message);
 			_logger.LogInformation("Verification email sent to {Email}.", email);
@@ -71,17 +72,22 @@ public class EmailService : IEmailService
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Failed to send verification email to {Email}. Error: {Message}", email, ex.Message);
+			if (ex is SmtpException)
+				throw;
+
+			throw new SmtpException("Verification email delivery failed.", ex);
 		}
 	}
 
 	public async Task SendPasswordResetEmailAsync(string email, string resetUrl)
 	{
 		if (string.IsNullOrWhiteSpace(_mailSettings.SmtpHost)
+			|| _mailSettings.SmtpPort <= 0
 			|| string.IsNullOrWhiteSpace(_mailSettings.SenderEmail)
 			|| string.IsNullOrWhiteSpace(_mailSettings.FrontendResetUrl))
 		{
-			_logger.LogInformation("Password reset email skipped because mail settings are incomplete for {Email}.", email);
-			return;
+			_logger.LogError("Password reset email delivery is unavailable because mail settings are incomplete.");
+			throw new SmtpException("Mail service configuration is incomplete.");
 		}
 
 		var smtpUsername = _mailSettings.SmtpUsername?.Trim();
@@ -100,7 +106,7 @@ public class EmailService : IEmailService
 			};
 			message.To.Add(email);
 
-			using var client = new SmtpClient(_mailSettings.SmtpHost, 587)
+			using var client = new SmtpClient(_mailSettings.SmtpHost, _mailSettings.SmtpPort)
 			{
 				EnableSsl = _mailSettings.EnableSsl,
 				DeliveryMethod = SmtpDeliveryMethod.Network,
@@ -119,7 +125,7 @@ public class EmailService : IEmailService
 				"Sending password reset email to {Email} via {SmtpHost}:{SmtpPort}.",
 				email,
 				_mailSettings.SmtpHost,
-				587);
+				_mailSettings.SmtpPort);
 
 			await client.SendMailAsync(message);
 			_logger.LogInformation("Password reset email sent to {Email}.", email);
@@ -127,6 +133,10 @@ public class EmailService : IEmailService
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Failed to send password reset email to {Email}. Error: {Message}", email, ex.Message);
+			if (ex is SmtpException)
+				throw;
+
+			throw new SmtpException("Password reset email delivery failed.", ex);
 		}
 	}
 }

@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
@@ -25,6 +27,7 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
     {
         _factory = factory;
         _client = factory.CreateClient();
+        factory.EmailService.Reset();
 
         using var scope = factory.Services.CreateScope();
         TestDatabaseSeeder.SeedAsync(scope.ServiceProvider).GetAwaiter().GetResult();
@@ -401,6 +404,143 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         // No cookie set and no body → 400 or 401 depending on cookie presence
         ((int)response.StatusCode).Should().BeOneOf(400, 401);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_WithUnconfirmedUser_SendsResetEmailAndPersistsDispatch()
+    {
+        var email = $"forgot_pending_{Guid.NewGuid():N}@test.com";
+        var userId = await RegisterPendingUserAsync(
+            $"forgot_{Guid.NewGuid():N}"[..20],
+            email,
+            "ValidPass1!");
+
+        var response = await _client.PostAsJsonAsync("/api/account/forgot-password", new { email });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _factory.EmailService.LastPasswordResetEmail.Should().Be(email);
+        _factory.EmailService.LastPasswordResetUrl.Should().NotBeNullOrWhiteSpace();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.PasswordResetTokens.Any(x => x.UserId == userId && x.UsedAt == null).Should().BeTrue();
+        db.EmailVerificationDispatches.Any(x =>
+            x.UserId == userId && x.Email == email && x.Purpose == "password-reset").Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ForgotPassword_WhenSmtpFails_Returns503WithoutConsumingQuota()
+    {
+        var email = $"forgot_smtp_{Guid.NewGuid():N}@test.com";
+        var userId = await RegisterPendingUserAsync(
+            $"smtp_{Guid.NewGuid():N}"[..20],
+            email,
+            "ValidPass1!");
+        _factory.EmailService.FailPasswordResetDelivery = true;
+
+        var response = await _client.PostAsJsonAsync("/api/account/forgot-password", new { email });
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.PasswordResetTokens.Any(x => x.UserId == userId).Should().BeFalse();
+        db.EmailVerificationDispatches.Any(x =>
+            x.UserId == userId && x.Purpose == "password-reset").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithValidToken_ConfirmsEmailRevokesSessionsAndConsumesToken()
+    {
+        var email = $"reset_pending_{Guid.NewGuid():N}@test.com";
+        var userId = await RegisterPendingUserAsync(
+            $"reset_{Guid.NewGuid():N}"[..20],
+            email,
+            "ValidPass1!");
+
+        using (var setupScope = _factory.Services.CreateScope())
+        {
+            var db = setupScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            db.RefreshTokens.Add(new RefreshToken
+            {
+                UserId = userId,
+                TokenHash = $"test-{Guid.NewGuid():N}",
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var forgotResponse = await _client.PostAsJsonAsync("/api/account/forgot-password", new { email });
+        forgotResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var resetUrl = new Uri(_factory.EmailService.LastPasswordResetUrl!);
+        var token = QueryHelpers.ParseQuery(resetUrl.Query)["token"].ToString();
+
+        var resetResponse = await _client.PostAsJsonAsync("/api/account/reset-password", new ResetPasswordRequest
+        {
+            Email = email,
+            Token = token,
+            NewPassword = "NewValidPass2!"
+        });
+
+        resetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var userManager = verifyScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var dbAfter = verifyScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var identityUser = await userManager.FindByEmailAsync(email);
+        identityUser.Should().NotBeNull();
+        identityUser!.EmailConfirmed.Should().BeTrue();
+        (await userManager.CheckPasswordAsync(identityUser, "NewValidPass2!")).Should().BeTrue();
+
+        var domainUser = await dbAfter.Users.FindAsync(userId);
+        domainUser!.IsVerified.Should().BeFalse();
+        dbAfter.PasswordResetTokens.Single(x => x.UserId == userId).UsedAt.Should().NotBeNull();
+        dbAfter.RefreshTokens
+            .Where(x => x.UserId == userId)
+            .All(x => x.RevokedAt != null)
+            .Should().BeTrue();
+
+        var reusedTokenResponse = await _client.PostAsJsonAsync("/api/account/reset-password", new ResetPasswordRequest
+        {
+            Email = email,
+            Token = token,
+            NewPassword = "AnotherValid3!"
+        });
+        reusedTokenResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WhenIdentityRejectsPassword_RollsBackAllChanges()
+    {
+        var email = $"reset_rollback_{Guid.NewGuid():N}@test.com";
+        const string originalPassword = "ValidPass1!";
+        var userId = await RegisterPendingUserAsync(
+            $"rollback_{Guid.NewGuid():N}"[..20],
+            email,
+            originalPassword);
+
+        var forgotResponse = await _client.PostAsJsonAsync("/api/account/forgot-password", new { email });
+        forgotResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var resetUrl = new Uri(_factory.EmailService.LastPasswordResetUrl!);
+        var token = QueryHelpers.ParseQuery(resetUrl.Query)["token"].ToString();
+
+        var resetResponse = await _client.PostAsJsonAsync("/api/account/reset-password", new ResetPasswordRequest
+        {
+            Email = email,
+            Token = token,
+            NewPassword = "NoSpecial123"
+        });
+
+        resetResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var identityUser = await userManager.FindByEmailAsync(email);
+        identityUser!.EmailConfirmed.Should().BeFalse();
+        (await userManager.CheckPasswordAsync(identityUser, originalPassword)).Should().BeTrue();
+        db.PasswordResetTokens.Single(x => x.UserId == userId).UsedAt.Should().BeNull();
     }
 
     // ── Protected Endpoint ────────────────────────────────────────────────────
