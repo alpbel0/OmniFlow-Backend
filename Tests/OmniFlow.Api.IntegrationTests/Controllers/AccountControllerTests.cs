@@ -1,8 +1,12 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
+using OmniFlow.Application.Interfaces;
+using OmniFlow.Domain.Entities;
+using OmniFlow.Infrastructure.Models;
 
 namespace OmniFlow.Api.IntegrationTests.Controllers;
 
@@ -117,6 +121,134 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
         });
 
         loginResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task ChangeVerificationEmail_WithValidPendingUser_UpdatesIdentityAndDomainEmails()
+    {
+        var oldEmail = $"change_old_{Guid.NewGuid():N}@test.com";
+        var newEmail = $"change_new_{Guid.NewGuid():N}@test.com";
+        var username = $"change_{Guid.NewGuid():N}".Substring(0, 20);
+        const string password = "ValidPass1!";
+
+        await RegisterPendingUserAsync(username, oldEmail, password);
+
+        var response = await _client.PostAsJsonAsync("/api/account/change-verification-email", new
+        {
+            oldEmail,
+            newEmail,
+            password
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        (await userManager.FindByEmailAsync(oldEmail)).Should().BeNull();
+
+        var updatedIdentityUser = await userManager.FindByEmailAsync(newEmail);
+        updatedIdentityUser.Should().NotBeNull();
+        updatedIdentityUser!.EmailConfirmed.Should().BeFalse();
+
+        var updatedDomainUser = await dbContext.Users.FindAsync(updatedIdentityUser.Id);
+        updatedDomainUser.Should().NotBeNull();
+        updatedDomainUser!.Email.Should().Be(newEmail);
+
+        dbContext.EmailVerificationDispatches
+            .Any(x => x.UserId == updatedIdentityUser.Id
+                && x.Email == newEmail
+                && x.Purpose == "email-verification")
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ChangeVerificationEmail_WithSameEmail_Returns422()
+    {
+        var email = $"same_{Guid.NewGuid():N}@test.com";
+
+        var response = await _client.PostAsJsonAsync("/api/account/change-verification-email", new
+        {
+            oldEmail = email,
+            newEmail = email,
+            password = "ValidPass1!"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task ChangeVerificationEmail_WithWrongPassword_Returns401()
+    {
+        var oldEmail = $"wrong_pw_{Guid.NewGuid():N}@test.com";
+        var newEmail = $"wrong_pw_new_{Guid.NewGuid():N}@test.com";
+        var username = $"wrongpw_{Guid.NewGuid():N}".Substring(0, 20);
+
+        await RegisterPendingUserAsync(username, oldEmail, "ValidPass1!");
+
+        var response = await _client.PostAsJsonAsync("/api/account/change-verification-email", new
+        {
+            oldEmail,
+            newEmail,
+            password = "WrongPass1!"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ChangeVerificationEmail_WhenNewEmailExists_Returns400()
+    {
+        var oldEmail = $"dup_change_{Guid.NewGuid():N}@test.com";
+        var existingEmail = $"dup_existing_{Guid.NewGuid():N}@test.com";
+        var username = $"dupchange_{Guid.NewGuid():N}".Substring(0, 20);
+        const string password = "ValidPass1!";
+
+        await RegisterPendingUserAsync(username, oldEmail, password);
+        await RegisterPendingUserAsync($"dupexist_{Guid.NewGuid():N}".Substring(0, 20), existingEmail, password);
+
+        var response = await _client.PostAsJsonAsync("/api/account/change-verification-email", new
+        {
+            oldEmail,
+            newEmail = existingEmail,
+            password
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ChangeVerificationEmail_WhenCooldownActive_Returns429()
+    {
+        var oldEmail = $"cooldown_{Guid.NewGuid():N}@test.com";
+        var newEmail = $"cooldown_new_{Guid.NewGuid():N}@test.com";
+        var username = $"cooldown_{Guid.NewGuid():N}".Substring(0, 20);
+        const string password = "ValidPass1!";
+
+        var userId = await RegisterPendingUserAsync(username, oldEmail, password);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            dbContext.EmailVerificationDispatches.Add(new EmailVerificationDispatch
+            {
+                UserId = userId,
+                Email = oldEmail,
+                Purpose = "email-verification",
+                SentAt = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var response = await _client.PostAsJsonAsync("/api/account/change-verification-email", new
+        {
+            oldEmail,
+            newEmail,
+            password
+        });
+
+        response.StatusCode.Should().Be((HttpStatusCode)429);
     }
 
     // ── Login ──────────────────────────────────────────────────────────────────
@@ -299,5 +431,24 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         var response = await authClient.GetAsync("/api/meta/info");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    private async Task<Guid> RegisterPendingUserAsync(string username, string email, string password)
+    {
+        var response = await _client.PostAsJsonAsync("/api/account/register", new RegisterRequest
+        {
+            Username = username,
+            Email = email,
+            Password = password,
+            ConfirmPassword = password
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = await userManager.FindByEmailAsync(email);
+        user.Should().NotBeNull();
+        return user!.Id;
     }
 }

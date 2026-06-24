@@ -18,6 +18,7 @@ public class AccountController : ControllerBase
 	private readonly IValidator<AuthenticationRequest> _loginValidator;
 	private readonly IValidator<VerifyEmailRequest> _verifyEmailValidator;
 	private readonly IValidator<ResendVerificationEmailRequest> _resendVerificationEmailValidator;
+	private readonly IValidator<ChangeVerificationEmailRequest> _changeVerificationEmailValidator;
 	private readonly IValidator<ResetPasswordRequest> _resetPasswordValidator;
 
 	public AccountController(
@@ -27,6 +28,7 @@ public class AccountController : ControllerBase
 		IValidator<AuthenticationRequest> loginValidator,
 		IValidator<VerifyEmailRequest> verifyEmailValidator,
 		IValidator<ResendVerificationEmailRequest> resendVerificationEmailValidator,
+		IValidator<ChangeVerificationEmailRequest> changeVerificationEmailValidator,
 		IValidator<ResetPasswordRequest> resetPasswordValidator)
 	{
 		_accountService = accountService;
@@ -35,6 +37,7 @@ public class AccountController : ControllerBase
 		_loginValidator = loginValidator;
 		_verifyEmailValidator = verifyEmailValidator;
 		_resendVerificationEmailValidator = resendVerificationEmailValidator;
+		_changeVerificationEmailValidator = changeVerificationEmailValidator;
 		_resetPasswordValidator = resetPasswordValidator;
 	}
 
@@ -100,6 +103,24 @@ public class AccountController : ControllerBase
 
 		await _accountService.ResendVerificationEmailAsync(request);
 		return Ok(new MessageResponse { Message = "If the account exists, a new verification email has been sent." });
+	}
+
+	/// <summary>Change the email address of an unverified account and send a fresh verification link.</summary>
+	[HttpPost("change-verification-email")]
+	[ProducesResponseType(typeof(MessageResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+	[ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+	public async Task<IActionResult> ChangeVerificationEmail([FromBody] ChangeVerificationEmailRequest request)
+	{
+		var validation = await _changeVerificationEmailValidator.ValidateAsync(request);
+		if (!validation.IsValid)
+			throw new ValidationException(validation.Errors);
+
+		await _accountService.ChangeVerificationEmailAsync(request);
+		return Ok(new MessageResponse { Message = "Verification email address updated. A new verification email has been sent." });
 	}
 
 	/// <summary>
