@@ -26,4 +26,7 @@ public class ProviderHotelResponse
 
     public BudgetTier Segment { get; set; }
     public bool IsAvailable { get; set; }
+    public DateTime LastUpdatedAt { get; set; }
+    public bool IsLiveData { get; set; }
+    public DateOnly DataSnapshotDate { get; set; }
 }

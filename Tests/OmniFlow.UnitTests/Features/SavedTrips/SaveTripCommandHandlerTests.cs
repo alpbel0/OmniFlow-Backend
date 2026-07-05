@@ -88,7 +88,7 @@ public class SaveTripCommandHandlerTests
         var trip = new Trip
         {
             Id = tripId,
-            Status = TripStatus.Draft // Not published
+            Status = TripStatus.Archived
         };
 
         _tripRepositoryMock.Setup(x => x.GetByIdAsync(tripId)).ReturnsAsync(trip);

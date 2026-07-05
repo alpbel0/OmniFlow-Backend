@@ -38,6 +38,13 @@ public class ProviderHotelConfiguration : IEntityTypeConfiguration<ProviderHotel
 		builder.Property(h => h.ProviderName).HasColumnName("provider_name").HasMaxLength(50).IsRequired();
 		builder.Property(h => h.ProviderUrl).HasColumnName("provider_url").HasMaxLength(1000);
 		builder.Property(h => h.IsAvailable).HasColumnName("is_available").HasDefaultValue(true);
+		builder.Property(h => h.LastUpdatedAt).HasColumnName("last_updated_at")
+			.HasColumnType("timestamp without time zone")
+			.HasDefaultValueSql("(now() at time zone 'utc')");
+		builder.Property(h => h.IsLiveData).HasColumnName("is_live_data").HasDefaultValue(false);
+		builder.Property(h => h.DataSnapshotDate).HasColumnName("data_snapshot_date")
+			.HasColumnType("date")
+			.HasDefaultValueSql("CURRENT_DATE");
 
 		builder.HasIndex(h => new { h.City, h.Country, h.ValidDate })
 			.HasDatabaseName("idx_provider_hotels_city_country_date");

@@ -33,4 +33,10 @@ public class ProviderHotel : BaseEntity
 	public string? ProviderUrl { get; set; }
 
 	public bool IsAvailable { get; set; } = true;
+
+	public DateTime LastUpdatedAt { get; set; } = DateTime.UtcNow;
+
+	public bool IsLiveData { get; set; }
+
+	public DateOnly DataSnapshotDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
 }

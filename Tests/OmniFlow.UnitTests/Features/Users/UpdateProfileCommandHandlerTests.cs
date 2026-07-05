@@ -26,7 +26,9 @@ public class UpdateProfileCommandHandlerTests
 		var act = async () => await handler.Handle(new UpdateProfileCommand
 		{
 			Bio = "Updated bio",
-			ProfilePhotoUrl = "https://cdn.example.com/new.jpg"
+			UpdateBio = true,
+			ProfilePhotoUrl = "https://cdn.example.com/new.jpg",
+			UpdateProfilePhotoUrl = true
 		}, CancellationToken.None);
 
 		await act.Should().ThrowAsync<EntityNotFoundException>()
@@ -58,7 +60,9 @@ public class UpdateProfileCommandHandlerTests
 		await handler.Handle(new UpdateProfileCommand
 		{
 			Bio = "  Updated bio  ",
-			ProfilePhotoUrl = "  https://cdn.example.com/new.jpg  "
+			UpdateBio = true,
+			ProfilePhotoUrl = "  https://cdn.example.com/new.jpg  ",
+			UpdateProfilePhotoUrl = true
 		}, CancellationToken.None);
 
 		user.Bio.Should().Be("Updated bio");

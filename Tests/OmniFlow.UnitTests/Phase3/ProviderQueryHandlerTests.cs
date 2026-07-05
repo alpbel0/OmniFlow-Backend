@@ -279,7 +279,7 @@ public class ProviderQueryHandlerTests
             CreateProviderHotel("Paris", 300m),
         };
 
-        _hotelRepoMock.Setup(x => x.GetByCityAsync("Paris"))
+        _hotelRepoMock.Setup(x => x.GetByCityAndDateAsync("Paris", checkIn))
             .ReturnsAsync(hotels);
         _budgetServiceMock.Setup(x => x.GetSeasonMultiplier(checkIn))
             .Returns(1.2m);
@@ -328,7 +328,7 @@ public class ProviderQueryHandlerTests
             CreateProviderHotel("Paris", 300m),
         };
 
-        _hotelRepoMock.Setup(x => x.GetByCityAsync("Paris"))
+        _hotelRepoMock.Setup(x => x.GetByCityAndDateAsync("Paris", checkIn))
             .ReturnsAsync(hotels);
         _budgetServiceMock.Setup(x => x.GetSeasonMultiplier(checkIn)).Returns(1.0m);
         _budgetServiceMock.Setup(x => x.SegmentHotel("Paris")).Returns((80m, 200m));
@@ -363,7 +363,7 @@ public class ProviderQueryHandlerTests
         var checkIn = new DateOnly(2026, 8, 10);
         var checkOut = new DateOnly(2026, 8, 13);
 
-        _hotelRepoMock.Setup(x => x.GetByCityAsync("GhostCity"))
+        _hotelRepoMock.Setup(x => x.GetByCityAndDateAsync("GhostCity", checkIn))
             .ReturnsAsync(new List<ProviderHotel>());
 
         var handler = new GetProviderHotelsQueryHandler(
@@ -391,7 +391,7 @@ public class ProviderQueryHandlerTests
 
         var hotels = new List<ProviderHotel> { availableHotel, unavailableHotel };
 
-        _hotelRepoMock.Setup(x => x.GetByCityAsync("Paris")).ReturnsAsync(hotels);
+        _hotelRepoMock.Setup(x => x.GetByCityAndDateAsync("Paris", checkIn)).ReturnsAsync(hotels);
         _budgetServiceMock.Setup(x => x.GetSeasonMultiplier(checkIn)).Returns(1.0m);
         _budgetServiceMock.Setup(x => x.SegmentHotel("Paris")).Returns((80m, 200m));
         _mapperMock.Setup(x => x.Map<ProviderHotelResponse>(It.IsAny<ProviderHotel>()))

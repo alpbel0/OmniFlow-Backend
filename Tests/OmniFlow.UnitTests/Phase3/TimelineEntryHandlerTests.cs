@@ -474,7 +474,7 @@ public class TimelineEntryHandlerTests
             FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
             AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
-            Price: 250, CurrencyCode: "EUR", ProviderFlightId: null, ProviderHotelId: null, Notes: null);
+            Price: 250, CurrencyCode: "EUR", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: null);
 
         var result = await _updateHandler.Handle(command, CancellationToken.None);
         result.Should().NotBeNull();
@@ -508,7 +508,7 @@ public class TimelineEntryHandlerTests
             FlightDepartureAt: new DateTime(2026, 8, 10, 11, 0, 0), FlightArrivalAt: new DateTime(2026, 8, 10, 13, 0, 0), Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
             AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
-            Price: 200, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null);
+            Price: 200, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: null);
 
         var ex = await Assert.ThrowsAsync<ApiException>(() => _updateHandler.Handle(command, CancellationToken.None));
         ex.Message.Should().Contain("locked");
@@ -540,7 +540,7 @@ public class TimelineEntryHandlerTests
             FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
             AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
-            Price: 25, CurrencyCode: "EUR", ProviderFlightId: null, ProviderHotelId: null, Notes: "Updated notes");
+            Price: 25, CurrencyCode: "EUR", ProviderFlightId: null, ProviderHotelId: null, Notes: "Updated notes", IsLocked: null);
 
         var result = await _updateHandler.Handle(command, CancellationToken.None);
         result.Should().NotBeNull();
@@ -576,7 +576,7 @@ public class TimelineEntryHandlerTests
             FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
             AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
-            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null);
+            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: null);
 
         var result = await _updateHandler.Handle(command, CancellationToken.None);
         result.Should().NotBeNull();
@@ -606,7 +606,7 @@ public class TimelineEntryHandlerTests
             FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
             AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
-            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null);
+            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: null);
 
         await Assert.ThrowsAsync<ForbiddenException>(() => _updateHandler.Handle(command, CancellationToken.None));
     }
@@ -632,7 +632,7 @@ public class TimelineEntryHandlerTests
             FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
             AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
-            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null);
+            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: null);
 
         var ex = await Assert.ThrowsAsync<ApiException>(() => _updateHandler.Handle(command, CancellationToken.None));
         ex.Message.Should().Contain("Only draft trips");
@@ -729,7 +729,7 @@ public class TimelineEntryHandlerTests
         _contextMock.Setup(x => x.TimelineEntries).Returns(CreateAsyncMockDbSet(allEntries).Object);
         _timelineServiceMock.Setup(x => x.GetLexoRankBetween(100.0, 300.0)).Returns(200.0);
 
-        var command = new ReorderTimelineEntriesCommand(trip.Id, dest.Id, entry2.Id, BeforeEntryId: entry3.Id, AfterEntryId: entry1.Id);
+        var command = new ReorderTimelineEntriesCommand(trip.Id, dest.Id, entry2.Id, BeforeEntryId: entry1.Id, AfterEntryId: entry3.Id);
 
         var result = await _reorderHandler.Handle(command, CancellationToken.None);
         result.Should().Be(Unit.Value);
@@ -755,7 +755,7 @@ public class TimelineEntryHandlerTests
         _contextMock.Setup(x => x.TimelineEntries).Returns(CreateAsyncMockDbSet(allEntries).Object);
         _timelineServiceMock.Setup(x => x.GetLexoRankBetween(200.0, null)).Returns(700.0);
 
-        var command = new ReorderTimelineEntriesCommand(trip.Id, dest.Id, entry1.Id, BeforeEntryId: null, AfterEntryId: entry2.Id);
+        var command = new ReorderTimelineEntriesCommand(trip.Id, dest.Id, entry1.Id, BeforeEntryId: entry2.Id, AfterEntryId: null);
 
         var result = await _reorderHandler.Handle(command, CancellationToken.None);
         result.Should().Be(Unit.Value);

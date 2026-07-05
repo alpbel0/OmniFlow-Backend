@@ -80,6 +80,7 @@ public class GetPublishedTripsByUserQueryTests
 			new() { Id = targetUserId, Username = "target", Email = "target@example.com" }
 		}).Object);
 		_contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
+		_contextMock.Setup(x => x.SavedTrips).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<SavedTrip>()).Object);
 
 		_tripRepositoryMock
 			.Setup(x => x.GetPublishedByOwnerAsync(

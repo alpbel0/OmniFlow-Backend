@@ -43,6 +43,13 @@ public class ProviderFlightConfiguration : IEntityTypeConfiguration<ProviderFlig
 		builder.Property(f => f.CurrencyCode).HasColumnName("currency_code").HasMaxLength(3).IsRequired();
 		builder.Property(f => f.AvailableSeats).HasColumnName("available_seats");
 		builder.Property(f => f.ProviderName).HasColumnName("provider_name").HasMaxLength(50).IsRequired();
+		builder.Property(f => f.LastUpdatedAt).HasColumnName("last_updated_at")
+			.HasColumnType("timestamp without time zone")
+			.HasDefaultValueSql("(now() at time zone 'utc')");
+		builder.Property(f => f.IsLiveData).HasColumnName("is_live_data").HasDefaultValue(false);
+		builder.Property(f => f.DataSnapshotDate).HasColumnName("data_snapshot_date")
+			.HasColumnType("date")
+			.HasDefaultValueSql("CURRENT_DATE");
 
 		builder.HasIndex(f => new { f.DepartureCity, f.ArrivalCity, f.DepartureTime })
 			.HasDatabaseName("idx_provider_flights_route_departure_time");

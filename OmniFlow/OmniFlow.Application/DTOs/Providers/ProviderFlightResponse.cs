@@ -24,4 +24,7 @@ public class ProviderFlightResponse
 
     public int? AvailableSeats { get; set; }
     public string ProviderName { get; set; } = string.Empty;
+    public DateTime LastUpdatedAt { get; set; }
+    public bool IsLiveData { get; set; }
+    public DateOnly DataSnapshotDate { get; set; }
 }

@@ -14,7 +14,7 @@
 
 | Faz | Konu | Mobil karşılığı | Öncelik |
 |-----|------|-----------------|---------|
-| **B0** | Temel & Temizlik (as-built docs, CI test, provider freshness) | — (önkoşul) | 🔴 Yüksek |
+| **B0** | Temel & Temizlik (as-built docs, CI test, provider freshness, trip %hazır/görüntülenme/cover photo) | M3 (önkoşul) | 🔴 Yüksek |
 | **B1** | Google OAuth (external login) | M7 | 🔴 Yüksek |
 | **B2** | Live Trip altyapısı (Visit Log, Trip Summary, Timezone) | M8 | 🟠 Orta |
 | **B3** | Push (FCM) + Notification Preferences | M9 | 🟠 Orta |
@@ -37,47 +37,336 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 ### Task B0.1: As-Built Dokümantasyon Güncelleme
 
 **Tahmini Süre:** 3 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
-- [ ] `BACKEND_SCHEMA_MVP.md` → `Stop`/`StopsController`/`IStopRepositoryAsync` referanslarını `TimelineEntry`/`TripDestination` ile değiştir, 18 tablo → 24 tablo güncelle
-- [ ] `README.md` → "20 tables", 5 TravelStyle, eski endpoint listesi güncellensin
-- [ ] `CLAUDE.md` ve `AGENTS.md` → silinmiş `Stop` + `select` endpoint anlatıları kaldırılsın, güncel controller listesi yazılsın
-- [ ] Güncel enum listesi (25 enum), güncel migration listesi (11) yansıtılsın
-- [ ] Flight/Hotel `select` endpoint'lerinin kaldırıldığı ve mantığın `TimelineEntry`'ye taşındığı not düşülsün
+- [x] `BACKEND_SCHEMA_MVP.md` → `Stop`/`StopsController`/`IStopRepositoryAsync` referanslarını `TimelineEntry`/`TripDestination` ile değiştir, 18 tablo → 24 tablo güncelle
+- [x] `README.md` → "20 tables", 5 TravelStyle, eski endpoint listesi güncellensin
+- [x] `CLAUDE.md` ve `AGENTS.md` → silinmiş `Stop` + `select` endpoint anlatıları kaldırılsın, güncel controller listesi yazılsın
+- [x] Güncel enum listesi (25 enum), güncel migration listesi (11) yansıtılsın
+- [x] Flight/Hotel `select` endpoint'lerinin kaldırıldığı ve mantığın `TimelineEntry`'ye taşındığı not düşülsün
 
 ### Task B0.2: CI/CD Kalite Kapısı
 
 **Tahmini Süre:** 2 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
-- [ ] `azure-pipelines.yml`'a `dotnet test` adımı eklensin (publish'ten önce)
-- [ ] `.slnx` / SDK uyumsuzluğu çözülsün (SDK 9'a geç **veya** klasik `.sln` üret) — `dotnet test` çözüm seviyesinde çalışmalı
-- [ ] Test başarısızsa pipeline kırmızı olsun (deploy engellensin)
+- [x] `azure-pipelines.yml`'a `dotnet test` adımı eklensin (publish'ten önce)
+- [x] `.slnx` / SDK uyumsuzluğu çözülsün (SDK 9'a geç **veya** klasik `.sln` üret) — `dotnet test` çözüm seviyesinde çalışmalı
+- [x] Test başarısızsa pipeline kırmızı olsun (deploy engellensin)
 - [ ] (Opsiyonel) PR trigger eklensin
 
 ### Task B0.3: Provider Freshness / Data Quality Alanları
 
 **Tahmini Süre:** 2 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
-- [ ] `ProviderFlight` / `ProviderHotel` entity'lerine `LastUpdatedAt`, `IsLiveData` (bool), `DataSnapshotDate` alanları (yoksa) eklensin
-- [ ] Migration
-- [ ] Provider response DTO'larına freshness bilgisi eklensin ("son güncelleme", "canlı değil/tahmini")
-- [ ] `ProvidersController` response'larında bu alanlar dönsün
+- [x] `ProviderFlight` / `ProviderHotel` entity'lerine `LastUpdatedAt`, `IsLiveData` (bool), `DataSnapshotDate` alanları (yoksa) eklensin
+- [x] Migration
+- [x] Provider response DTO'larına freshness bilgisi eklensin ("son güncelleme", "canlı değil/tahmini")
+- [x] `ProvidersController` response'larında bu alanlar dönsün
 
 ### Task B0.4: AI Scaffold Kararı
 
 **Tahmini Süre:** 30 dakika
+**Durum:** [x] Tamamlandı
+
+- [x] Boş `AiTimelineService.cs`, `AiFallbackService.cs`, `GenerateTimelineCommand.cs` dosyaları → B6'ya kadar **kaldırılsın** (kafa karışıklığı yapmasın) veya açık `// TODO B6` notuyla işaretlensin
+- [x] İlgili boş interface'ler B6 tasarımına göre yeniden değerlendirilsin
+
+### Task B0.5: User Profil Alanları Genişletme
+
+**Tahmini Süre:** 2 saat
 **Durum:** [ ] Bekliyor
 
-- [ ] Boş `AiTimelineService.cs`, `AiFallbackService.cs`, `GenerateTimelineCommand.cs` dosyaları → B6'ya kadar **kaldırılsın** (kafa karışıklığı yapmasın) veya açık `// TODO B6` notuyla işaretlensin
-- [ ] İlgili boş interface'ler B6 tasarımına göre yeniden değerlendirilsin
+> **Bağlam:** Edit Profile ekranında "Konum" ve "Seyahat Stili" alanları ekleniyor. `TravelStyle` enum'u zaten domain'de mevcut. Bu task M2 profil ekranından önce tamamlanmalı.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M2 / Task 2.4`
+
+- [ ] `User` entity'sine `Location` (string?, ör. "İstanbul, Türkiye") ve `TravelStyles` (List\<TravelStyle\>?, JSON kolonu) alanları eklensin
+- [ ] EF Core konfigürasyonu: `TravelStyles` → `jsonb` kolonu (PostgreSQL)
+- [ ] Migration
+- [ ] `UpdateProfileRequest`'e `Location` ve `TravelStyles` alanları eklensin
+- [ ] `UpdateProfileCommand` ve handler güncellenmesi
+- [ ] `UserProfileResponse`'a `Location` ve `TravelStyles` alanları eklensin
+- [ ] AutoMapper mapping güncellenmesi
+
+### Task B0.6: Trip Tamamlanma Yüzdesi (%hazır)
+
+**Tahmini Süre:** 2 saat
+**Durum:** [ ] Bekliyor
+
+> **Bağlam:** My Trips ekranında Draft kartlarında "%40 hazır" gibi bir ilerleme göstergesi olacak. Migration gerekmez; `TripResponse`'a computed alan eklenir.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.1`
+
+- [ ] `CompletionPercentage` (int, 0-100) alanı `TripResponse`'a eklenir — computed, DB'de saklanmaz
+- [ ] Hesaplama kuralları: Kapak fotoğrafı var (+20%), destinasyon eklenmiş (+20%), timeline entry var (+30%), bütçe girilmiş (+15%), trip adı/açıklaması dolu (+15%)
+- [ ] `GetMyTripsQuery` handler'ında hesaplanır; sadece kendi trip'lerinde döner (public trip response'da 0 veya null)
+
+---
+
+### Task B0.7: Trip Görüntülenme Sayacı
+
+**Tahmini Süre:** 2 saat
+**Durum:** [ ] Bekliyor
+
+> **Bağlam:** My Trips / Published tab'ında "231 Görüntülenme" gibi bir metrik gösterilecek.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.1`
+
+- [ ] `Trip` entity'sine `ViewCount` (int, default 0) kolonu ekle
+- [ ] EF Core konfigürasyonu: `HasDefaultValue(0)`
+- [ ] Migration
+- [ ] `GET /api/v1/Trips/{id}` handler'ında: **istek sahibi trip'in owner'ı değilse** `ViewCount++` (atomic increment, `ExecuteUpdateAsync`) — **anonim istekler de dahil** (B0.10 ile Published trip'ler anonime açıldığı için, koşul "authenticated + owner değil" değil, sadece "owner değil"; anonim zaten hiçbir zaman owner olamayacağı için bu koşulu otomatik sağlar ve sayaca dahil olur)
+- [ ] `TripResponse`'a `ViewCount` alanı eklenir
+
+---
+
+### Task B0.8: Trip Kapak Fotoğrafı Yükleme
+
+**Tahmini Süre:** 1.5 saat
+**Durum:** [ ] Bekliyor
+
+> **Bağlam:** My Trips kartlarında ve Trip Detail'de gerçek kapak fotoğrafı gösterilecek. Kullanıcı profil fotoğrafı için `POST /api/v1/users/me/profile-photo` zaten var; trip için eşdeğeri eksik.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.1, 3.2`
+
+- [ ] `UploadTripCoverPhotoCommand` — multipart/form-data, owner kontrolü
+- [ ] Mevcut `BlobService` kullanılır (yeni altyapı gerekmez)
+- [ ] Trip entity'sindeki `CoverPhotoUrl` güncellenir
+- [ ] Endpoint: `POST /api/v1/trips/{id}/cover-photo` → `{ "coverPhotoUrl": "..." }` döner
+- [ ] `CompletionPercentage` hesabında kapak fotoğrafının varlığı bu alan üzerinden kontrol edilir (B0.6 ile koordineli)
+
+---
+
+### Task B0.9: Trip Checklist Confirmation (Review Modu için)
+
+**Tahmini Süre:** 2.5 saat
+**Durum:** [ ] Bekliyor
+
+> **Bağlam:** Trip Detail'in yeni "Review Modu"nda (Kategori kartları — Flights/Hotels/Mekan) kullanıcı her checklist satırını **manuel olarak** işaretleyip "hallettim" diyebiliyor. Bu işaretleme, gerçek bir `Flight`/`Hotel` kaydının var olup olmamasından **bağımsız** — kullanıcı o bacağı uçakla, trenle veya kendi imkânıyla halletmiş olabilir, sistem bunu bilmiyor/bilmesi gerekmiyor.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.2` (Trip Detail — Review Modu / Kategori Kartları), tasarım detayları için `omniflow-mobile/TRIP_DETAILS_PAGE.md`
+
+**⚠️ Kapsam düzeltmesi:** Bu mekanizma **sadece Flights (leg) ve Hotels (gece) için** gerekli. **Mekan (Food/Activities) kapsam dışı** — Mekan'ın checklist satırları zaten var olan gerçek `TimelineEntry` (Place tipi) kayıtlarıdır; "işaretli mi" durumu **entry'nin var olması** ile otomatik belirlenir, ayrı bir confirmation kaydına ihtiyaç yok. Mekan'da checkbox salt-okunur bir gösterge (entry eklenmiş ✓), manuel toggle edilmez.
+
+**ItemKey Formatı (stabil, destinasyon reorder'ından etkilenmez — `TripDestination.Id` GUID'i üzerinden, isim/index üzerinden değil):**
+- Flight leg: `flight-leg:{fromDestinationId}:{toDestinationId}` — iki ardışık `TripDestination.Id`'si
+- Hotel night: `hotel-night:{destinationId}:{nightNumber}` — `nightNumber` 1'den `TripDestination.NightCount`'a kadar
+
+**Reconciliation Kuralı (destinasyon silinir/tarih değişirse):**
+- Destinasyon **silinirse** → o destinasyona referans veren tüm `TripChecklistConfirmation` kayıtları **cascade silinir** (`DeleteTripDestinationCommand` handler'ında explicit temizlik, EF cascade delete güvenilir olmayabileceği için)
+- Destinasyon tarihleri değişip `NightCount` **azalırsa** → artık geçersiz `nightNumber`'a sahip confirmation'lar silinmez ama **okuma sırasında filtrelenir**: `GetTripChecklistStatusQuery`, önce güncel geçerli `ItemKey` setini (mevcut destinasyonlardan) hesaplar, sadece bunlarla eşleşen confirmation'ları döner — stale kayıtlar sessizce yok sayılır (fiziksel silme opsiyonel, doğruluk read-time filtrelemeyle garanti edilir)
+- Yeni destinasyon eklenirse veya `NightCount` artarsa → yeni `ItemKey`'ler otomatik "işaretlenmemiş" (confirmation kaydı yok = unchecked) olarak başlar, ekstra işlem gerekmez
+
+- [ ] `TripChecklistConfirmation.cs` entity (hafif, `BaseEntity`) — `TripId`, `ItemKey` (string, yukarıdaki format), `IsConfirmed` (bool), `ConfirmedAt` (DateTime?)
+- [ ] EF Core configuration + migration — unique index (`trip_id`, `item_key`)
+- [ ] `ToggleChecklistItemCommand` — owner kontrolü, idempotent (aynı state'e tekrar set etmek hata vermez)
+- [ ] `DeleteTripDestinationCommand` handler'ına o destinasyona ait `flight-leg:` / `hotel-night:` confirmation'larının temizlenmesi eklenir
+- [ ] `GetTripChecklistStatusQuery` — güncel geçerli `ItemKey` setini destinasyon verisinden hesaplar, sadece bunlarla eşleşen confirmation'ları döner (stale veri read-time'da filtrelenir)
+- [ ] Endpoint'ler ve tam contract (`TripsController` üzerinde, `GetById`/`GetBudgetSummary` ile aynı controller — casing tutarlılığı için `/api/v1/Trips/...`):
+  - `GET /api/v1/Trips/{id}/checklist` → response:
+    ```json
+    { "items": [
+        { "itemKey": "flight-leg:{guid}:{guid}", "isConfirmed": true, "confirmedAt": "2026-07-01T10:00:00Z" },
+        { "itemKey": "hotel-night:{guid}:1", "isConfirmed": false, "confirmedAt": null }
+    ] }
+    ```
+    Sadece **güncel geçerli** `itemKey`'ler döner (stale olanlar read-time'da filtrelenmiş halde, yukarıdaki Reconciliation Kuralı'na göre). Ring hesaplaması (`seçilen/beklenen`) **client-side** yapılır — backend sadece ham confirmation state'i döner, beklenen sayı zaten mobilde mevcut destinasyon verisinden hesaplanabiliyor, backend'de tekrar hesaplamaya gerek yok
+  - `PUT /api/v1/Trips/{id}/checklist/{itemKey}` — body: `{ "isConfirmed": true }`, response: **`204 No Content`** (netleşti — mobil zaten optimistic update kullandığı için response body'ye bağımlı değil, en basit kontrat bu)
+- [ ] **Visibility kuralı (B0.10 ile aynı desen — ayrıştırılmalı, kopyalanmamalı):**
+  - **`GetTripChecklistStatusQuery` (GET):** `[AllowAnonymous]` + handler'da `ITripVisibilityService` (B0.10'da tanımlanan paylaşılan helper) kullanılır — Published → **anonim dahil herkes okuyabilir** (misafir Trip Detail'de checklist'i salt-okunur görüyor, bkz. `TRIP_DETAILS_PAGE.md`), Draft/Archived → sadece owner, yetkisiz/anonim → `EntityNotFoundException` (404)
+  - **`ToggleChecklistItemCommand` (PUT):** sınıf seviyesindeki `[Authorize]`'dan (override yok) — giriş gerektirir, **ayrıca owner kontrolü** (sadece trip owner'ı checklist işaretleyebilir; misafir/anonim PUT çağırırsa 401/403, GET'te salt-okunur görebilmesiyle çelişmez çünkü ikisi ayrı action, ayrı yetki seviyesi)
+- [ ] **URL encoding:** `itemKey` içindeki `:` karakterleri path segment'inde teknik olarak geçerlidir (RFC 3986 `pchar` seti `:` içerir), ama HTTP client kütüphaneleri (Retrofit/OkHttp) arasında tutarlılık için **mobil taraf `itemKey`'i açıkça percent-encode eder** (`:` → `%3A`) URL'i oluştururken. ASP.NET Core route binding, path parametrelerini **otomatik url-decode eder** — backend tarafında ekstra bir işlem gerekmez, sadece bu beklenti iki taraf arasında netleşmiş olsun
+- [ ] Mobil tarafta **optimistic update + hata durumunda geri alma** — mevcut app-wide konvansiyonla tutarlı (bkz. `MOBILE_ROADMAP.md` "UI State Konvansiyonu" → Aksiyon durumları), yeni bir pattern gerekmez
+
+---
+
+### Task B0.10: 🔴 GÜVENLİK — GetTripByIdQuery Owner/Status Kontrolü Eksik
+
+**Tahmini Süre:** 1 saat
+**Durum:** [ ] Bekliyor
+**Öncelik:** 🔴 Kritik — güvenlik açığı, diğer her şeyden önce yapılmalı
+
+> **Bulgu:** `GetTripByIdQueryHandler.cs` trip'i bulup **hiçbir owner/status kontrolü yapmadan** direkt döndürüyor. Şu an authenticated herhangi bir kullanıcı, ID'sini bilirse **başkasının Draft/Archived trip'ini** tam olarak görebiliyor. Diğer command'larda (`ArchiveTripCommandHandler` vb.) owner kontrolü var, ama bu **read** path'inde (Trip Detail'in kullandığı asıl endpoint) yok.
+>
+> **⚠️ Ek bulgu (kod incelemesinde ortaya çıktı):** `TripsController`, `BaseApiController`'dan miras alıyor ve `BaseApiController` sınıf seviyesinde `[Authorize]` taşıyor ([BaseApiController.cs:8](omniflow-backend/OmniFlow/OmniFlow.WebApi/Controllers/BaseApiController.cs:8)). `GetById` ([TripsController.cs:61-70](omniflow-backend/OmniFlow/OmniFlow.WebApi/Controllers/v1/TripsController.cs:61)) ve `GetBudgetSummary` ([TripsController.cs:142-152](omniflow-backend/OmniFlow/OmniFlow.WebApi/Controllers/v1/TripsController.cs:142)) üzerinde **`[AllowAnonymous]` yok** — yani anonim (giriş yapmamış) bir istek şu an **handler'a hiç ulaşmadan, framework seviyesinde 401 ile reddediliyor**. Handler içine "anonim ise Published kontrolü yap" mantığı eklemek **tek başına yeterli değil**, controller seviyesinde de `[AllowAnonymous]` eklenmesi şart.
+>
+> **Karar (Explore ile tutarlılık):** `ExploreController` zaten `[AllowAnonymous]` + "Authentication is optional" yorumuyla anonim taramaya izin veriyor. Trip Detail/Budget Summary'nin de **gerçekten anonim** erişime açık olması gerekir — "misafir" burada sadece "başka bir login olmuş kullanıcı" değil, **giriş yapmamış kullanıcıyı da kapsar**.
+
+- [ ] `GetTripByIdQueryHandler`'a kontrol eklenir: `trip.Status != TripStatus.Published && trip.OwnerId != currentUserId` ise **`EntityNotFoundException`** fırlatılır (403/`ForbiddenException` değil — "yetkin yok" yerine "bulunamadı" denir, private trip'in var olduğu bile sızdırılmaz)
+- [ ] Anonim (giriş yapmamış) kullanıcı için de aynı kural geçerli — `currentUserId` yoksa `trip.Status != Published` durumunda 404 (mevcut `GetTripByIdQueryHandler`'daki `Guid.TryParse(_authenticatedUserService.UserId, ...)` pattern'i zaten anonim'i güvenli ele alıyor, `IsUpvoted`/`IsSaved` için kullanılan aynı desen)
+- [ ] **`[AllowAnonymous]` attribute'ü `TripsController.GetById` action'ına eklenir** — `[Authorize]` sınıf seviyesinden miras kalmasın
+- [ ] Integration test: guest/başka user'ın Draft/Archived trip'e erişimi 404 dönmeli; owner kendi Draft/Archived trip'ini görebilmeli; **anonim (token'sız) istek Published trip'i görebilmeli, Draft/Archived'de 404 almalı**
+
+**Ek düzeltme (Budget privacy kararı — bütçe herkese açık, anonim dahil):** `GetBudgetSummaryQueryHandler.cs:36-37`'de şu an **katı owner-only** kontrolü var (`if (trip.OwnerId != currentUserId) throw new ForbiddenException(...)`). Trip Detail'deki Toplam Bütçe satırı artık **anonim dahil herkese açık** olacağı için bu kısıtlama **`GetTripByIdQueryHandler` ile aynı duruma (status-bazlı)** çevrilir:
+- [ ] `GetBudgetSummaryQueryHandler`'daki katı `ForbiddenException` kuralı kaldırılır, yerine `trip.Status != TripStatus.Published && trip.OwnerId != currentUserId` → `EntityNotFoundException` konur (Published trip'lerde owner olmayan **ve anonim** de görebilir; Draft/Archived'de sadece owner)
+- [ ] **`[AllowAnonymous]` attribute'ü `TripsController.GetBudgetSummary` action'ına eklenir**
+- [ ] `GetBudgetSummaryQueryHandler`'a da `GetTripByIdQueryHandler`'daki gibi anonim-güvenli `Guid.TryParse` deseni eklenir (şu an `Guid.Parse(_authService.UserId)` kullanıyor — anonim istekte `UserId` null/boş olursa bu **exception fırlatır**, `TryParse` ile güvenli hale getirilmeli)
+- [ ] İlgili unit/integration testler güncellenir (mevcut "sadece owner görebilir" testleri artık "Published'da herkes + anonim, Draft/Archived'de sadece owner" olarak değişir)
+
+**⚠️ Kapsam genişletmesi (kod incelemesinde 2 kardeş handler'da aynı sınıf hata bulundu):** Bu güvenlik açığı sadece `GetTripByIdQuery`'ye özgü değilmiş — trip'in **child kaynaklarını** okuyan diğer handler'larda da aynı desen eksik/tutarsız:
+
+- **`GetTimelineQueryHandler.cs:39-44`** — `trip.Status != Published` durumunda `Guid.Parse(_authService.UserId)` çağırıyor (satır 41), **`TryParse` değil**. Anonim istek geldiğinde `UserId` boş/null olduğu için bu **`FormatException` fırlatır** (temiz bir 404 yerine beklenmeyen 500 hatası)
+- **`GetTripDestinationsQueryHandler.cs:51`** — sadece `TripStatus.Draft` için owner-only kontrolü var, **`Archived` hiç kontrol edilmiyor**. Yani şu an **Archived bir trip'in destinasyonları owner olmayan herkese açık** — bu, B0.10'un asıl çözmeye çalıştığı sorunun aynısı, farklı bir endpoint'te
+- **`GetRecommendedPlacesQueryHandler.cs:35-40`** — handler mantığı zaten doğru (`Published != status` ise owner-only), ama aynı güvensiz `Guid.Parse` (satır 37) var **ve** `TripsController.GetRecommendPlaces` action'ında (satır 155) `[AllowAnonymous]` yok — anonim istek handler'a hiç ulaşamıyor (401). Niyet doğru, uygulama eksik.
+
+**Karar (Recommended Places görünürlüğü):** Diğer child kaynaklarla (Timeline, Budget Summary, Destinations) tutarlı olması için **Recommended Places de Published trip'lerde herkese açık (anonim dahil)** olacak — ayrı bir owner/collaborator-only istisna yapılmıyor. "Timeline'a ekle" aksiyonu zaten sadece owner'a görünür, misafir sadece görüntüler. (`omniflow-mobile/OMNIFLOW_PAGE_ARCHITECTURE.md § 8.3` güncellendi.)
+
+**Kök neden:** Bu mantık (trip Published değilse owner-only, 404 ile) her handler'da ayrı ayrı yazılıyor, bu yüzden tutarsızlıklar/eksiklikler çıkıyor. Çözüm: **paylaşılan bir visibility helper**.
+
+- [ ] `ITripVisibilityService` (veya basit bir static extension) eklenir — `EnsureVisibleOrThrow(Trip trip, string? currentUserIdString)`: `trip.Status != Published` ise `currentUserIdString`'i güvenli `TryParse` eder, parse başarısız (anonim) veya `trip.OwnerId != currentUserId` ise `EntityNotFoundException` (404) fırlatır
+- [ ] `GetTripByIdQueryHandler`, `GetBudgetSummaryQueryHandler`, `GetTimelineQueryHandler`, `GetTripDestinationsQueryHandler`, `GetRecommendedPlacesQueryHandler`, **ve B0.9'un `GetTripChecklistStatusQuery`'si** — **hepsi bu paylaşılan helper'ı kullanacak şekilde güncellenir/yazılır**, kendi ad-hoc kontrollerini kaldırırlar (checklist henüz implemente edilmediği için sıfırdan bu helper'la yazılır, diğerleri mevcut ad-hoc kontrollerini helper'a taşır)
+- [ ] `GetTimelineQueryHandler` ve `GetRecommendedPlacesQueryHandler`'daki güvensiz `Guid.Parse` → helper üzerinden güvenli hale gelir
+- [ ] `GetTripDestinationsQueryHandler`'a eksik olan `Archived` kontrolü eklenir (helper kullanılınca otomatik gelir)
+- [ ] **`[AllowAnonymous]` attribute'ü `TripsController.GetRecommendPlaces` action'ına eklenir**
+- [ ] Bu handler'lardaki mevcut `ForbiddenException` (403) davranışı da **`EntityNotFoundException` (404)**'a çevrilir — B0.10'un "private trip'in varlığı bile sızdırılmasın" prensibiyle tutarlı olsun
+- [ ] Integration test: **6 endpoint** (GetById, BudgetSummary, Timeline, Destinations, Checklist, RecommendPlaces) için de Draft/Archived + anonim/non-owner → 404; owner → 200; Published + anonim/herkes → 200
+
+---
+
+### Task B0.11: Trip Unarchive / Yeniden Yayınla
+
+**Tahmini Süre:** 1.5 saat
+**Durum:** [ ] Bekliyor
+
+> **Bağlam:** Şu an `Draft → Published → Archived` tek yönlü bir akış; Archived durumdan geri dönüş yok (sadece Delete mümkün). Trip Detail üst bar menüsünde Archived trip'ler için **"Yayına Al"** seçeneği isteniyor — bu, backend'de yeni bir komut gerektiriyor.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.2` (üst bar `⋮` menü — durum bazlı içerik), tasarım detayları `omniflow-mobile/TRIP_DETAILS_PAGE.md`
+
+- [ ] `UnarchiveTripCommand` + Handler — `ArchiveTripCommandHandler` ile simetrik yapı: owner kontrolü (`ForbiddenException`), sadece `TripStatus.Archived` durumundaki trip'lere uygulanabilir (`ApiException` diğer durumlarda)
+- [ ] `trip.Status = TripStatus.Published` olarak günceller
+- [ ] Endpoint: `POST /api/v1/Trips/{id}/unarchive` *(büyük T — `TripsController`'ın `[controller]` token casing'iyle tutarlı, B0.14'teki `unpublish` ile aynı)*
+- [ ] Unit + integration test (owner/non-owner, yanlış durumdan unarchive denemesi)
+
+**Owner Menü İçeriği (durum bazlı, mobil tarafta uygulanacak):**
+
+| Trip Durumu | Menü İçeriği |
+|---|---|
+| **Draft** | Yayınla · Sil |
+| **Published** | Arşivle · **Düzenlemek için Taslağa Al** · Paylaş · Sil |
+| **Archived** | Yayına Al · Sil *(**Paylaş yok** — Archived owner-only, B0.10 gereği 404 döner; paylaşılan link işe yaramaz. Draft'ta zaten aynı sebeple Paylaş yok, Archived'da da tutarlı olsun diye kaldırıldı)* |
+
+---
+
+### Task B0.14: 🔴 KRİTİK — Trip Unpublish (Düzenleme İçin Taslağa Al)
+
+**Tahmini Süre:** 1.5 saat
+**Durum:** [ ] Bekliyor
+**Öncelik:** 🔴 Kritik — ciddi bir ürün kısıtı çözüyor
+
+> **Bulgu:** `UpdateTimelineEntryCommandHandler`, `CreateTimelineEntryCommandHandler`, `DeleteTimelineEntryCommandHandler`, `ReorderTimelineEntriesCommandHandler`, `UpdateTripCommandHandler` ve destinasyon CRUD handler'larının **hepsi** `trip.Status != TripStatus.Draft` ise reddediyor. Backend'de `Published → Draft` geri dönüşü **hiç yok** (sadece `Draft→Published→Archived→(B0.11 ile)Published` döngüsü var). Sonuç: **bir trip yayınlandığı anda timeline'ı sonsuza kadar donuyor** — owner bir daha hiçbir entry ekleyemez/düzenleyemez/silemez/kilit açamaz, Archived'a alıp tekrar Published yapsa bile. Bu, gerçek kullanıcı senaryosunda (yayınladıktan sonra plan değişmesi) çok kısıtlayıcı.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.2` (üst bar `⋮` menü, Timeline entry Edit/Delete/Unlock aksiyonları), tasarım detayı `omniflow-mobile/TRIP_DETAILS_PAGE.md`
+
+**Karar:** `ArchiveTripCommandHandler`'a simetrik yeni bir komut — `UnpublishTripCommand`. Draft-only kısıtları **gevşetilmiyor** (Timeline entry mutasyonları hâlâ Draft-only kalıyor), bunun yerine owner trip'i **geçici olarak Draft'a alıp** düzenleyip **tekrar Yayınla**yabiliyor.
+
+- [ ] `UnpublishTripCommand` + Handler — owner kontrolü (`ForbiddenException`), sadece `TripStatus.Published` durumundaki trip'lere uygulanabilir (`ApiException` diğer durumlarda — Archived'dan direkt Unpublish yok, önce Unarchive (B0.11) ile Published'a dönülür, sonra Unpublish edilir; state machine basit tutulur)
+- [ ] `trip.Status = TripStatus.Draft` olarak günceller
+- [ ] **Sayaçlar korunur:** `UpvoteCount`, `ForkCount`, mevcut `SavedTrip` ilişkileri **silinmez/sıfırlanmaz** — trip Draft'tayken bu sayılar sadece owner'a görünür kalır (B0.10 visibility kuralı gereği), tekrar Publish edilince aynen geri gelir
+- [ ] Endpoint: `POST /api/v1/Trips/{id}/unpublish`
+- [ ] Unit + integration test (owner/non-owner, Draft/Archived'den Unpublish denemesi reddedilmeli, sayaçların korunduğu)
+
+**Mobil davranış:**
+- [ ] Üst bar Owner menüsüne **Published** durumunda **"Düzenlemek için Taslağa Al"** eklenir (yukarıdaki tabloya bakınız)
+- [ ] Tıklanınca **onay dialogu**: "Bu geziyi düzenlemek için yayından kaldıracaksın — düzenleme bitince tekrar yayınlaman gerekecek. Devam edilsin mi?" + İptal/Devam Et
+- [ ] Onaylanınca `POST /api/v1/Trips/{id}/unpublish` çağrılır, başarılı olursa trip Draft'a döner, Timeline'daki Edit/Kilidi Aç/Sil/+Detay Ekle aksiyonları artık aktif olur
+- [ ] Trip Draft'tayken herkese kapalıdır (B0.10), owner "Yayınla" ile düzenleme bitince tekrar Published'a alır
+
+---
+
+### Task B0.12: TripDestination Koordinat (Geocoding)
+
+**Tahmini Süre:** 3.5 saat *(Nominatim operasyonel gereksinimleri nedeniyle 2.5 saatten güncellendi)*
+**Durum:** [ ] Bekliyor
+
+> **Bulgu:** Trip Detail'in haritası (`omniflow-mobile/TRIP_DETAILS_PAGE.md`, MapLibre pinler + ORS yol modu) destinasyon koordinatlarına ihtiyaç duyuyor, ama `TripDestinationResponse` sadece `City`/`Country`/`ArrivalDate`/`DepartureDate`/`OrderIndex`/`NightCount` döndürüyor — **koordinat yok**. `Place` entity'sinde `Latitude`/`Longitude` zaten var (OSM/Google Places'ten önceden import edilmiş), ama bu veri statik — çalışma zamanında "bu şehri geocode et" diyebilecek bir servis **hiç yok**.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.2` (Trip Detail — Map bölümü), tasarım detayı `omniflow-mobile/TRIP_DETAILS_PAGE.md`
+
+**Karar:** Backend, destinasyon oluşturulduğunda/güncellendiğinde City+Country'yi **bir kere** geocode edip `TripDestination`'a kaydeder (mobil client-side geocoding yok, her seferinde tekrar istek atılmaz).
+
+> **⚠️ Nominatim operasyonel kısıtlar (resmi kullanım politikası):** Public Nominatim instance'ı (`nominatim.openstreetmap.org`) **max 1 istek/saniye**, geçerli/tanımlayıcı bir `User-Agent` (jenerik/tarayıcı UA'sı değil), **sonuçların cache'lenmesi zorunlu**, ve ağır kullanımda self-host önerisi şartlarını taşıyor. Wizard tek seferde **10 destinasyona kadar** oluşturabildiği için, bunlar naif şekilde paralel/hızlı ardışık geocode edilirse hem rate-limit'e takılır hem policy ihlali olur.
+
+- [ ] `TripDestination` entity'sine `Latitude` (double?), `Longitude` (double?) alanları + migration
+- [ ] `IGeocodingService` arayüzü + **Nominatim** implementasyonu — `City, Country` string'ini koordinata çevirir. Arayüz sağlayıcıdan bağımsız tasarlanır (ileride self-hosted Nominatim veya başka bir servise **config ile** geçilebilsin — base URL + provider seçimi `appsettings.json`'da)
+- [ ] **Rate limiting:** Servis içinde bir kuyruk/semaphore ile giden istekler **max 1 istek/saniye** olacak şekilde sınırlanır (10 destinasyonluk bir wizard submit'i naif paralel çağrı yerine sıraya alınır)
+- [ ] **Cache:** Geocode sonuçları `(City, Country)` normalize edilmiş anahtarla **kalıcı (DB tablosu)** olarak cache'lenir — production'da in-memory cache yetersiz kalır (uygulama yeniden başlayınca/birden fazla instance'ta kaybolur, Nominatim policy'sinin "sonuçları cache'le" şartını kalıcı karşılamaz). In-memory sadece **dev/local'da DB'ye ek bir L1 hız katmanı** olarak opsiyonel kullanılabilir, tek başına yeterli değil. Aynı şehir (ör. "Paris, France") birden fazla trip/kullanıcı tarafından istenirse Nominatim'e tekrar gidilmez — bu, pratikte rate-limit baskısının büyük kısmını da çözer (popüler şehirler zaten cache'te olur)
+- [ ] **User-Agent:** İsteklerde uygulamayı tanımlayan özel bir `User-Agent` header'ı gönderilir (ör. `OmniFlow/1.0 (+iletişim e-postası)`), jenerik/varsayılan HTTP client UA'sı kullanılmaz
+- [ ] **Timeout:** Makul bir timeout (ör. 5 sn) — Nominatim yanıt vermezse hata toleransı kuralına (aşağıda) düşer, wizard submit'ini süresiz bekletmez
+- [ ] `CreateTripDestinationCommandHandler`, `UpdateTripDestinationCommandHandler` ve `CreateTripWizardCommandHandler` (destinasyon oluşturan/güncelleyen üç nokta) geocoding çağrısını yapacak şekilde güncellenir — **senkron ve cache+rate-limit korumalı** (M3 kapsamında background job/kuyruk sistemi **bilinçli olarak kurulmuyor** — basitlik tercih edildi). **Gerçekçi zamanlama:** 1 istek/saniye limiti nedeniyle, en kötü senaryoda (10 destinasyonun **hepsi cache miss** — yani hiçbiri daha önce başka bir trip'te geocode edilmemiş) wizard submit'i **10+ saniyeye kadar uzayabilir** (timeout'larla daha da fazla). Pratikte çoğu trip popüler şehirler içerdiği için cache sayesinde çok daha hızlı olması beklenir, ama worst-case bu kadar sürebileceği bilinerek kabul ediliyor. Mobil tarafta wizard submit zaten bir loading state gösteriyor, bu süre o loading state içinde karşılanır. İleride gerçek bir kullanıcı şikayeti/performans sorunu olursa arka plan job'una geçiş değerlendirilebilir
+- [ ] **Hata toleransı:** Geocoding başarısız olursa (servis erişilemez, timeout, şehir bulunamaz vb.) `Latitude`/`Longitude` `null` kalır — komut **hata fırlatmaz**, destinasyon yine de oluşturulur/güncellenir; mobil tarafta o destinasyon için pin gösterilmez, diğer pinler etkilenmez
+- [ ] `TripDestinationResponse`'a `Latitude`/`Longitude` (nullable) eklenir
+- [ ] Unit test: geocoding başarılı/başarısız senaryoları, mevcut destinasyon davranışının bozulmadığı
+
+---
+
+### Task B0.13: TimelineEntry → Checklist Bağlantısı (PlanningSlotKey)
+
+**Tahmini Süre:** 1.5 saat
+**Durum:** [ ] Bekliyor
+
+> **Bulgu:** Trip Detail'in Detay Modalı, bir Flights/Hotels checklist satırı (ör. "İstanbul → Roma" leg'i) için **gerçek bir TimelineEntry'nin var olup olmadığını** göstermesi gerekiyor (bkz. `omniflow-mobile/TRIP_DETAILS_PAGE.md → Detay Modal — İçerik / Durum A vs B`). Bunu client-side **şehir adı/tarih heuristiği** ile yapmak kırılgan — aynı leg/gece için birden fazla `CustomFlight`/`CustomTransport`/`CustomAccommodation` entry'si varsa (ör. kullanıcı önce uçuş sonra taksi transferi eklediyse, veya oteli değiştirdiyse) **yanlış entry'ye bağlanma riski** var.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.2`, tasarım detayı `omniflow-mobile/TRIP_DETAILS_PAGE.md → Detay Modal — İçerik`
+
+**Karar:** `TimelineEntry`'ye opsiyonel `PlanningSlotKey` (string?) alanı eklenir — B0.9'daki `itemKey` formatıyla **aynı değer** (`flight-leg:{fromId}:{toId}` / `hotel-night:{destId}:{nightNumber}`). Bu alan **sadece** Detay Modal'ın "**+ Detay Ekle**" CTA'sından (Durum B → yeni entry oluşturma akışı) geçilen entry'lere set edilir — normal Timeline entry ekleme akışından oluşturulan entry'ler bu alanı `null` bırakır ve checklist'e otomatik bağlanmaz (checklist confirmation o entry'lerden **bağımsız, manuel** kalmaya devam eder).
+
+- [ ] `TimelineEntry` entity'sine `PlanningSlotKey` (string?, nullable) alanı + migration
+- [ ] **Partial unique index** — `(TripId, PlanningSlotKey)` where **`planning_slot_key IS NOT NULL AND deleted_at IS NULL`** (`TimelineEntry` soft-delete kullanıyor — `deleted_at` filtresi olmadan, silinmiş bir entry aynı slot'u "kullanılmış" gibi tutar ve o slota **yeni entry eklemeyi kalıcı olarak engeller**; bu yüzden filtreye `deleted_at IS NULL` şart)
+- [ ] **DTO/Command zinciri tam olarak güncellenir** (sadece prosa değil, somut dosyalar):
+  - `CreateTimelineEntryRequest.cs` → opsiyonel `PlanningSlotKey` (string?) alanı eklenir
+  - `CreateTimelineEntryCommand.cs` → aynı alan eklenir, controller'dan handler'a taşınır
+  - `CreateTimelineEntryCommandHandler` → `PlanningSlotKey`'i yeni `TimelineEntry`'ye set eder (factory metodlarına parametre olarak eklenir veya oluşturulduktan sonra atanır)
+  - `TimelineEntryResponse.cs` → `PlanningSlotKey` (string?) response'a eklenir
+  - AutoMapper profili güncellenir (entity → response mapping'inde bu alan otomatik gelsin)
+  - Detay Modal'ın "+ Detay Ekle" CTA'sı bu alanı doldurur, normal Timeline ekleme akışı (Task 3.13'ün standart formu) boş bırakır
+- [ ] **`PlanningSlotKey` sadece create'te set edilir, immutable'dır:** `UpdateTimelineEntryRequest`/`UpdateTimelineEntryCommand`'a **bu alan bilinçli olarak eklenmez** — yani bir entry oluşturulduktan sonra hangi slot'a bağlı olduğu **değiştirilemez**. Kullanıcı bir entry'yi başka bir slot'a bağlamak isterse (nadir senaryo), mevcut entry'yi **siler ve yeni bir entry oluşturur** (yeni entry oluştururken doğru `planningSlotKey` ile). Bu, slot ownership'in Update akışı üzerinden karışmasını (ör. yanlışlıkla başka bir slot'un key'ini üzerine yazma) baştan engeller
+- [ ] **Entry silinirse checklist confirmation'a ne olur:** `TripChecklistConfirmation` (B0.9), `TimelineEntry`'den **tamamen bağımsız bir tablo** — entry silinse bile confirmation kaydı **silinmez/değişmez**. Yani kullanıcı "İstanbul→Roma" uçuşunu ekleyip checklist'i işaretledikten sonra o entry'yi silerse, checklist **checked kalır** (kullanıcının "hallettim" beyanı entry'nin varlığından bağımsız bir gerçek) — sadece bir sonraki modal açılışında **Durum B**'ye döner (`PlanningSlotKey` eşleşen entry artık yok)
+- [ ] `GetTripByIdQuery`/`GetTimelineQuery` response'larına `PlanningSlotKey` eklenir (mobil, Durum A/B ayrımını artık **exact match** ile yapar: `entries.any { it.planningSlotKey == itemKey }` — şehir/tarih heuristiği yok)
+- [ ] Unit test: aynı slot'a ikinci kez entry oluşturma denemesi engelleniyor (unique constraint); **soft-delete edilmiş bir entry'nin slot'u serbest bıraktığı** (yeni entry aynı `planningSlotKey` ile oluşturulabiliyor) test edilir; normal akıştan oluşan entry'lerin `PlanningSlotKey`'i null kalıyor; entry silinince ilgili checklist confirmation'ın **değişmediği** test edilir
+
+---
+
+### Task B0.15: ORS Routing Proxy ("Yol" Modu)
+
+**Tahmini Süre:** 2 saat
+**Durum:** [ ] Bekliyor
+
+> **Bulgu:** Map'in `Yol` modu OpenRouteService (ORS) polyline kullanıyor (bkz. `omniflow-mobile/TRIP_DETAILS_PAGE.md`), ama **kimin ORS'u çağıracağı hiç netleşmemiş**. ORS, Nominatim'in aksine **API key gerektiriyor** (ücretsiz tier'da bile). Mobil doğrudan ORS'u çağırırsa, **API key APK içine gömülür** — decompile edilip çıkarılabilir, kötüye kullanılırsa uygulamanın günlük ORS kotası (free tier'da sınırlı) tüketilip **herkes için** Yol modu çalışmaz hale gelir. Bu, Nominatim'den farklı bir risk (Nominatim key istemiyor).
+>
+> **Mobil karşılığı:** `omniflow-mobile/TRIP_DETAILS_PAGE.md → Map — 2 Mod` (Yol modu ORS polyline)
+
+**Karar:** ORS çağrısı **backend üzerinden proxy'lenir** — mobil ORS'u hiç doğrudan çağırmaz, API key backend'de (appsettings/secret olarak) kalır, hiçbir zaman client'a gönderilmez.
+
+- [ ] `IRoutingService` arayüzü + **OpenRouteService** implementasyonu (Directions API) — destinasyon koordinat sırasını alır, polyline/koordinat listesi döner
+- [ ] **Null koordinat filtresi (ORS'a gitmeden önce):** Handler, ORS'a istek atmadan önce `Latitude`/`Longitude`'u `null` olan destinasyonları **sıradan çıkarır** — sadece geçerli koordinatlı destinasyonlar ORS'a gönderilir (mobil tarafın "null koordinatlı destinasyonu atla, bir sonraki geçerliye direkt bağlan" kuralıyla aynı mantık, backend'de de uygulanır). Bu filtre olmadan ORS'a eksik/geçersiz koordinat gönderilirse ORS hata döner, gereksiz yere hata-path'inden fallback'e düşülür ve ORS kotası boşa harcanır
+- [ ] **Cache:** Bir trip'in rotası, destinasyonlar değişmediği sürece **aynı kalır** — hesaplanan polyline trip başına cache'lenir (DB'de bir alan veya ayrı küçük tablo), destinasyon eklenir/silinir/sıralanırsa cache geçersiz kılınıp yeniden hesaplanır. Bu hem ORS'un kendi rate-limit'ini (free tier'da dakikada/günde sınırlı istek) korur hem performansı artırır
+- [ ] Endpoint: `GET /api/v1/Trips/{id}/route` → `{ "coordinates": [[lat,lng], [lat,lng], ...] }` (mobil bunu MapLibre'de polyline olarak çizer)
+- [ ] Visibility kuralı diğerleriyle aynı (B0.10'un paylaşılan helper'ı) — Published'da herkese açık, Draft/Archived'de owner-only
+- [ ] **Hata toleransı:** ORS erişilemez/timeout olursa endpoint hata döner, mobil tarafta zaten var olan "sessizce Kuş Bakışı'na fallback" davranışı devreye girer (backend hatası = mobilde ORS başarısızlığıyla aynı şekilde ele alınır)
+- [ ] Unit test: cache invalidation (destinasyon değişince yeniden hesaplanıyor), owner/anonim/Published-Draft erişim matrisi
+
+---
 
 ### Definition of Done (B0)
 
 - [ ] Dokümanlar koddaki gerçeği yansıtıyor
 - [ ] `dotnet test` çözüm seviyesinde çalışıyor ve CI'da koşuyor
 - [ ] Provider verisinin tazeliği API'den görülebiliyor
+- [ ] User profili konum ve seyahat stili alanlarını destekliyor
+- [ ] Draft trip'lerde tamamlanma yüzdesi hesaplanıp dönüyor
+- [ ] Published trip'lerde görüntülenme sayısı (`ViewCount`, anonim dahil) doğru artıyor ve gösteriliyor
+- [ ] Trip kapak fotoğrafı yüklenebiliyor
+- [ ] Trip Detail Review modundaki checklist satırları işaretlenip kalıcı olarak saklanabiliyor
+- [ ] Draft/Archived trip'ler owner olmayan kullanıcılara 404 dönüyor (B0.10)
+- [ ] Archived trip'ler tekrar Published durumuna alınabiliyor (B0.11)
+- [ ] Destinasyonlar koordinat ile dönüyor, Trip Detail haritasında pinlenebiliyor (B0.12)
+- [ ] Checklist satırları ile TimelineEntry'ler arasında belirsizlik olmadan (exact match) bağlantı kuruluyor (B0.13)
+- [ ] Owner, yayınladığı bir trip'i düzenlemek için Taslağa alıp tekrar yayınlayabiliyor, sayaçlar korunuyor (B0.14)
+- [ ] Map'in Yol modu backend proxy üzerinden çalışıyor, ORS API key client'a hiç gitmiyor (B0.15)
+
+> **📝 Düşük öncelikli not (gelecekte değerlendirilebilir):** `TripsController` (`[controller]` token → `/api/v1/Trips/...`, büyük T) ile `TimelineController` (literal route override → `/api/v1/trips/...`, küçük t) arasında casing tutarsızlığı var. ASP.NET Core route matching genelde case-insensitive çalıştığı için şu an **işlevsel bir sorun yaratmıyor**, ama Retrofit contract'larında gereksiz kafa karışıklığına yol açabiliyor. Kısa vadede dokümanlarda gerçek casing'in yazılması (yapıldı) yeterli; orta/uzun vadede tüm controller route'larının lowercase literal'e standardize edilmesi düşünülebilir (B0 kapsamında zorunlu değil).
 
 ---
 
@@ -239,6 +528,8 @@ Mevcut in-app notification sistemine push katmanı eklenir. Cihaz token'ı kayde
 - [ ] Bir sosyal etkileşim gerçek bir push'a dönüşüyor
 - [ ] Kullanıcı bildirim tiplerini açıp kapatabiliyor ve bu push'ı etkiliyor
 
+> **Mobil kaynaklı ek:** `NotificationsController`'da bildirim silme endpoint'i (`DELETE /api/v1/notifications/{id}`) yok. Mobil select mode'daki "Sil" butonu şu an işlevsiz. Bu endpoint B3 sonrasına veya ayrı bir cleanup task'ına eklenebilir.
+
 ---
 
 ## 🎯 B4 — Collections, Global Search, Deep-link, Memories
@@ -254,10 +545,25 @@ Kişisel düzenleme ve keşif katmanı. Mevcut saved-trips üzerine koleksiyonla
 **Tahmini Süre:** 4 saat
 **Durum:** [ ] Bekliyor
 
-- [ ] `Collection.cs` (UserId, Name, Description?, CoverPhotoUrl?) + `CollectionItem.cs` (CollectionId, TripId)
-- [ ] Configuration'lar + unique (collection_id, trip_id) + migration
-- [ ] CQRS: Create/Update/Delete collection, Add/Remove trip, GetMyCollections, GetCollectionDetail
-- [ ] Endpoint'ler: `GET/POST/PUT/DELETE /api/v1/collections`, `POST/DELETE /api/v1/collections/{id}/trips/{tripId}`
+> **Öncelik notu (güncellendi):** Bu task artık **iki** M3 ekranı tarafından bekleniyor — Task 3.1 (My Trips → Kaydedilenler sekmesi) **ve** Task 3.2 (Trip Detail → `🔖 Kaydet` bottom sheet). Task 3.1 zaten bu bekleyişi **local mock collections** ile çözmüş durumda (kod tarafında implemente edilmiş, gerçek backend'i bekliyor). Task 3.2'nin Kaydet akışı da **aynı mock mekanizmasını** kullanmalı — B4.1'i M3'e zorunlu/bloklayıcı bağımlılık yapmak yerine, iki ekran da mock veriyle ilerler, B4.1 gerçekten implemente edildiğinde **ikisi birden** gerçek endpoint'lere geçirilir.
+
+**Kararlar (M3 tasarım oturumundan):**
+- Bir trip birden fazla koleksiyona eklenebilir (many-to-many)
+- Koleksiyon kapağı: kayıttaki ilk trip'in `CoverPhotoUrl`'i otomatik kullanılır; kullanıcı sonradan manuel değiştirebilir
+- Kaydetme akışı: `🔖 Kaydet` → bottom sheet → mevcut koleksiyonlar checkbox listesi + "Yeni koleksiyon" → seçim sonrası `POST` çağrısı
+
+- [ ] `SavedCollection.cs` (UserId, Name, CoverPhotoUrl? — nullable, auto-resolved) + `SavedCollectionTrip.cs` join table (SavedCollectionId, TripId) + unique constraint (collection_id, trip_id)
+- [ ] Configuration'lar + migration
+- [ ] **CoverPhotoUrl otomatik çözümü:** `GetCollectionDetail` handler'ı `CoverPhotoUrl` null ise koleksiyondaki ilk trip'in `CoverPhotoUrl`'ini döner (computed, DB'ye yazılmaz)
+- [ ] CQRS: `CreateCollection`, `RenameCollection`, `DeleteCollection`, `AddTripToCollection`, `RemoveTripFromCollection`, `GetMyCollections`, `GetCollectionDetail`
+- [ ] Endpoint'ler:
+  - `GET /api/v1/collections` — kullanıcının koleksiyonları (ad + trip sayısı + kapak)
+  - `POST /api/v1/collections` — yeni koleksiyon oluştur (body: `{ "name": "..." }`)
+  - `PUT /api/v1/collections/{id}` — yeniden adlandır
+  - `DELETE /api/v1/collections/{id}` — koleksiyonu sil (trip'ler silinmez, sadece ilişki kalkar)
+  - `POST /api/v1/collections/{id}/trips/{tripId}` — trip ekle
+  - `DELETE /api/v1/collections/{id}/trips/{tripId}` — trip çıkar
+  - `POST /api/v1/collections/{id}/cover-photo` — manuel kapak fotoğrafı yükle (BlobService)
 
 ### Task B4.2: Global Search
 
@@ -305,6 +611,20 @@ Kişisel düzenleme ve keşif katmanı. Mevcut saved-trips üzerine koleksiyonla
 - [ ] Fallback: app kurulu değil / domain doğrulanmadıysa link web doğrulama sayfasına düşmeye devam eder
 - [ ] Mobil ekiple koordinasyon: package name + SHA-256 imza parmak izi `assetlinks.json`'a eklenir
 
+### Task B4.6: Trending Destinations Endpoint
+
+**Tahmini Süre:** 2 saat
+**Durum:** [ ] Bekliyor
+
+> **Bağlam:** Home ekranındaki "İlham Al" destination kartları ve Destination Detail sayfası için backend'den şehir bazlı trending veri gerekiyor. Mevcut entity'lerde yeni tablo gerekmez; `TripDestination` üzerinden aggregation yapılır.
+>
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → M2 / Task 2.1` (Home "İlham Al" bölümü)
+
+- [ ] `GetTrendingDestinationsQuery` — `TripDestination` tablosunu `city` bazında grupla, published trip sayısına göre sırala, limit (default: 10) uygula
+- [ ] `TrendingDestinationResponse` DTO: `city`, `country`, `tripCount`, `coverPhotoUrl` (nullable — en çok upvote alan o şehirdeki trip'in kapak fotoğrafı)
+- [ ] Endpoint: `GET /api/v1/destinations/trending?limit=10` (anonim erişime açık)
+- [ ] Cache dostu: sonuç sık değişmez, ileride Redis ile önbelleğe alınabilir
+
 ### Definition of Done (B4)
 
 - [ ] Kullanıcı koleksiyon oluşturup trip ekleyebiliyor
@@ -312,6 +632,7 @@ Kişisel düzenleme ve keşif katmanı. Mevcut saved-trips üzerine koleksiyonla
 - [ ] Trip linki paylaşıldığında önizleme verisi var
 - [ ] Gezi günlüğü (not + foto) eklenebiliyor
 - [ ] Email doğrulama linki App Link uyumlu; app kuruluysa doğrudan app'te, değilse web'de açılıyor
+- [ ] Trending destination listesi endpoint'ten alınabiliyor
 
 ---
 
@@ -481,5 +802,23 @@ Lokal para birimi ana, kullanıcının para birimi ikincil gösterilecek. Backen
 - Her faz bağımsız deploy edilebilir; mobil ekip ilgili fazı bekler.
 - Yeni her endpoint Swagger'da `ProducesResponseType` ile dokümante edilir.
 - Yeni her entity için soft-delete gerekiyorsa `AuditableBaseEntity`, gerekmiyorsa `BaseEntity` kullanılır.
-- Block-aware görünürlük (`BlockVisibilityHelper`) yeni listeleme/arama endpoint'lerinde de uygulanır.
+- Block-aware görünürlük (`BlockVisibilityHelper`) yeni listeleme/arama endpoint'lerinde de uygulanur.
 - Mobil bağımlılık etiketi formatı: mobil roadmap'te **⛔ Bağımlılık: B{faz}.{task}** olarak geçer.
+
+---
+
+## 💡 Gelecek Fikirler (Kapsam Dışı — Şimdilik)
+
+### Fikir: Trip Görünürlük Kontrolü (Visibility Toggle)
+
+**Fikir:** Kullanıcının kendi published trip'ini `🌍 Herkese açık` / `👥 Takipçilere özel` / `🔒 Sadece ben` olarak işaretleyebilmesi (Instagram private hesap mantığına benzer 3 katmanlı görünürlük).
+
+**Motivasyon:** Şu an archive = "yayından çek, gizle" işlevi görüyor. Ancak bu ayrımı kullanıcıya daha sezgisel anlatmak için trip'e bir `Visibility` enum'u (`Public / FollowersOnly / Private`) eklenebilir. Private/FollowersOnly bir published trip Explore'dan düşer; FollowersOnly sadece owner'ı takip edenlere görünür, Private sadece owner'a. Owner her durumda Trip Detail'den görebilir ve düzenleyebilir.
+
+**Gerektirecekleri:**
+- `Trip` entity'sine `Visibility` enum alanı (migration gerekir) — `Public / FollowersOnly / Private`
+- `GET /explore`, `GET /api/v1/trips`, ve **`GetTripByIdQuery` (bkz. B0.10 güvenlik düzeltmesi)** query'lerinde visibility filtresi — `FollowersOnly` için `Follow` tablosuna karşı ek bir kontrol gerekir (istekte bulunan kullanıcı owner'ı takip ediyor mu)
+- `PATCH /api/v1/trips/{id}/visibility` endpoint'i
+- Mobil: Trip Detail `⋮` menüsüne 3 seçenekli visibility toggle eklenmesi
+
+**Öncelik:** ⚪ Ertelendi — B8 sonrası değerlendirilebilir. Mezuniyet projesi takvimi göz önüne alınarak şu an tasarım detayına girilmiyor, sadece fikir olarak not düşüldü.

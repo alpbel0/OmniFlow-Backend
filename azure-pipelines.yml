@@ -2,11 +2,11 @@ trigger:
 - main
 
 pool:
-  name: 'Default' # Senin localindeki Agent'ın ismi (YIGITALP ise oraya bak)
+  name: 'Default'
 
 variables:
   buildConfiguration: 'Release'
-  # Projenin yolu (Senin klasör yapına göre güncellendi)
+  solutionPath: 'OmniFlow/OmniFlow.sln'
   projectPath: 'OmniFlow/OmniFlow.WebApi/OmniFlow.WebApi.csproj'
 
 steps:
@@ -14,20 +14,28 @@ steps:
   displayName: 'Install .NET SDK'
   inputs:
     packageType: 'sdk'
-    version: '8.x' # .NET 8 kullandığın için
+    version: '8.x'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Restore'
+  displayName: 'Restore solution'
   inputs:
     command: 'restore'
-    projects: '$(projectPath)'
+    projects: '$(solutionPath)'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Build'
+  displayName: 'Build solution'
   inputs:
     command: 'build'
-    projects: '$(projectPath)'
-    arguments: '--configuration $(buildConfiguration)'
+    projects: '$(solutionPath)'
+    arguments: '--configuration $(buildConfiguration) --no-restore'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Test solution'
+  inputs:
+    command: 'test'
+    projects: '$(solutionPath)'
+    arguments: '--configuration $(buildConfiguration) --no-build --logger trx'
+    publishTestResults: true
 
 - task: DotNetCoreCLI@2
   displayName: 'Publish'
@@ -35,14 +43,12 @@ steps:
     command: 'publish'
     publishWebProjects: false
     projects: '$(projectPath)'
-    # --output $(Build.ArtifactStagingDirectory) kısmını koruyoruz
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)'
     zipAfterPublish: true
 
 - task: AzureRmWebAppDeployment@4
   displayName: 'Deploy to Azure Web App'
   inputs:
-    azureSubscription: 'OmniFlow-Azure-Conn' 
+    azureSubscription: 'OmniFlow-Azure-Conn'
     WebAppName: 'omniflow-backend'
-    # Burayı daha spesifik hale getirelim kanka:
     packageForLinux: '$(Build.ArtifactStagingDirectory)/*.zip'

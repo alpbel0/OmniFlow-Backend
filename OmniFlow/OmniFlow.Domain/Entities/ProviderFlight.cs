@@ -31,4 +31,10 @@ public class ProviderFlight : BaseEntity
 	public int? AvailableSeats { get; set; }
 
 	public string ProviderName { get; set; } = string.Empty;
+
+	public DateTime LastUpdatedAt { get; set; } = DateTime.UtcNow;
+
+	public bool IsLiveData { get; set; }
+
+	public DateOnly DataSnapshotDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
 }

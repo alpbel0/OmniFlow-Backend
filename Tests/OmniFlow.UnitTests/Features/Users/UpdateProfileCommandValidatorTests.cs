@@ -25,7 +25,8 @@ public class UpdateProfileCommandValidatorTests
 	{
 		var command = new UpdateProfileCommand
 		{
-			Bio = new string('a', 301)
+			Bio = new string('a', 301),
+			UpdateBio = true
 		};
 
 		var result = _validator.Validate(command);
