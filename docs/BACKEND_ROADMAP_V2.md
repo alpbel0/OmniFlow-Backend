@@ -76,19 +76,19 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 ### Task B0.5: User Profil Alanları Genişletme
 
 **Tahmini Süre:** 2 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bağlam:** Edit Profile ekranında "Konum" ve "Seyahat Stili" alanları ekleniyor. `TravelStyle` enum'u zaten domain'de mevcut. Bu task M2 profil ekranından önce tamamlanmalı.
 >
 > **Mobil karşılığı:** `MOBILE_ROADMAP.md → M2 / Task 2.4`
 
-- [ ] `User` entity'sine `Location` (string?, ör. "İstanbul, Türkiye") ve `TravelStyles` (List\<TravelStyle\>?, JSON kolonu) alanları eklensin
-- [ ] EF Core konfigürasyonu: `TravelStyles` → `jsonb` kolonu (PostgreSQL)
-- [ ] Migration
-- [ ] `UpdateProfileRequest`'e `Location` ve `TravelStyles` alanları eklensin
-- [ ] `UpdateProfileCommand` ve handler güncellenmesi
-- [ ] `UserProfileResponse`'a `Location` ve `TravelStyles` alanları eklensin
-- [ ] AutoMapper mapping güncellenmesi
+- [x] `User` entity'sine `Location` (string?, ör. "İstanbul, Türkiye") ve `TravelStyles` (List\<TravelStyle\>?, JSON kolonu) alanları eklensin
+- [x] EF Core konfigürasyonu: `TravelStyles` → `jsonb` kolonu (PostgreSQL)
+- [x] Migration
+- [x] `UpdateProfileRequest`'e `Location` ve `TravelStyles` alanları eklensin
+- [x] `UpdateProfileCommand` ve handler güncellenmesi
+- [x] `UserProfileResponse`'a `Location` ve `TravelStyles` alanları eklensin
+- [x] AutoMapper mapping güncellenmesi
 
 ### Task B0.6: Trip Tamamlanma Yüzdesi (%hazır)
 

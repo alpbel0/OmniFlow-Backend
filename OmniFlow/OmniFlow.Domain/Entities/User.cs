@@ -13,6 +13,10 @@ public class User : AuditableBaseEntity
 
 	public string? ProfilePhotoUrl { get; set; }
 
+	public string? Location { get; set; }
+
+	public List<TravelStyle> TravelStyles { get; set; } = new();
+
 	public int KarmaScore { get; set; } = 0;
 
 	public int FollowersCount { get; set; } = 0;

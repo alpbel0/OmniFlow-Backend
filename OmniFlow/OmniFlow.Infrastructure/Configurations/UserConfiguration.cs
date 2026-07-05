@@ -1,6 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OmniFlow.Domain.Entities;
+using OmniFlow.Domain.Enums;
+using System.Text.Json;
 
 namespace OmniFlow.Infrastructure.Configurations;
 
@@ -21,6 +25,22 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 		builder.Property(u => u.Email).HasColumnName("email").HasColumnType("citext").IsRequired();
 		builder.Property(u => u.Bio).HasColumnName("bio");
 		builder.Property(u => u.ProfilePhotoUrl).HasColumnName("profile_photo_url");
+		builder.Property(u => u.Location).HasColumnName("location").HasMaxLength(120);
+
+		var travelStyleConverter = new ValueConverter<List<TravelStyle>, string>(
+			v => SerializeTravelStyles(v),
+			v => DeserializeTravelStyles(v));
+		var travelStyleComparer = new ValueComparer<List<TravelStyle>>(
+			(a, b) => a != null && b != null && a.SequenceEqual(b),
+			v => v == null ? 0 : v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
+			v => v == null ? new List<TravelStyle>() : v.ToList());
+		builder.Property(u => u.TravelStyles)
+			.HasColumnName("travel_styles")
+			.HasColumnType("jsonb")
+			.HasDefaultValueSql("'[]'::jsonb")
+			.HasConversion(travelStyleConverter, travelStyleComparer)
+			.IsRequired();
+
 		builder.Property(u => u.KarmaScore).HasColumnName("karma_score").HasDefaultValue(0);
 		builder.Property(u => u.FollowersCount).HasColumnName("followers_count").HasDefaultValue(0);
 		builder.Property(u => u.FollowingCount).HasColumnName("following_count").HasDefaultValue(0);
@@ -40,5 +60,24 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 			.HasFilter("deleted_at IS NULL")
 			.IsUnique()
 			.HasDatabaseName("idx_users_email_unique");
+	}
+
+	private static string SerializeTravelStyles(List<TravelStyle>? travelStyles)
+	{
+		var styleNames = travelStyles?.Select(style => style.ToString()).ToArray()
+			?? Array.Empty<string>();
+
+		return JsonSerializer.Serialize(styleNames);
+	}
+
+	private static List<TravelStyle> DeserializeTravelStyles(string? value)
+	{
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			return new List<TravelStyle>();
+		}
+
+		var styleNames = JsonSerializer.Deserialize<List<string>>(value) ?? new List<string>();
+		return styleNames.Select(style => Enum.Parse<TravelStyle>(style)).ToList();
 	}
 }

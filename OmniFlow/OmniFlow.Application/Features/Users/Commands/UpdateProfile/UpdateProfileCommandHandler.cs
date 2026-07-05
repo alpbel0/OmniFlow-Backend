@@ -42,6 +42,20 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
 				: request.ProfilePhotoUrl.Trim();
 		}
 
+		if (request.UpdateLocation)
+		{
+			user.Location = string.IsNullOrWhiteSpace(request.Location)
+				? null
+				: request.Location.Trim();
+		}
+
+		if (request.UpdateTravelStyles)
+		{
+			user.TravelStyles = request.TravelStyles?
+				.Distinct()
+				.ToList() ?? new List<Domain.Enums.TravelStyle>();
+		}
+
 		await _userRepository.UpdateAsync(user);
 		return Unit.Value;
 	}

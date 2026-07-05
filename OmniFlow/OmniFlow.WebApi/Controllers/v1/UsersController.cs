@@ -158,7 +158,11 @@ public class UsersController : BaseApiController
 			Bio = request.Bio,
 			UpdateBio = true,
 			ProfilePhotoUrl = request.ProfilePhotoUrl,
-			UpdateProfilePhotoUrl = true
+			UpdateProfilePhotoUrl = true,
+			Location = request.Location,
+			UpdateLocation = true,
+			TravelStyles = request.TravelStyles,
+			UpdateTravelStyles = true
 		};
 
 		await Mediator.Send(command);

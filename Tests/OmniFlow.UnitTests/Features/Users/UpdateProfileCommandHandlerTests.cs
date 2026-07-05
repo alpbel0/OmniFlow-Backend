@@ -4,6 +4,7 @@ using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Domain.Entities;
+using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.UnitTests.Features.Users;
 
@@ -28,7 +29,11 @@ public class UpdateProfileCommandHandlerTests
 			Bio = "Updated bio",
 			UpdateBio = true,
 			ProfilePhotoUrl = "https://cdn.example.com/new.jpg",
-			UpdateProfilePhotoUrl = true
+			UpdateProfilePhotoUrl = true,
+			Location = "Istanbul, Turkiye",
+			UpdateLocation = true,
+			TravelStyles = new List<TravelStyle> { TravelStyle.Cultural },
+			UpdateTravelStyles = true
 		}, CancellationToken.None);
 
 		await act.Should().ThrowAsync<EntityNotFoundException>()
@@ -36,7 +41,7 @@ public class UpdateProfileCommandHandlerTests
 	}
 
 	[Fact]
-	public async Task Handle_ValidCommand_UpdatesBioAndProfilePhotoUrl()
+	public async Task Handle_ValidCommand_UpdatesProfileFields()
 	{
 		var currentUserId = Guid.NewGuid();
 		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
@@ -47,7 +52,9 @@ public class UpdateProfileCommandHandlerTests
 			Username = "alice",
 			Email = "alice@example.com",
 			Bio = "Old bio",
-			ProfilePhotoUrl = "https://cdn.example.com/old.jpg"
+			ProfilePhotoUrl = "https://cdn.example.com/old.jpg",
+			Location = "Old location",
+			TravelStyles = new List<TravelStyle> { TravelStyle.Relax }
 		};
 
 		_userRepositoryMock.Setup(x => x.GetByIdAsync(currentUserId)).ReturnsAsync(user);
@@ -62,11 +69,53 @@ public class UpdateProfileCommandHandlerTests
 			Bio = "  Updated bio  ",
 			UpdateBio = true,
 			ProfilePhotoUrl = "  https://cdn.example.com/new.jpg  ",
-			UpdateProfilePhotoUrl = true
+			UpdateProfilePhotoUrl = true,
+			Location = "  Istanbul, Turkiye  ",
+			UpdateLocation = true,
+			TravelStyles = new List<TravelStyle>
+			{
+				TravelStyle.Cultural,
+				TravelStyle.Adventure,
+				TravelStyle.Cultural
+			},
+			UpdateTravelStyles = true
 		}, CancellationToken.None);
 
 		user.Bio.Should().Be("Updated bio");
 		user.ProfilePhotoUrl.Should().Be("https://cdn.example.com/new.jpg");
+		user.Location.Should().Be("Istanbul, Turkiye");
+		user.TravelStyles.Should().Equal(TravelStyle.Cultural, TravelStyle.Adventure);
+		_userRepositoryMock.Verify(x => x.UpdateAsync(user), Times.Once);
+	}
+
+	[Fact]
+	public async Task Handle_NullTravelStyles_NormalizesToEmptyList()
+	{
+		var currentUserId = Guid.NewGuid();
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+
+		var user = new User
+		{
+			Id = currentUserId,
+			Username = "alice",
+			Email = "alice@example.com",
+			TravelStyles = new List<TravelStyle> { TravelStyle.Relax }
+		};
+
+		_userRepositoryMock.Setup(x => x.GetByIdAsync(currentUserId)).ReturnsAsync(user);
+		_userRepositoryMock.Setup(x => x.UpdateAsync(user)).Returns(Task.CompletedTask);
+
+		var handler = new UpdateProfileCommandHandler(
+			_userRepositoryMock.Object,
+			_authenticatedUserServiceMock.Object);
+
+		await handler.Handle(new UpdateProfileCommand
+		{
+			TravelStyles = null,
+			UpdateTravelStyles = true
+		}, CancellationToken.None);
+
+		user.TravelStyles.Should().BeEmpty();
 		_userRepositoryMock.Verify(x => x.UpdateAsync(user), Times.Once);
 	}
 }
