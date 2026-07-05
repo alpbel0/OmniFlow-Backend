@@ -73,6 +73,21 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var authClient = CreateAuthenticatedClient(token);
 
+        var createRequest = new CreateTripRequest
+        {
+            Title = "Completion Smoke Trip",
+            Origin = "Istanbul",
+            OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 10, 1),
+            EndDate = new DateOnly(2026, 10, 5),
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural }
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
         var response = await authClient.GetAsync("/api/v1/trips");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -83,6 +98,9 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         result.Should().NotBeNull();
         result!.PageNumber.Should().Be(1);
         result.PageSize.Should().Be(10);
+        result.Data.Should().NotBeEmpty();
+        result.Data.Should().OnlyContain(trip =>
+            trip.CompletionPercentage >= 0 && trip.CompletionPercentage <= 100);
     }
 
     // ── GET Trip By Id ────────────────────────────────────────────────────────────

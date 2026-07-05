@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
+using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
@@ -43,14 +44,39 @@ public class GetMyTripsQueryHandler : IRequestHandler<GetMyTripsQuery, GetMyTrip
 
         // Set IsSaved using batch query
         var tripIds = filteredTrips.Select(t => t.Id).ToList();
-        var savedTripIds = await _context.SavedTrips
-            .Where(s => s.UserId == currentUserId && tripIds.Contains(s.TripId))
-            .Select(s => s.TripId)
-            .ToListAsync(cancellationToken);
+        var tripById = filteredTrips.ToDictionary(t => t.Id);
+
+        List<Guid> savedTripIds = tripIds.Count == 0
+            ? new List<Guid>()
+            : await _context.SavedTrips
+                .Where(s => s.UserId == currentUserId && tripIds.Contains(s.TripId))
+                .Select(s => s.TripId)
+                .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, List<TripDestination>> destinationsByTripId = tripIds.Count == 0
+            ? new Dictionary<Guid, List<TripDestination>>()
+            : (await _context.TripDestinations
+                .Where(d => tripIds.Contains(d.TripId) && d.DeletedAt == null)
+                .OrderBy(d => d.OrderIndex)
+                .ToListAsync(cancellationToken))
+            .GroupBy(d => d.TripId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        Dictionary<Guid, List<TimelineEntry>> timelineEntriesByTripId = tripIds.Count == 0
+            ? new Dictionary<Guid, List<TimelineEntry>>()
+            : (await _context.TimelineEntries
+                .Where(e => tripIds.Contains(e.TripId) && e.DeletedAt == null)
+                .ToListAsync(cancellationToken))
+            .GroupBy(e => e.TripId)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         foreach (var response in tripResponses)
         {
             response.IsSaved = savedTripIds.Contains(response.Id);
+            var trip = tripById[response.Id];
+            destinationsByTripId.TryGetValue(response.Id, out var destinations);
+            timelineEntriesByTripId.TryGetValue(response.Id, out var timelineEntries);
+            response.CompletionPercentage = TripCompletionCalculator.Calculate(trip, destinations, timelineEntries);
         }
 
         return new GetMyTripsViewModel(

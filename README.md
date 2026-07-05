@@ -97,7 +97,7 @@ Social/system tables:
 ASP.NET Identity also maps `roles`, `user_roles`, `user_claims`, `user_logins`,
 `user_tokens`, and `role_claims`.
 
-Current enum count: 25. Current EF migration count: 13. See
+Current enum count: 25. Current EF migration count: 14. See
 [`docs/BACKEND_SCHEMA_MVP.md`](docs/BACKEND_SCHEMA_MVP.md) for the detailed as-built schema.
 
 ## Current Travel Styles

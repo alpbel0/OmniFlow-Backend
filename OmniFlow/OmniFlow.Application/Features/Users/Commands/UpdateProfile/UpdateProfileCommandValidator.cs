@@ -14,6 +14,19 @@ public class UpdateProfileCommandValidator : AbstractValidator<UpdateProfileComm
 			.MaximumLength(120)
 			.When(command => command.UpdateLocation && command.Location != null);
 
+		RuleFor(command => command.LocationLatitude)
+			.InclusiveBetween(-90, 90)
+			.When(command => command.UpdateLocationCoordinates && command.LocationLatitude.HasValue);
+
+		RuleFor(command => command.LocationLongitude)
+			.InclusiveBetween(-180, 180)
+			.When(command => command.UpdateLocationCoordinates && command.LocationLongitude.HasValue);
+
+		RuleFor(command => command)
+			.Must(command => command.LocationLatitude.HasValue == command.LocationLongitude.HasValue)
+			.WithMessage("Latitude and longitude must be provided together.")
+			.When(command => command.UpdateLocationCoordinates);
+
 		RuleForEach(command => command.TravelStyles)
 			.IsInEnum()
 			.When(command => command.UpdateTravelStyles && command.TravelStyles != null);

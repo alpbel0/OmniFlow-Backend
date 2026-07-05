@@ -49,6 +49,12 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
 				: request.Location.Trim();
 		}
 
+		if (request.UpdateLocationCoordinates)
+		{
+			user.LocationLatitude = request.LocationLatitude;
+			user.LocationLongitude = request.LocationLongitude;
+		}
+
 		if (request.UpdateTravelStyles)
 		{
 			user.TravelStyles = request.TravelStyles?

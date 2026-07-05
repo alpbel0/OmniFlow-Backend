@@ -16,6 +16,9 @@ public class UpdateProfileCommandValidatorTests
 			ProfilePhotoUrl = "https://cdn.example.com/profile.jpg",
 			Location = "Istanbul, Turkiye",
 			UpdateLocation = true,
+			LocationLatitude = 41.0082,
+			LocationLongitude = 28.9784,
+			UpdateLocationCoordinates = true,
 			TravelStyles = new List<TravelStyle> { TravelStyle.Cultural, TravelStyle.Adventure },
 			UpdateTravelStyles = true
 		};
@@ -53,6 +56,53 @@ public class UpdateProfileCommandValidatorTests
 
 		result.IsValid.Should().BeFalse();
 		result.Errors.Should().Contain(error => error.PropertyName == "Location");
+	}
+
+	[Fact]
+	public void Validate_OnlyLatitudeProvided_FailsValidation()
+	{
+		var command = new UpdateProfileCommand
+		{
+			LocationLatitude = 41.0082,
+			UpdateLocationCoordinates = true
+		};
+
+		var result = _validator.Validate(command);
+
+		result.IsValid.Should().BeFalse();
+		result.Errors.Should().Contain(error => error.ErrorMessage == "Latitude and longitude must be provided together.");
+	}
+
+	[Fact]
+	public void Validate_LatitudeOutsideRange_FailsValidation()
+	{
+		var command = new UpdateProfileCommand
+		{
+			LocationLatitude = 91,
+			LocationLongitude = 28.9784,
+			UpdateLocationCoordinates = true
+		};
+
+		var result = _validator.Validate(command);
+
+		result.IsValid.Should().BeFalse();
+		result.Errors.Should().Contain(error => error.PropertyName == "LocationLatitude");
+	}
+
+	[Fact]
+	public void Validate_LongitudeOutsideRange_FailsValidation()
+	{
+		var command = new UpdateProfileCommand
+		{
+			LocationLatitude = 41.0082,
+			LocationLongitude = 181,
+			UpdateLocationCoordinates = true
+		};
+
+		var result = _validator.Validate(command);
+
+		result.IsValid.Should().BeFalse();
+		result.Errors.Should().Contain(error => error.PropertyName == "LocationLongitude");
 	}
 
 	[Fact]

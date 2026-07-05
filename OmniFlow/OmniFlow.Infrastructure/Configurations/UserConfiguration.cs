@@ -26,6 +26,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 		builder.Property(u => u.Bio).HasColumnName("bio");
 		builder.Property(u => u.ProfilePhotoUrl).HasColumnName("profile_photo_url");
 		builder.Property(u => u.Location).HasColumnName("location").HasMaxLength(120);
+		builder.Property(u => u.LocationLatitude).HasColumnName("location_latitude");
+		builder.Property(u => u.LocationLongitude).HasColumnName("location_longitude");
 
 		var travelStyleConverter = new ValueConverter<List<TravelStyle>, string>(
 			v => SerializeTravelStyles(v),

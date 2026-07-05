@@ -90,18 +90,43 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 - [x] `UserProfileResponse`'a `Location` ve `TravelStyles` alanları eklensin
 - [x] AutoMapper mapping güncellenmesi
 
+### Task B0.5.1: Profil Mevcut Konum Koordinatları
+
+**Tahmini Süre:** 1 saat
+**Durum:** [x] Tamamlandı
+
+> **Bağlam:** Edit Profile ekranında "Mevcut konumu kullan" aksiyonu olacak. B0.5 şu an kullanıcıya gösterilecek `Location` text'ini saklıyor. Bu ek task, mobil cihazdan gelen GPS koordinatını da saklayarak B0.12 ve sonrası geocoding/reverse-geocoding işleri için altyapı hazırlar.
+>
+> **Not:** Bu task backend'de otomatik şehir/ülke üretmez. Şimdilik mobil `location` text'ini gönderebilir veya kullanıcı elle düzenleyebilir. Backend reverse geocoding B0.12 ve sonrası eklendiğinde `LocationLatitude` / `LocationLongitude` üzerinden `Location` otomatik üretilebilir.
+
+- [x] `User` entity'sine `LocationLatitude` (double?) ve `LocationLongitude` (double?) alanları eklensin
+- [x] EF Core konfigürasyonu + migration: `users.location_latitude`, `users.location_longitude`
+- [x] `UpdateProfileRequest` / `UpdateProfileCommand` / handler bu alanları desteklesin
+- [x] `UserProfileResponse` bu alanları dönsün
+- [x] Validation:
+  - [x] Latitude `-90..90`
+  - [x] Longitude `-180..180`
+  - [x] Koordinat update edilecekse latitude ve longitude birlikte gelsin
+- [x] Unit testler: valid koordinat update, tek koordinat eksikse validation fail, range dışı validation fail
+
 ### Task B0.6: Trip Tamamlanma Yüzdesi (%hazır)
 
 **Tahmini Süre:** 2 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bağlam:** My Trips ekranında Draft kartlarında "%40 hazır" gibi bir ilerleme göstergesi olacak. Migration gerekmez; `TripResponse`'a computed alan eklenir.
 >
 > **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.1`
 
-- [ ] `CompletionPercentage` (int, 0-100) alanı `TripResponse`'a eklenir — computed, DB'de saklanmaz
-- [ ] Hesaplama kuralları: Kapak fotoğrafı var (+20%), destinasyon eklenmiş (+20%), timeline entry var (+30%), bütçe girilmiş (+15%), trip adı/açıklaması dolu (+15%)
-- [ ] `GetMyTripsQuery` handler'ında hesaplanır; sadece kendi trip'lerinde döner (public trip response'da 0 veya null)
+- [x] `CompletionPercentage` (int, 0-100) alanı `TripResponse`'a eklenir — computed, DB'de saklanmaz
+- [x] Hesaplama kuralları daha detaylı readiness modeliyle yapılır:
+  - [x] **Temel bilgiler (20):** title dolu (+8), description dolu (+6), coverPhotoUrl var (+6)
+  - [x] **Seyahat bilgileri (25):** origin/originCountry dolu (+8), startDate/endDate mantıklı (+7), personCount > 0 (+4), travelStyles seçilmiş (+6)
+  - [x] **Destinasyon planı (25):** en az 1 destination var (+15), destination tarihleri dolu ve sıralı (+5), birden fazla destination varsa order düzgün (+5)
+  - [x] **Timeline/itinerary (20):** en az 1 timeline entry var (+10), her destination için en az 1 entry var (+7), entry'lerde start/end time veya dayNumber var (+3)
+  - [x] **Bütçe (10):** budgetTier var (+5), estimatedCost veya manualBudget var (+5)
+- [x] Sonuç 0-100 aralığında clamp edilir; eksik ilişkiler yüklenemiyorsa ilgili alt puan 0 sayılır, hesaplama hata fırlatmaz
+- [x] `GetMyTripsQuery` handler'ında hesaplanır; sadece kendi trip'lerinde döner (public trip response'da 0 veya null)
 
 ---
 
@@ -290,12 +315,14 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 - [ ] `TripDestination` entity'sine `Latitude` (double?), `Longitude` (double?) alanları + migration
 - [ ] `IGeocodingService` arayüzü + **Nominatim** implementasyonu — `City, Country` string'ini koordinata çevirir. Arayüz sağlayıcıdan bağımsız tasarlanır (ileride self-hosted Nominatim veya başka bir servise **config ile** geçilebilsin — base URL + provider seçimi `appsettings.json`'da)
+- [ ] **Reverse geocoding:** `IReverseGeocodingService` (veya `IGeocodingService` içinde ayrı reverse method) eklenir — `Latitude, Longitude` değerini şehir/ülke veya formatted location text'ine çevirir. Bu altyapı B0.5.1'de saklanan `User.LocationLatitude` / `User.LocationLongitude` değerlerinden `User.Location` üretmek için kullanılacak.
 - [ ] **Rate limiting:** Servis içinde bir kuyruk/semaphore ile giden istekler **max 1 istek/saniye** olacak şekilde sınırlanır (10 destinasyonluk bir wizard submit'i naif paralel çağrı yerine sıraya alınır)
 - [ ] **Cache:** Geocode sonuçları `(City, Country)` normalize edilmiş anahtarla **kalıcı (DB tablosu)** olarak cache'lenir — production'da in-memory cache yetersiz kalır (uygulama yeniden başlayınca/birden fazla instance'ta kaybolur, Nominatim policy'sinin "sonuçları cache'le" şartını kalıcı karşılamaz). In-memory sadece **dev/local'da DB'ye ek bir L1 hız katmanı** olarak opsiyonel kullanılabilir, tek başına yeterli değil. Aynı şehir (ör. "Paris, France") birden fazla trip/kullanıcı tarafından istenirse Nominatim'e tekrar gidilmez — bu, pratikte rate-limit baskısının büyük kısmını da çözer (popüler şehirler zaten cache'te olur)
 - [ ] **User-Agent:** İsteklerde uygulamayı tanımlayan özel bir `User-Agent` header'ı gönderilir (ör. `OmniFlow/1.0 (+iletişim e-postası)`), jenerik/varsayılan HTTP client UA'sı kullanılmaz
 - [ ] **Timeout:** Makul bir timeout (ör. 5 sn) — Nominatim yanıt vermezse hata toleransı kuralına (aşağıda) düşer, wizard submit'ini süresiz bekletmez
 - [ ] `CreateTripDestinationCommandHandler`, `UpdateTripDestinationCommandHandler` ve `CreateTripWizardCommandHandler` (destinasyon oluşturan/güncelleyen üç nokta) geocoding çağrısını yapacak şekilde güncellenir — **senkron ve cache+rate-limit korumalı** (M3 kapsamında background job/kuyruk sistemi **bilinçli olarak kurulmuyor** — basitlik tercih edildi). **Gerçekçi zamanlama:** 1 istek/saniye limiti nedeniyle, en kötü senaryoda (10 destinasyonun **hepsi cache miss** — yani hiçbiri daha önce başka bir trip'te geocode edilmemiş) wizard submit'i **10+ saniyeye kadar uzayabilir** (timeout'larla daha da fazla). Pratikte çoğu trip popüler şehirler içerdiği için cache sayesinde çok daha hızlı olması beklenir, ama worst-case bu kadar sürebileceği bilinerek kabul ediliyor. Mobil tarafta wizard submit zaten bir loading state gösteriyor, bu süre o loading state içinde karşılanır. İleride gerçek bir kullanıcı şikayeti/performans sorunu olursa arka plan job'una geçiş değerlendirilebilir
 - [ ] **Hata toleransı:** Geocoding başarısız olursa (servis erişilemez, timeout, şehir bulunamaz vb.) `Latitude`/`Longitude` `null` kalır — komut **hata fırlatmaz**, destinasyon yine de oluşturulur/güncellenir; mobil tarafta o destinasyon için pin gösterilmez, diğer pinler etkilenmez
+- [ ] **User profile reverse geocoding entegrasyonu:** B0.5.1 koordinatları geldiğinde backend `Location` text'i otomatik üretebilecek hale getirilir. Reverse geocoding başarısız olursa profil update'i başarısız olmaz; mevcut `Location` korunur veya request'te gelen manuel `Location` kullanılır.
 - [ ] `TripDestinationResponse`'a `Latitude`/`Longitude` (nullable) eklenir
 - [ ] Unit test: geocoding başarılı/başarısız senaryoları, mevcut destinasyon davranışının bozulmadığı
 

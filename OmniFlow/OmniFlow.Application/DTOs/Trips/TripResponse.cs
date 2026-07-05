@@ -28,6 +28,7 @@ public class TripResponse
     public BudgetTier? AdjustedBudgetTier { get; set; }
 
     public decimal? EstimatedCost { get; set; }
+    public int CompletionPercentage { get; set; }
     public int ForkCount { get; set; }
     public int UpvoteCount { get; set; }
     public int ViewCount { get; set; }

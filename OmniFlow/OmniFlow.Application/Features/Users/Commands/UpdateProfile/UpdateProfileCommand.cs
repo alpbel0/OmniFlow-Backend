@@ -11,6 +11,9 @@ public class UpdateProfileCommand : IRequest<Unit>
 	public bool UpdateProfilePhotoUrl { get; set; }
 	public string? Location { get; set; }
 	public bool UpdateLocation { get; set; }
+	public double? LocationLatitude { get; set; }
+	public double? LocationLongitude { get; set; }
+	public bool UpdateLocationCoordinates { get; set; }
 	public List<TravelStyle>? TravelStyles { get; set; }
 	public bool UpdateTravelStyles { get; set; }
 }

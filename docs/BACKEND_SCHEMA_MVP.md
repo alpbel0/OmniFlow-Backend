@@ -1,6 +1,6 @@
 # OmniFlow Backend - As-Built Schema Snapshot
 
-Last updated for `BACKEND_ROADMAP_V2` B0.5.
+Last updated for `BACKEND_ROADMAP_V2` B0.5.1.
 
 This document reflects the current backend codebase after the trip-planning cleanup. The legacy
 `Stop` model, `StopsController`, `IStopRepositoryAsync`, and flight/hotel `select` endpoints are no
@@ -57,7 +57,7 @@ table through ASP.NET Identity mapping.
 
 | Entity | Table | Notes |
 |--------|-------|-------|
-| `User` / `ApplicationUser` | `users` | Identity + domain profile in one table; includes profile location and travel styles |
+| `User` / `ApplicationUser` | `users` | Identity + domain profile in one table; includes profile location, GPS coordinates, and travel styles |
 | `Trip` | `trips` | Includes origin, wizard preferences, counters, tags |
 | `TripDestination` | `trip_destinations` | Ordered destination legs |
 | `TimelineEntry` | `timeline_entries` | Current itinerary item model |
@@ -160,7 +160,7 @@ Provider lookups remain under `ProvidersController`; trip-owned flight/hotel rea
 
 ## Migration List
 
-Current migration count: 13.
+Current migration count: 14.
 
 1. `20260316193107_InitialCreate`
 2. `20260414223328_AddProviderTables`
@@ -175,12 +175,13 @@ Current migration count: 13.
 11. `20260501112921_AllowOrderIndexZeroForShift`
 12. `20260705104746_AddProviderFreshnessFields`
 13. `20260705114209_AddUserProfileLocationTravelStyles`
+14. `20260705120607_AddUserProfileLocationCoordinates`
 
 Provider lookup responses include freshness metadata from provider tables:
 `LastUpdatedAt`, `IsLiveData`, and `DataSnapshotDate`.
 
-User profile responses include `Location` and `TravelStyles`; user `travel_styles` is stored as
-PostgreSQL `jsonb`.
+User profile responses include `Location`, `LocationLatitude`, `LocationLongitude`, and
+`TravelStyles`; user `travel_styles` is stored as PostgreSQL `jsonb`.
 
 ## Design Notes
 

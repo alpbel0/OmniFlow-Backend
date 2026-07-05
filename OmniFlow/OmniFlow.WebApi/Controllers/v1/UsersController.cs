@@ -161,6 +161,9 @@ public class UsersController : BaseApiController
 			UpdateProfilePhotoUrl = true,
 			Location = request.Location,
 			UpdateLocation = true,
+			LocationLatitude = request.LocationLatitude,
+			LocationLongitude = request.LocationLongitude,
+			UpdateLocationCoordinates = true,
 			TravelStyles = request.TravelStyles,
 			UpdateTravelStyles = true
 		};

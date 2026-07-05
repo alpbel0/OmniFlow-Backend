@@ -10,6 +10,8 @@ public class UserProfileResponse
 	public string? Bio { get; set; }
 	public string? ProfilePhotoUrl { get; set; }
 	public string? Location { get; set; }
+	public double? LocationLatitude { get; set; }
+	public double? LocationLongitude { get; set; }
 	public List<TravelStyle> TravelStyles { get; set; } = new();
 	public int KarmaScore { get; set; }
 	public int FollowersCount { get; set; }
