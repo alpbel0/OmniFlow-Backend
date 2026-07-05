@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Exceptions;
 using OmniFlow.Application.Interfaces;
-using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Application.Features.TripDestinations.Queries.GetTripDestinations;
 
@@ -12,15 +11,18 @@ public class GetTripDestinationsQueryHandler : IRequestHandler<GetTripDestinatio
 {
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
+    private readonly ITripVisibilityService _tripVisibilityService;
     private readonly IMapper _mapper;
 
     public GetTripDestinationsQueryHandler(
         IApplicationDbContext context,
         IAuthenticatedUserService authenticatedUserService,
+        ITripVisibilityService tripVisibilityService,
         IMapper mapper)
     {
         _context = context;
         _authenticatedUserService = authenticatedUserService;
+        _tripVisibilityService = tripVisibilityService;
         _mapper = mapper;
     }
 
@@ -33,31 +35,16 @@ public class GetTripDestinationsQueryHandler : IRequestHandler<GetTripDestinatio
             .OrderBy(d => d.OrderIndex)
             .ToListAsync(cancellationToken);
 
-        if (destinations.Count == 0)
-        {
-            var tripExists = await _context.Trips
+        var trip = destinations.Count > 0
+            ? destinations.First().Trip!
+            : await _context.Trips
                 .AsNoTracking()
-                .AnyAsync(t => t.Id == request.TripId && t.DeletedAt == null, cancellationToken);
+                .FirstOrDefaultAsync(t => t.Id == request.TripId && t.DeletedAt == null, cancellationToken);
 
-            if (!tripExists)
-                throw new EntityNotFoundException("Trip", request.TripId);
+        if (trip is null)
+            throw new EntityNotFoundException("Trip", request.TripId);
 
-            return new List<TripDestinationResponse>();
-        }
-
-        var trip = destinations.First().Trip!;
-
-        // Draft trips are owner-only
-        if (trip.Status == TripStatus.Draft)
-        {
-            var currentUserIdStr = _authenticatedUserService.UserId;
-            if (string.IsNullOrEmpty(currentUserIdStr))
-                throw new ForbiddenException("Authentication required to view draft trips.");
-
-            var currentUserId = Guid.Parse(currentUserIdStr);
-            if (trip.OwnerId != currentUserId)
-                throw new ForbiddenException("You are not authorized to view this draft trip.");
-        }
+        _tripVisibilityService.EnsureVisibleOrThrow(trip, _authenticatedUserService.UserId);
 
         return _mapper.Map<IReadOnlyList<TripDestinationResponse>>(destinations);
     }

@@ -13,6 +13,7 @@ using OmniFlow.Application.Features.TimelineEntries.Commands.UpdateTimelineEntry
 using OmniFlow.Application.Features.TimelineEntries.Queries.GetTimeline;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
+using OmniFlow.Application.Services;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
@@ -65,7 +66,7 @@ public class TimelineEntryHandlerTests
         _markVisitedHandler = new MarkEntryVisitedCommandHandler(
             _contextMock.Object, _timelineRepoMock.Object, _authServiceMock.Object);
         _getTimelineHandler = new GetTimelineQueryHandler(
-            _contextMock.Object, _timelineRepoMock.Object, _authServiceMock.Object, _mapperMock.Object);
+            _contextMock.Object, _timelineRepoMock.Object, _authServiceMock.Object, new TripVisibilityService(), _mapperMock.Object);
 
         _timelineRepoMock.Setup(x => x.AddAsync(It.IsAny<TimelineEntry>())).Returns((TimelineEntry e) => Task.FromResult(e));
         _contextMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
@@ -911,7 +912,7 @@ public class TimelineEntryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_GetTimeline_DraftTrip_NotOwner_ThrowsForbiddenException()
+    public async Task Handle_GetTimeline_DraftTrip_NotOwner_ThrowsEntityNotFoundException()
     {
         var userId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
@@ -921,6 +922,6 @@ public class TimelineEntryHandlerTests
         _contextMock.Setup(x => x.Trips).Returns(CreateAsyncMockDbSet(new List<Trip> { trip }).Object);
 
         var query = new GetTimelineQuery(trip.Id);
-        await Assert.ThrowsAsync<ForbiddenException>(() => _getTimelineHandler.Handle(query, CancellationToken.None));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _getTimelineHandler.Handle(query, CancellationToken.None));
     }
 }

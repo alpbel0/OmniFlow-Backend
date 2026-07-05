@@ -13,17 +13,20 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
     private readonly ITripRepositoryAsync _tripRepository;
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
+    private readonly ITripVisibilityService _tripVisibilityService;
     private readonly IMapper _mapper;
 
     public GetTripByIdQueryHandler(
         ITripRepositoryAsync tripRepository,
         IApplicationDbContext context,
         IAuthenticatedUserService authenticatedUserService,
+        ITripVisibilityService tripVisibilityService,
         IMapper mapper)
     {
         _tripRepository = tripRepository;
         _context = context;
         _authenticatedUserService = authenticatedUserService;
+        _tripVisibilityService = tripVisibilityService;
         _mapper = mapper;
     }
 
@@ -37,13 +40,16 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
             throw new EntityNotFoundException("Trip", request.TripId);
         }
 
-        var response = _mapper.Map<TripResponse>(trip);
+        _tripVisibilityService.EnsureVisibleOrThrow(trip, _authenticatedUserService.UserId);
+
         Guid? currentUserId = null;
 
         if (Guid.TryParse(_authenticatedUserService.UserId, out var parsedUserId))
         {
             currentUserId = parsedUserId;
         }
+
+        var response = _mapper.Map<TripResponse>(trip);
 
         if (ShouldIncrementViewCount(trip.OwnerId, currentUserId))
         {

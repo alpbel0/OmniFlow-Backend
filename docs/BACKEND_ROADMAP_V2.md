@@ -167,7 +167,7 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 ### Task B0.9: Trip Checklist Confirmation (Review Modu için)
 
 **Tahmini Süre:** 2.5 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bağlam:** Trip Detail'in yeni "Review Modu"nda (Kategori kartları — Flights/Hotels/Mekan) kullanıcı her checklist satırını **manuel olarak** işaretleyip "hallettim" diyebiliyor. Bu işaretleme, gerçek bir `Flight`/`Hotel` kaydının var olup olmamasından **bağımsız** — kullanıcı o bacağı uçakla, trenle veya kendi imkânıyla halletmiş olabilir, sistem bunu bilmiyor/bilmesi gerekmiyor.
 >
@@ -184,12 +184,12 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 - Destinasyon tarihleri değişip `NightCount` **azalırsa** → artık geçersiz `nightNumber`'a sahip confirmation'lar silinmez ama **okuma sırasında filtrelenir**: `GetTripChecklistStatusQuery`, önce güncel geçerli `ItemKey` setini (mevcut destinasyonlardan) hesaplar, sadece bunlarla eşleşen confirmation'ları döner — stale kayıtlar sessizce yok sayılır (fiziksel silme opsiyonel, doğruluk read-time filtrelemeyle garanti edilir)
 - Yeni destinasyon eklenirse veya `NightCount` artarsa → yeni `ItemKey`'ler otomatik "işaretlenmemiş" (confirmation kaydı yok = unchecked) olarak başlar, ekstra işlem gerekmez
 
-- [ ] `TripChecklistConfirmation.cs` entity (hafif, `BaseEntity`) — `TripId`, `ItemKey` (string, yukarıdaki format), `IsConfirmed` (bool), `ConfirmedAt` (DateTime?)
-- [ ] EF Core configuration + migration — unique index (`trip_id`, `item_key`)
-- [ ] `ToggleChecklistItemCommand` — owner kontrolü, idempotent (aynı state'e tekrar set etmek hata vermez)
-- [ ] `DeleteTripDestinationCommand` handler'ına o destinasyona ait `flight-leg:` / `hotel-night:` confirmation'larının temizlenmesi eklenir
-- [ ] `GetTripChecklistStatusQuery` — güncel geçerli `ItemKey` setini destinasyon verisinden hesaplar, sadece bunlarla eşleşen confirmation'ları döner (stale veri read-time'da filtrelenir)
-- [ ] Endpoint'ler ve tam contract (`TripsController` üzerinde, `GetById`/`GetBudgetSummary` ile aynı controller — casing tutarlılığı için `/api/v1/Trips/...`):
+- [x] `TripChecklistConfirmation.cs` entity (hafif, `BaseEntity`) — `TripId`, `ItemKey` (string, yukarıdaki format), `IsConfirmed` (bool), `ConfirmedAt` (DateTime?)
+- [x] EF Core configuration + migration — unique index (`trip_id`, `item_key`)
+- [x] `ToggleChecklistItemCommand` — owner kontrolü, idempotent (aynı state'e tekrar set etmek hata vermez)
+- [x] `DeleteTripDestinationCommand` handler'ına o destinasyona ait `flight-leg:` / `hotel-night:` confirmation'larının temizlenmesi eklenir
+- [x] `GetTripChecklistStatusQuery` — güncel geçerli `ItemKey` setini destinasyon verisinden hesaplar, sadece bunlarla eşleşen confirmation'ları döner (stale veri read-time'da filtrelenir)
+- [x] Endpoint'ler ve tam contract (`TripsController` üzerinde, `GetById`/`GetBudgetSummary` ile aynı controller — casing tutarlılığı için `/api/v1/Trips/...`):
   - `GET /api/v1/Trips/{id}/checklist` → response:
     ```json
     { "items": [
@@ -199,18 +199,18 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
     ```
     Sadece **güncel geçerli** `itemKey`'ler döner (stale olanlar read-time'da filtrelenmiş halde, yukarıdaki Reconciliation Kuralı'na göre). Ring hesaplaması (`seçilen/beklenen`) **client-side** yapılır — backend sadece ham confirmation state'i döner, beklenen sayı zaten mobilde mevcut destinasyon verisinden hesaplanabiliyor, backend'de tekrar hesaplamaya gerek yok
   - `PUT /api/v1/Trips/{id}/checklist/{itemKey}` — body: `{ "isConfirmed": true }`, response: **`204 No Content`** (netleşti — mobil zaten optimistic update kullandığı için response body'ye bağımlı değil, en basit kontrat bu)
-- [ ] **Visibility kuralı (B0.10 ile aynı desen — ayrıştırılmalı, kopyalanmamalı):**
+- [x] **Visibility kuralı (B0.10 ile aynı desen — ayrıştırılmalı, kopyalanmamalı):**
   - **`GetTripChecklistStatusQuery` (GET):** `[AllowAnonymous]` + handler'da `ITripVisibilityService` (B0.10'da tanımlanan paylaşılan helper) kullanılır — Published → **anonim dahil herkes okuyabilir** (misafir Trip Detail'de checklist'i salt-okunur görüyor, bkz. `TRIP_DETAILS_PAGE.md`), Draft/Archived → sadece owner, yetkisiz/anonim → `EntityNotFoundException` (404)
   - **`ToggleChecklistItemCommand` (PUT):** sınıf seviyesindeki `[Authorize]`'dan (override yok) — giriş gerektirir, **ayrıca owner kontrolü** (sadece trip owner'ı checklist işaretleyebilir; misafir/anonim PUT çağırırsa 401/403, GET'te salt-okunur görebilmesiyle çelişmez çünkü ikisi ayrı action, ayrı yetki seviyesi)
-- [ ] **URL encoding:** `itemKey` içindeki `:` karakterleri path segment'inde teknik olarak geçerlidir (RFC 3986 `pchar` seti `:` içerir), ama HTTP client kütüphaneleri (Retrofit/OkHttp) arasında tutarlılık için **mobil taraf `itemKey`'i açıkça percent-encode eder** (`:` → `%3A`) URL'i oluştururken. ASP.NET Core route binding, path parametrelerini **otomatik url-decode eder** — backend tarafında ekstra bir işlem gerekmez, sadece bu beklenti iki taraf arasında netleşmiş olsun
-- [ ] Mobil tarafta **optimistic update + hata durumunda geri alma** — mevcut app-wide konvansiyonla tutarlı (bkz. `MOBILE_ROADMAP.md` "UI State Konvansiyonu" → Aksiyon durumları), yeni bir pattern gerekmez
+- [x] **URL encoding:** `itemKey` içindeki `:` karakterleri path segment'inde teknik olarak geçerlidir (RFC 3986 `pchar` seti `:` içerir), ama HTTP client kütüphaneleri (Retrofit/OkHttp) arasında tutarlılık için **mobil taraf `itemKey`'i açıkça percent-encode eder** (`:` → `%3A`) URL'i oluştururken. ASP.NET Core route binding, path parametrelerini **otomatik url-decode eder** — backend tarafında ekstra bir işlem gerekmez, sadece bu beklenti iki taraf arasında netleşmiş olsun
+- [x] Mobil tarafta **optimistic update + hata durumunda geri alma** — mevcut app-wide konvansiyonla tutarlı (bkz. `MOBILE_ROADMAP.md` "UI State Konvansiyonu" → Aksiyon durumları), yeni bir pattern gerekmez
 
 ---
 
 ### Task B0.10: 🔴 GÜVENLİK — GetTripByIdQuery Owner/Status Kontrolü Eksik
 
 **Tahmini Süre:** 1 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 **Öncelik:** 🔴 Kritik — güvenlik açığı, diğer her şeyden önce yapılmalı
 
 > **Bulgu:** `GetTripByIdQueryHandler.cs` trip'i bulup **hiçbir owner/status kontrolü yapmadan** direkt döndürüyor. Şu an authenticated herhangi bir kullanıcı, ID'sini bilirse **başkasının Draft/Archived trip'ini** tam olarak görebiliyor. Diğer command'larda (`ArchiveTripCommandHandler` vb.) owner kontrolü var, ama bu **read** path'inde (Trip Detail'in kullandığı asıl endpoint) yok.
@@ -219,16 +219,17 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 >
 > **Karar (Explore ile tutarlılık):** `ExploreController` zaten `[AllowAnonymous]` + "Authentication is optional" yorumuyla anonim taramaya izin veriyor. Trip Detail/Budget Summary'nin de **gerçekten anonim** erişime açık olması gerekir — "misafir" burada sadece "başka bir login olmuş kullanıcı" değil, **giriş yapmamış kullanıcıyı da kapsar**.
 
-- [ ] `GetTripByIdQueryHandler`'a kontrol eklenir: `trip.Status != TripStatus.Published && trip.OwnerId != currentUserId` ise **`EntityNotFoundException`** fırlatılır (403/`ForbiddenException` değil — "yetkin yok" yerine "bulunamadı" denir, private trip'in var olduğu bile sızdırılmaz)
-- [ ] Anonim (giriş yapmamış) kullanıcı için de aynı kural geçerli — `currentUserId` yoksa `trip.Status != Published` durumunda 404 (mevcut `GetTripByIdQueryHandler`'daki `Guid.TryParse(_authenticatedUserService.UserId, ...)` pattern'i zaten anonim'i güvenli ele alıyor, `IsUpvoted`/`IsSaved` için kullanılan aynı desen)
-- [ ] **`[AllowAnonymous]` attribute'ü `TripsController.GetById` action'ına eklenir** — `[Authorize]` sınıf seviyesinden miras kalmasın
-- [ ] Integration test: guest/başka user'ın Draft/Archived trip'e erişimi 404 dönmeli; owner kendi Draft/Archived trip'ini görebilmeli; **anonim (token'sız) istek Published trip'i görebilmeli, Draft/Archived'de 404 almalı**
+- [x] `GetTripByIdQueryHandler`'a kontrol eklenir: `trip.Status != TripStatus.Published && trip.OwnerId != currentUserId` ise **`EntityNotFoundException`** fırlatılır (403/`ForbiddenException` değil — "yetkin yok" yerine "bulunamadı" denir, private trip'in var olduğu bile sızdırılmaz)
+- [x] Anonim (giriş yapmamış) kullanıcı için de aynı kural geçerli — `currentUserId` yoksa `trip.Status != Published` durumunda 404 (mevcut `GetTripByIdQueryHandler`'daki `Guid.TryParse(_authenticatedUserService.UserId, ...)` pattern'i zaten anonim'i güvenli ele alıyor, `IsUpvoted`/`IsSaved` için kullanılan aynı desen)
+- [x] **`[AllowAnonymous]` attribute'ü `TripsController.GetById` action'ına eklenir** — `[Authorize]` sınıf seviyesinden miras kalmasın
+- [x] Integration test: guest/başka user'ın Draft/Archived trip'e erişimi 404 dönmeli; owner kendi Draft/Archived trip'ini görebilmeli; **anonim (token'sız) istek Published trip'i görebilmeli, Draft/Archived'de 404 almalı**
+- [x] `EntityNotFoundException` → `404 Not Found` mapping'i mevcut `ErrorHandlerMiddleware` üzerinden HTTP integration testleriyle teyit edilir
 
 **Ek düzeltme (Budget privacy kararı — bütçe herkese açık, anonim dahil):** `GetBudgetSummaryQueryHandler.cs:36-37`'de şu an **katı owner-only** kontrolü var (`if (trip.OwnerId != currentUserId) throw new ForbiddenException(...)`). Trip Detail'deki Toplam Bütçe satırı artık **anonim dahil herkese açık** olacağı için bu kısıtlama **`GetTripByIdQueryHandler` ile aynı duruma (status-bazlı)** çevrilir:
-- [ ] `GetBudgetSummaryQueryHandler`'daki katı `ForbiddenException` kuralı kaldırılır, yerine `trip.Status != TripStatus.Published && trip.OwnerId != currentUserId` → `EntityNotFoundException` konur (Published trip'lerde owner olmayan **ve anonim** de görebilir; Draft/Archived'de sadece owner)
-- [ ] **`[AllowAnonymous]` attribute'ü `TripsController.GetBudgetSummary` action'ına eklenir**
-- [ ] `GetBudgetSummaryQueryHandler`'a da `GetTripByIdQueryHandler`'daki gibi anonim-güvenli `Guid.TryParse` deseni eklenir (şu an `Guid.Parse(_authService.UserId)` kullanıyor — anonim istekte `UserId` null/boş olursa bu **exception fırlatır**, `TryParse` ile güvenli hale getirilmeli)
-- [ ] İlgili unit/integration testler güncellenir (mevcut "sadece owner görebilir" testleri artık "Published'da herkes + anonim, Draft/Archived'de sadece owner" olarak değişir)
+- [x] `GetBudgetSummaryQueryHandler`'daki katı `ForbiddenException` kuralı kaldırılır, yerine `trip.Status != TripStatus.Published && trip.OwnerId != currentUserId` → `EntityNotFoundException` konur (Published trip'lerde owner olmayan **ve anonim** de görebilir; Draft/Archived'de sadece owner)
+- [x] **`[AllowAnonymous]` attribute'ü `TripsController.GetBudgetSummary` action'ına eklenir**
+- [x] `GetBudgetSummaryQueryHandler`'a da `GetTripByIdQueryHandler`'daki gibi anonim-güvenli `Guid.TryParse` deseni eklenir (şu an `Guid.Parse(_authService.UserId)` kullanıyor — anonim istekte `UserId` null/boş olursa bu **exception fırlatır**, `TryParse` ile güvenli hale getirilmeli)
+- [x] İlgili unit/integration testler güncellenir (mevcut "sadece owner görebilir" testleri artık "Published'da herkes + anonim, Draft/Archived'de sadece owner" olarak değişir)
 
 **⚠️ Kapsam genişletmesi (kod incelemesinde 2 kardeş handler'da aynı sınıf hata bulundu):** Bu güvenlik açığı sadece `GetTripByIdQuery`'ye özgü değilmiş — trip'in **child kaynaklarını** okuyan diğer handler'larda da aynı desen eksik/tutarsız:
 
@@ -240,29 +241,29 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 **Kök neden:** Bu mantık (trip Published değilse owner-only, 404 ile) her handler'da ayrı ayrı yazılıyor, bu yüzden tutarsızlıklar/eksiklikler çıkıyor. Çözüm: **paylaşılan bir visibility helper**.
 
-- [ ] `ITripVisibilityService` (veya basit bir static extension) eklenir — `EnsureVisibleOrThrow(Trip trip, string? currentUserIdString)`: `trip.Status != Published` ise `currentUserIdString`'i güvenli `TryParse` eder, parse başarısız (anonim) veya `trip.OwnerId != currentUserId` ise `EntityNotFoundException` (404) fırlatır
-- [ ] `GetTripByIdQueryHandler`, `GetBudgetSummaryQueryHandler`, `GetTimelineQueryHandler`, `GetTripDestinationsQueryHandler`, `GetRecommendedPlacesQueryHandler`, **ve B0.9'un `GetTripChecklistStatusQuery`'si** — **hepsi bu paylaşılan helper'ı kullanacak şekilde güncellenir/yazılır**, kendi ad-hoc kontrollerini kaldırırlar (checklist henüz implemente edilmediği için sıfırdan bu helper'la yazılır, diğerleri mevcut ad-hoc kontrollerini helper'a taşır)
-- [ ] `GetTimelineQueryHandler` ve `GetRecommendedPlacesQueryHandler`'daki güvensiz `Guid.Parse` → helper üzerinden güvenli hale gelir
-- [ ] `GetTripDestinationsQueryHandler`'a eksik olan `Archived` kontrolü eklenir (helper kullanılınca otomatik gelir)
-- [ ] **`[AllowAnonymous]` attribute'ü `TripsController.GetRecommendPlaces` action'ına eklenir**
-- [ ] Bu handler'lardaki mevcut `ForbiddenException` (403) davranışı da **`EntityNotFoundException` (404)**'a çevrilir — B0.10'un "private trip'in varlığı bile sızdırılmasın" prensibiyle tutarlı olsun
-- [ ] Integration test: **6 endpoint** (GetById, BudgetSummary, Timeline, Destinations, Checklist, RecommendPlaces) için de Draft/Archived + anonim/non-owner → 404; owner → 200; Published + anonim/herkes → 200
+- [x] `ITripVisibilityService` (veya basit bir static extension) eklenir — `EnsureVisibleOrThrow(Trip trip, string? currentUserIdString)`: `trip.Status != Published` ise `currentUserIdString`'i güvenli `TryParse` eder, parse başarısız (anonim) veya `trip.OwnerId != currentUserId` ise `EntityNotFoundException` (404) fırlatır
+- [x] `GetTripByIdQueryHandler`, `GetBudgetSummaryQueryHandler`, `GetTimelineQueryHandler`, `GetTripDestinationsQueryHandler`, `GetRecommendedPlacesQueryHandler`, **ve B0.9'un `GetTripChecklistStatusQuery`'si** — **hepsi bu paylaşılan helper'ı kullanacak şekilde güncellenir/yazılır**, kendi ad-hoc kontrollerini kaldırırlar (checklist henüz implemente edilmediği için sıfırdan bu helper'la yazılır, diğerleri mevcut ad-hoc kontrollerini helper'a taşır)
+- [x] `GetTimelineQueryHandler` ve `GetRecommendedPlacesQueryHandler`'daki güvensiz `Guid.Parse` → helper üzerinden güvenli hale gelir
+- [x] `GetTripDestinationsQueryHandler`'a eksik olan `Archived` kontrolü eklenir (helper kullanılınca otomatik gelir)
+- [x] **`[AllowAnonymous]` attribute'ü `TripsController.GetRecommendPlaces` action'ına eklenir**
+- [x] Bu handler'lardaki mevcut `ForbiddenException` (403) davranışı da **`EntityNotFoundException` (404)**'a çevrilir — B0.10'un "private trip'in varlığı bile sızdırılmasın" prensibiyle tutarlı olsun
+- [x] Integration test: **6 endpoint** (GetById, BudgetSummary, Timeline, Destinations, Checklist, RecommendPlaces) için de Draft/Archived + anonim/non-owner → 404; owner → 200; Published + anonim/herkes → 200
 
 ---
 
 ### Task B0.11: Trip Unarchive / Yeniden Yayınla
 
 **Tahmini Süre:** 1.5 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bağlam:** Şu an `Draft → Published → Archived` tek yönlü bir akış; Archived durumdan geri dönüş yok (sadece Delete mümkün). Trip Detail üst bar menüsünde Archived trip'ler için **"Yayına Al"** seçeneği isteniyor — bu, backend'de yeni bir komut gerektiriyor.
 >
 > **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.2` (üst bar `⋮` menü — durum bazlı içerik), tasarım detayları `omniflow-mobile/TRIP_DETAILS_PAGE.md`
 
-- [ ] `UnarchiveTripCommand` + Handler — `ArchiveTripCommandHandler` ile simetrik yapı: owner kontrolü (`ForbiddenException`), sadece `TripStatus.Archived` durumundaki trip'lere uygulanabilir (`ApiException` diğer durumlarda)
-- [ ] `trip.Status = TripStatus.Published` olarak günceller
-- [ ] Endpoint: `POST /api/v1/Trips/{id}/unarchive` *(büyük T — `TripsController`'ın `[controller]` token casing'iyle tutarlı, B0.14'teki `unpublish` ile aynı)*
-- [ ] Unit + integration test (owner/non-owner, yanlış durumdan unarchive denemesi)
+- [x] `UnarchiveTripCommand` + Handler — `ArchiveTripCommandHandler` ile simetrik yapı: owner kontrolü (`ForbiddenException`), sadece `TripStatus.Archived` durumundaki trip'lere uygulanabilir (`ApiException` diğer durumlarda)
+- [x] `trip.Status = TripStatus.Published` olarak günceller
+- [x] Endpoint: `POST /api/v1/Trips/{id}/unarchive` *(büyük T — `TripsController`'ın `[controller]` token casing'iyle tutarlı, B0.14'teki `unpublish` ile aynı)*
+- [x] Unit + integration test (owner/non-owner, yanlış durumdan unarchive denemesi)
 
 **Owner Menü İçeriği (durum bazlı, mobil tarafta uygulanacak):**
 

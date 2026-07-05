@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.SavedTrips.Commands.SaveTrip;
@@ -10,12 +11,15 @@ using OmniFlow.Application.Features.Trips.Commands.DeleteTrip;
 using OmniFlow.Application.Features.Trips.Commands.ForkTrip;
 using OmniFlow.Application.Features.Trips.Commands.PublishTrip;
 using OmniFlow.Application.Features.Trips.Commands.RemoveUpvoteTrip;
+using OmniFlow.Application.Features.Trips.Commands.ToggleChecklistItem;
+using OmniFlow.Application.Features.Trips.Commands.UnarchiveTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 using OmniFlow.Application.Features.Trips.Commands.UploadTripCoverPhoto;
 using OmniFlow.Application.Features.Trips.Commands.UpvoteTrip;
 using OmniFlow.Application.Features.Trips.Queries.GetBudgetSummary;
 using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
 using OmniFlow.Application.Features.Trips.Queries.GetRecommendedPlaces;
+using OmniFlow.Application.Features.Trips.Queries.GetTripChecklistStatus;
 using OmniFlow.Application.Features.Trips.Queries.GetTripById;
 using OmniFlow.Domain.Enums;
 
@@ -68,6 +72,7 @@ public class TripsController : BaseApiController
     }
 
     /// <summary>Get a specific trip by ID.</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(TripResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -149,6 +154,7 @@ public class TripsController : BaseApiController
     }
 
     /// <summary>Get real-time budget summary for a trip.</summary>
+    [AllowAnonymous]
     [HttpGet("{tripId:guid}/budget-summary")]
     [ProducesResponseType(typeof(BudgetSummaryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -162,6 +168,7 @@ public class TripsController : BaseApiController
     }
 
     /// <summary>Get scored place recommendations for a trip destination.</summary>
+    [AllowAnonymous]
     [HttpGet("{tripId:guid}/recommend-places")]
     [ProducesResponseType(typeof(RecommendedPlacesResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -240,6 +247,38 @@ public class TripsController : BaseApiController
         return Ok(result);
     }
 
+    /// <summary>Get review checklist confirmation state for a trip.</summary>
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/checklist")]
+    [ProducesResponseType(typeof(TripChecklistStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetChecklist([FromRoute] Guid id)
+    {
+        var result = await Mediator.Send(new GetTripChecklistStatusQuery { TripId = id });
+        return Ok(result);
+    }
+
+    /// <summary>Toggle a review checklist item confirmation state.</summary>
+    [HttpPut("{id:guid}/checklist/{itemKey}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleChecklistItem(
+        [FromRoute] Guid id,
+        [FromRoute] string itemKey,
+        [FromBody] ToggleChecklistItemRequest request)
+    {
+        await Mediator.Send(new ToggleChecklistItemCommand
+        {
+            TripId = id,
+            ItemKey = itemKey,
+            IsConfirmed = request.IsConfirmed
+        });
+
+        return NoContent();
+    }
+
     /// <summary>Delete a trip (soft delete).</summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -277,6 +316,20 @@ public class TripsController : BaseApiController
     public async Task<IActionResult> Archive([FromRoute] Guid id)
     {
         var command = new ArchiveTripCommand { TripId = id };
+        await Mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>Unarchive an archived trip and publish it again.</summary>
+    [HttpPost("{id:guid}/unarchive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Unarchive([FromRoute] Guid id)
+    {
+        var command = new UnarchiveTripCommand { TripId = id };
         await Mediator.Send(command);
         return NoContent();
     }

@@ -9,6 +9,7 @@ public interface IApplicationDbContext
 	DbSet<User> Users { get; }
 	DbSet<Trip> Trips { get; }
 	DbSet<TripDestination> TripDestinations { get; }
+	DbSet<TripChecklistConfirmation> TripChecklistConfirmations { get; }
 	DbSet<TimelineEntry> TimelineEntries { get; }
 	DbSet<Place> Places { get; }
 	DbSet<Flight> Flights { get; }

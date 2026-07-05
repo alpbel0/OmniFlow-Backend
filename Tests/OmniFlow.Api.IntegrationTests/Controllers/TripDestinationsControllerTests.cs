@@ -181,7 +181,7 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
     }
 
     [Fact]
-    public async Task GetDestinations_DraftTrip_OtherUser_Returns403()
+    public async Task GetDestinations_DraftTrip_OtherUser_Returns404()
     {
         var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var ownerClient = CreateAuthenticatedClient(ownerToken);
@@ -193,7 +193,7 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
         var otherClient = CreateAuthenticatedClient(otherToken);
 
         var response = await otherClient.GetAsync($"/api/v1/trips/{tripId}/destinations");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

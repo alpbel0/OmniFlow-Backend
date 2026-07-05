@@ -157,7 +157,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
-    public async Task GetTimeline_DraftTrip_OtherUser_Returns403()
+    public async Task GetTimeline_DraftTrip_OtherUser_Returns404()
     {
         var token = await GetAccessTokenAsync();
         var authClient = CreateAuthenticatedClient(token);
@@ -167,7 +167,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         var otherClient = CreateAuthenticatedClient(otherToken);
 
         var response = await otherClient.GetAsync($"/api/v1/trips/{tripId}/timeline");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

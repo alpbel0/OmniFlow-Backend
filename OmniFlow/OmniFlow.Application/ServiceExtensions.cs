@@ -26,6 +26,7 @@ public static class ServiceExtensions
         services.AddValidatorsFromAssembly(assembly);
         services.AddScoped<IKarmaService, KarmaService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<ITripVisibilityService, TripVisibilityService>();
 
         return services;
     }

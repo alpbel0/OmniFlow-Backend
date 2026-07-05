@@ -14,17 +14,20 @@ public class GetRecommendedPlacesQueryHandler : IRequestHandler<GetRecommendedPl
     private readonly IApplicationDbContext _context;
     private readonly IRecommendationService _recommendationService;
     private readonly IAuthenticatedUserService _authService;
+    private readonly ITripVisibilityService _tripVisibilityService;
 
     public GetRecommendedPlacesQueryHandler(
         ITripRepositoryAsync tripRepository,
         IApplicationDbContext context,
         IRecommendationService recommendationService,
-        IAuthenticatedUserService authService)
+        IAuthenticatedUserService authService,
+        ITripVisibilityService tripVisibilityService)
     {
         _tripRepository = tripRepository;
         _context = context;
         _recommendationService = recommendationService;
         _authService = authService;
+        _tripVisibilityService = tripVisibilityService;
     }
 
     public async Task<RecommendedPlacesResult> Handle(GetRecommendedPlacesQuery request, CancellationToken cancellationToken)
@@ -32,12 +35,7 @@ public class GetRecommendedPlacesQueryHandler : IRequestHandler<GetRecommendedPl
         var trip = await _tripRepository.GetByIdWithOwnerAndDestinationsAsync(request.TripId)
             ?? throw new EntityNotFoundException("Trip", request.TripId);
 
-        if (trip.Status != TripStatus.Published)
-        {
-            var currentUserId = Guid.Parse(_authService.UserId);
-            if (trip.OwnerId != currentUserId)
-                throw new ForbiddenException("You can only view recommended places for your own draft trips.");
-        }
+        _tripVisibilityService.EnsureVisibleOrThrow(trip, _authService.UserId);
 
         var destination = trip.Destinations.FirstOrDefault(d => d.Id == request.DestinationId)
             ?? throw new ApiException("Destination not found in this trip.", 400);

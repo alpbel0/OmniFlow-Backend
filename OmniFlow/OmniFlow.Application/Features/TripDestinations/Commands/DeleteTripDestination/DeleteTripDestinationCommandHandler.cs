@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.Exceptions;
+using OmniFlow.Application.Features.Trips.Checklist;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Domain.Enums;
 
@@ -42,6 +43,17 @@ public class DeleteTripDestinationCommandHandler : IRequestHandler<DeleteTripDes
 
             if (trip.Status != TripStatus.Draft)
                 throw new ApiException("Only draft trips can be modified.");
+
+            var relatedConfirmations = await _context.TripChecklistConfirmations
+                .Where(c => c.TripId == trip.Id)
+                .ToListAsync(cancellationToken);
+
+            var confirmationsToRemove = relatedConfirmations
+                .Where(c => TripChecklistItemKeyGenerator.BelongsToDestination(c.ItemKey, destination.Id))
+                .ToList();
+
+            if (confirmationsToRemove.Count > 0)
+                _context.TripChecklistConfirmations.RemoveRange(confirmationsToRemove);
 
             destination.DeletedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(cancellationToken);

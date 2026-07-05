@@ -5,6 +5,7 @@ using OmniFlow.Application.Exceptions;
 using OmniFlow.Application.Features.Trips.Queries.GetRecommendedPlaces;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
+using OmniFlow.Application.Services;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 
@@ -16,6 +17,7 @@ public class GetRecommendedPlacesHandlerTests
     private readonly Mock<IApplicationDbContext> _contextMock;
     private readonly Mock<IRecommendationService> _recommendationServiceMock;
     private readonly Mock<IAuthenticatedUserService> _authServiceMock;
+    private readonly ITripVisibilityService _tripVisibilityService = new TripVisibilityService();
 
     public GetRecommendedPlacesHandlerTests()
     {
@@ -55,7 +57,7 @@ public class GetRecommendedPlacesHandlerTests
         _authServiceMock.Setup(x => x.UserId).Returns(trip.OwnerId.ToString());
 
         var handler = new GetRecommendedPlacesQueryHandler(
-            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object);
+            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object, _tripVisibilityService);
 
         var query = new GetRecommendedPlacesQuery { TripId = tripId, DestinationId = destId };
         var result = await handler.Handle(query, CancellationToken.None);
@@ -91,7 +93,7 @@ public class GetRecommendedPlacesHandlerTests
         _authServiceMock.Setup(x => x.UserId).Returns(ownerId.ToString());
 
         var handler = new GetRecommendedPlacesQueryHandler(
-            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object);
+            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object, _tripVisibilityService);
 
         var query = new GetRecommendedPlacesQuery { TripId = tripId, DestinationId = destId };
         await handler.Handle(query, CancellationToken.None);
@@ -111,7 +113,7 @@ public class GetRecommendedPlacesHandlerTests
             .ReturnsAsync((Trip?)null);
 
         var handler = new GetRecommendedPlacesQueryHandler(
-            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object);
+            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object, _tripVisibilityService);
 
         var query = new GetRecommendedPlacesQuery { TripId = tripId, DestinationId = Guid.NewGuid() };
 
@@ -135,7 +137,7 @@ public class GetRecommendedPlacesHandlerTests
         _authServiceMock.Setup(x => x.UserId).Returns(trip.OwnerId.ToString());
 
         var handler = new GetRecommendedPlacesQueryHandler(
-            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object);
+            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object, _tripVisibilityService);
 
         var query = new GetRecommendedPlacesQuery { TripId = tripId, DestinationId = wrongDestId };
 
@@ -184,7 +186,7 @@ public class GetRecommendedPlacesHandlerTests
             .ReturnsAsync(new RecommendedPlacesResult { DailyCapacity = 5 });
 
         var handler = new GetRecommendedPlacesQueryHandler(
-            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object);
+            _tripRepoMock.Object, _contextMock.Object, _recommendationServiceMock.Object, _authServiceMock.Object, _tripVisibilityService);
 
         await handler.Handle(new GetRecommendedPlacesQuery { TripId = tripId, DestinationId = destId }, CancellationToken.None);
 

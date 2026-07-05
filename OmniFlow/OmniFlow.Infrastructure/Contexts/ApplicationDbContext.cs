@@ -22,6 +22,7 @@ public class ApplicationDbContext
 
 	public DbSet<Trip> Trips => Set<Trip>();
 	public DbSet<TripDestination> TripDestinations => Set<TripDestination>();
+	public DbSet<TripChecklistConfirmation> TripChecklistConfirmations => Set<TripChecklistConfirmation>();
 	public DbSet<TimelineEntry> TimelineEntries => Set<TimelineEntry>();
 	public DbSet<Place> Places => Set<Place>();
 	public DbSet<Flight> Flights => Set<Flight>();

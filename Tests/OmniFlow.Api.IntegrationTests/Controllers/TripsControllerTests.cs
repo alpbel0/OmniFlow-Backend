@@ -109,10 +109,23 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
     // ── GET Trip By Id ────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetById_WithoutToken_Returns401()
+    public async Task GetById_PublishedTripWithoutToken_Returns200AndAnonymousFlagsAreNull()
     {
-        var response = await _client.GetAsync($"/api/v1/trips/{Guid.NewGuid()}");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateAndPublishTripAsync(authClient);
+
+        var response = await _client.GetAsync($"/api/v1/trips/{tripId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var trip = JsonSerializer.Deserialize<TripResponse>(
+            await response.Content.ReadAsStringAsync(),
+            _json);
+
+        trip.Should().NotBeNull();
+        trip!.IsSaved.Should().BeNull();
+        trip.IsUpvoted.Should().BeNull();
     }
 
     [Fact]
@@ -147,11 +160,11 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GetById_AsDifferentUser_IncrementsViewCount()
+    public async Task GetById_AsDifferentUserForPublishedTrip_IncrementsViewCount()
     {
         var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var ownerClient = CreateAuthenticatedClient(ownerToken);
-        var tripId = await CreateTripAsync(ownerClient, "Visitor View Count Trip");
+        var tripId = await CreateAndPublishTripAsync(ownerClient);
 
         var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
         var visitorClient = CreateAuthenticatedClient(visitorToken);
@@ -365,6 +378,265 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
     // ── DELETE Trip ────────────────────────────────────────────────────────────────
 
     [Fact]
+    public async Task GetChecklist_ForPublishedTripWithoutToken_ReturnsCurrentItems()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "Published Checklist Trip");
+        await AddTimelineEntryAsync(trip.TripId, trip.Destinations[0].Id);
+
+        var publishResponse = await authClient.PostAsync($"/api/v1/trips/{trip.TripId}/publish", null);
+        publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var response = await _client.GetAsync($"/api/v1/Trips/{trip.TripId}/checklist");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = JsonSerializer.Deserialize<TripChecklistStatusResponse>(
+            await response.Content.ReadAsStringAsync(),
+            _json);
+
+        result.Should().NotBeNull();
+        result!.Items.Should().HaveCount(4);
+        result.Items.Should().Contain(i =>
+            i.ItemKey == $"flight-leg:{trip.Destinations[0].Id:D}:{trip.Destinations[1].Id:D}" &&
+            !i.IsConfirmed &&
+            i.ConfirmedAt == null);
+    }
+
+    [Fact]
+    public async Task GetChecklist_ForDraftTripWithoutToken_Returns404()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "Private Checklist Trip");
+
+        var response = await _client.GetAsync($"/api/v1/Trips/{trip.TripId}/checklist");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetChecklist_AsOwnerForArchivedTrip_Returns200()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "Archived Checklist Trip");
+        await AddTimelineEntryAsync(trip.TripId, trip.Destinations[0].Id);
+
+        var publishResponse = await authClient.PostAsync($"/api/v1/trips/{trip.TripId}/publish", null);
+        publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var archiveResponse = await authClient.PostAsync($"/api/v1/trips/{trip.TripId}/archive", null);
+        archiveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var response = await authClient.GetAsync($"/api/v1/Trips/{trip.TripId}/checklist");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task B010_ReadEndpoints_ForPublishedTrip_AllowAnonymous()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "B010 Published Visibility Trip");
+        await AddTimelineEntryAsync(trip.TripId, trip.Destinations[0].Id);
+
+        var publishResponse = await authClient.PostAsync($"/api/v1/trips/{trip.TripId}/publish", null);
+        publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var responses = await GetReadEndpointResponsesAsync(_client, trip.TripId, trip.Destinations[0].Id);
+
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task B010_ReadEndpoints_ForDraftTrip_Return404ForAnonymousAndNonOwner()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "B010 Draft Visibility Trip");
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+
+        var anonymousResponses = await GetReadEndpointResponsesAsync(_client, trip.TripId, trip.Destinations[0].Id);
+        var visitorResponses = await GetReadEndpointResponsesAsync(visitorClient, trip.TripId, trip.Destinations[0].Id);
+        var ownerResponses = await GetReadEndpointResponsesAsync(authClient, trip.TripId, trip.Destinations[0].Id);
+
+        anonymousResponses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.NotFound);
+        visitorResponses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.NotFound);
+        ownerResponses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task B010_ReadEndpoints_ForArchivedTrip_Return404ForAnonymousAndNonOwner()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "B010 Archived Visibility Trip");
+        await AddTimelineEntryAsync(trip.TripId, trip.Destinations[0].Id);
+
+        var publishResponse = await authClient.PostAsync($"/api/v1/trips/{trip.TripId}/publish", null);
+        publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var archiveResponse = await authClient.PostAsync($"/api/v1/trips/{trip.TripId}/archive", null);
+        archiveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+
+        var anonymousResponses = await GetReadEndpointResponsesAsync(_client, trip.TripId, trip.Destinations[0].Id);
+        var visitorResponses = await GetReadEndpointResponsesAsync(visitorClient, trip.TripId, trip.Destinations[0].Id);
+        var ownerResponses = await GetReadEndpointResponsesAsync(authClient, trip.TripId, trip.Destinations[0].Id);
+
+        anonymousResponses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.NotFound);
+        visitorResponses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.NotFound);
+        ownerResponses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task B010_GetDestinations_ForPrivateTripWithoutDestinations_Returns404ForAnonymousAndNonOwner()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateTripAsync(authClient, "B010 Empty Destination Private Trip");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var destinations = db.TripDestinations.Where(destination => destination.TripId == tripId).ToList();
+            db.TripDestinations.RemoveRange(destinations);
+            await db.SaveChangesAsync();
+        }
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+
+        var anonymousResponse = await _client.GetAsync($"/api/v1/trips/{tripId}/destinations");
+        var visitorResponse = await visitorClient.GetAsync($"/api/v1/trips/{tripId}/destinations");
+        var ownerResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/destinations");
+
+        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        visitorResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ToggleChecklistItem_AsOwner_ConfirmsAndClearsItem()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "Toggle Checklist Trip");
+        var itemKey = $"hotel-night:{trip.Destinations[0].Id:D}:1";
+
+        var confirmResponse = await authClient.PutAsJsonAsync(
+            $"/api/v1/Trips/{trip.TripId}/checklist/{Uri.EscapeDataString(itemKey)}",
+            new ToggleChecklistItemRequest { IsConfirmed = true });
+
+        confirmResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var confirmedResult = await GetChecklistAsync(authClient, trip.TripId);
+        var confirmedItem = confirmedResult.Items.Single(i => i.ItemKey == itemKey);
+        confirmedItem.IsConfirmed.Should().BeTrue();
+        confirmedItem.ConfirmedAt.Should().NotBeNull();
+
+        var clearResponse = await authClient.PutAsJsonAsync(
+            $"/api/v1/Trips/{trip.TripId}/checklist/{Uri.EscapeDataString(itemKey)}",
+            new ToggleChecklistItemRequest { IsConfirmed = false });
+
+        clearResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var clearedResult = await GetChecklistAsync(authClient, trip.TripId);
+        var clearedItem = clearedResult.Items.Single(i => i.ItemKey == itemKey);
+        clearedItem.IsConfirmed.Should().BeFalse();
+        clearedItem.ConfirmedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ToggleChecklistItem_AsNonOwner_Returns403()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var ownerClient = CreateAuthenticatedClient(ownerToken);
+        var trip = await CreateChecklistTripAsync(ownerClient, "Forbidden Checklist Trip");
+        var itemKey = $"hotel-night:{trip.Destinations[0].Id:D}:1";
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+
+        var response = await visitorClient.PutAsJsonAsync(
+            $"/api/v1/Trips/{trip.TripId}/checklist/{Uri.EscapeDataString(itemKey)}",
+            new ToggleChecklistItemRequest { IsConfirmed = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task ToggleChecklistItem_WithInvalidItemKey_Returns404()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "Invalid Checklist Trip");
+
+        var response = await authClient.PutAsJsonAsync(
+            $"/api/v1/Trips/{trip.TripId}/checklist/{Uri.EscapeDataString("hotel-night:invalid:1")}",
+            new ToggleChecklistItemRequest { IsConfirmed = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetChecklist_WithStaleConfirmation_FiltersStaleItem()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "Stale Checklist Trip");
+        const string staleItemKey = "hotel-night:00000000-0000-0000-0000-000000000000:9";
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            db.TripChecklistConfirmations.Add(new TripChecklistConfirmation
+            {
+                TripId = trip.TripId,
+                ItemKey = staleItemKey,
+                IsConfirmed = true,
+                ConfirmedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await GetChecklistAsync(authClient, trip.TripId);
+
+        result.Items.Should().NotContain(i => i.ItemKey == staleItemKey);
+        result.Items.Should().OnlyContain(i => i.ItemKey != staleItemKey);
+    }
+
+    [Fact]
+    public async Task DeleteDestination_RemovesRelatedChecklistConfirmations()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var trip = await CreateChecklistTripAsync(authClient, "Cleanup Checklist Trip");
+        var destinationToDelete = trip.Destinations[1];
+        var itemKey = $"flight-leg:{trip.Destinations[0].Id:D}:{destinationToDelete.Id:D}";
+
+        var toggleResponse = await authClient.PutAsJsonAsync(
+            $"/api/v1/Trips/{trip.TripId}/checklist/{Uri.EscapeDataString(itemKey)}",
+            new ToggleChecklistItemRequest { IsConfirmed = true });
+        toggleResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var deleteResponse = await authClient.DeleteAsync(
+            $"/api/v1/trips/{trip.TripId}/destinations/{destinationToDelete.Id}");
+
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.TripChecklistConfirmations
+            .Any(c => c.TripId == trip.TripId && c.ItemKey == itemKey)
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Delete_WithoutToken_Returns401()
     {
         var response = await _client.DeleteAsync($"/api/v1/trips/{Guid.NewGuid()}");
@@ -387,6 +659,83 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
     {
         var response = await _client.PostAsync($"/api/v1/trips/{Guid.NewGuid()}/archive", null);
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Unarchive_WithoutToken_Returns401()
+    {
+        var response = await _client.PostAsync($"/api/v1/Trips/{Guid.NewGuid()}/unarchive", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Unarchive_AsOwnerForArchivedTrip_Returns204AndPublishesTrip()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateAndArchiveTripAsync(authClient);
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unarchive", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.Trips.Single(t => t.Id == tripId).Status.Should().Be(TripStatus.Published);
+    }
+
+    [Fact]
+    public async Task Unarchive_AsNonOwner_Returns403()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var ownerClient = CreateAuthenticatedClient(ownerToken);
+        var tripId = await CreateAndArchiveTripAsync(ownerClient);
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+
+        var response = await visitorClient.PostAsync($"/api/v1/Trips/{tripId}/unarchive", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Unarchive_ForDraftTrip_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateTripAsync(authClient, "Draft Unarchive Trip");
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unarchive", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Unarchive_ForPublishedTrip_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateAndPublishTripAsync(authClient);
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unarchive", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Unarchive_AfterSuccess_AllowsAnonymousRead()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateAndArchiveTripAsync(authClient);
+
+        var unarchiveResponse = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unarchive", null);
+        unarchiveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var getResponse = await _client.GetAsync($"/api/v1/Trips/{tripId}");
+
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     // ── Full Flow Test ─────────────────────────────────────────────────────────────
@@ -1036,6 +1385,97 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
 
     // ── Helper Methods ─────────────────────────────────────────────────────────────
 
+    private static async Task<List<HttpResponseMessage>> GetReadEndpointResponsesAsync(
+        HttpClient client,
+        Guid tripId,
+        Guid destinationId)
+    {
+        return
+        [
+            await client.GetAsync($"/api/v1/Trips/{tripId}"),
+            await client.GetAsync($"/api/v1/Trips/{tripId}/budget-summary"),
+            await client.GetAsync($"/api/v1/trips/{tripId}/timeline"),
+            await client.GetAsync($"/api/v1/trips/{tripId}/destinations"),
+            await client.GetAsync($"/api/v1/Trips/{tripId}/checklist"),
+            await client.GetAsync($"/api/v1/Trips/{tripId}/recommend-places?destinationId={destinationId}")
+        ];
+    }
+
+    private async Task<CreateTripWizardResponse> CreateChecklistTripAsync(HttpClient authClient, string title)
+    {
+        var createRequest = new CreateTripWizardRequest
+        {
+            Title = title,
+            Origin = "Istanbul",
+            OriginCountry = "Turkey",
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelCompanion = TravelCompanion.Couple,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural },
+            Tempo = Tempo.Moderate,
+            TransportPreference = TransportPreference.PublicTransport,
+            Destinations =
+            [
+                new OmniFlow.Application.DTOs.TripDestinations.CreateTripDestinationRequest
+                {
+                    City = "Paris",
+                    Country = "France",
+                    ArrivalDate = new DateOnly(2026, 8, 1),
+                    DepartureDate = new DateOnly(2026, 8, 3),
+                    OrderIndex = 1
+                },
+                new OmniFlow.Application.DTOs.TripDestinations.CreateTripDestinationRequest
+                {
+                    City = "Rome",
+                    Country = "Italy",
+                    ArrivalDate = new DateOnly(2026, 8, 3),
+                    DepartureDate = new DateOnly(2026, 8, 4),
+                    OrderIndex = 2
+                }
+            ]
+        };
+
+        var response = await authClient.PostAsJsonAsync("/api/v1/trips/wizard", createRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var result = JsonSerializer.Deserialize<CreateTripWizardResponse>(
+            await response.Content.ReadAsStringAsync(),
+            _json);
+
+        result.Should().NotBeNull();
+        return result!;
+    }
+
+    private async Task AddTimelineEntryAsync(Guid tripId, Guid destinationId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        db.TimelineEntries.Add(TimelineEntry.CreateCustomEventEntry(
+            tripId,
+            destinationId,
+            1,
+            1000,
+            "Checklist publish entry",
+            new TimeOnly(10, 0),
+            60));
+
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task<TripChecklistStatusResponse> GetChecklistAsync(HttpClient client, Guid tripId)
+    {
+        var response = await client.GetAsync($"/api/v1/Trips/{tripId}/checklist");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = JsonSerializer.Deserialize<TripChecklistStatusResponse>(
+            await response.Content.ReadAsStringAsync(),
+            _json);
+
+        result.Should().NotBeNull();
+        return result!;
+    }
+
     private async Task<Guid> CreateAndPublishTripAsync(HttpClient authClient, int entryCount = 1)
     {
         // Create trip
@@ -1070,6 +1510,16 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         // Publish trip
         var publishResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);
         publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        return tripId;
+    }
+
+    private async Task<Guid> CreateAndArchiveTripAsync(HttpClient authClient)
+    {
+        var tripId = await CreateAndPublishTripAsync(authClient);
+
+        var archiveResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/archive", null);
+        archiveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         return tripId;
     }

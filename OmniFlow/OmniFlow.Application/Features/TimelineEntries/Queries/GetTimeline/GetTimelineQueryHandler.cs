@@ -5,7 +5,6 @@ using OmniFlow.Application.DTOs.TimelineEntries;
 using OmniFlow.Application.Exceptions;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
-using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.Application.Features.TimelineEntries.Queries.GetTimeline;
 
@@ -14,17 +13,20 @@ public class GetTimelineQueryHandler : IRequestHandler<GetTimelineQuery, List<Ti
     private readonly IApplicationDbContext _context;
     private readonly ITimelineEntryRepositoryAsync _timelineRepo;
     private readonly IAuthenticatedUserService _authService;
+    private readonly ITripVisibilityService _tripVisibilityService;
     private readonly IMapper _mapper;
 
     public GetTimelineQueryHandler(
         IApplicationDbContext context,
         ITimelineEntryRepositoryAsync timelineRepo,
         IAuthenticatedUserService authService,
+        ITripVisibilityService tripVisibilityService,
         IMapper mapper)
     {
         _context = context;
         _timelineRepo = timelineRepo;
         _authService = authService;
+        _tripVisibilityService = tripVisibilityService;
         _mapper = mapper;
     }
 
@@ -36,12 +38,7 @@ public class GetTimelineQueryHandler : IRequestHandler<GetTimelineQuery, List<Ti
             ?? throw new EntityNotFoundException("Trip", request.TripId);
 
         // 2. Authorization: Published = public, Draft/Archived = owner only
-        if (trip.Status != TripStatus.Published)
-        {
-            var currentUserId = Guid.Parse(_authService.UserId);
-            if (trip.OwnerId != currentUserId)
-                throw new ForbiddenException("You are not authorized to view this trip's timeline.");
-        }
+        _tripVisibilityService.EnsureVisibleOrThrow(trip, _authService.UserId);
 
         // 3. Load entries
         IReadOnlyList<Domain.Entities.TimelineEntry> entries;
