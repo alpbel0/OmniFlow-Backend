@@ -38,6 +38,22 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
         }
 
         var response = _mapper.Map<TripResponse>(trip);
+        Guid? currentUserId = null;
+
+        if (Guid.TryParse(_authenticatedUserService.UserId, out var parsedUserId))
+        {
+            currentUserId = parsedUserId;
+        }
+
+        if (ShouldIncrementViewCount(trip.OwnerId, currentUserId))
+        {
+            var updatedRows = await _context.IncrementTripViewCountAsync(request.TripId, cancellationToken);
+
+            if (updatedRows > 0)
+            {
+                response.ViewCount += 1;
+            }
+        }
 
         // Lightweight projection: daily entry counts via GROUP BY
         var dailyCounts = await _context.TimelineEntries
@@ -60,14 +76,14 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
             };
         }
 
-        if (Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId))
+        if (currentUserId.HasValue)
         {
             response.IsUpvoted = await _context.TripUpvotes.AnyAsync(
-                upvote => upvote.TripId == request.TripId && upvote.UserId == currentUserId,
+                upvote => upvote.TripId == request.TripId && upvote.UserId == currentUserId.Value,
                 cancellationToken);
 
             response.IsSaved = await _context.SavedTrips.AnyAsync(
-                savedTrip => savedTrip.TripId == request.TripId && savedTrip.UserId == currentUserId,
+                savedTrip => savedTrip.TripId == request.TripId && savedTrip.UserId == currentUserId.Value,
                 cancellationToken);
         }
         else
@@ -77,5 +93,10 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
         }
 
         return response;
+    }
+
+    private static bool ShouldIncrementViewCount(Guid ownerId, Guid? currentUserId)
+    {
+        return !currentUserId.HasValue || currentUserId.Value != ownerId;
     }
 }

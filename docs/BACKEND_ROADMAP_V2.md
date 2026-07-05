@@ -120,11 +120,11 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 - [x] `CompletionPercentage` (int, 0-100) alanı `TripResponse`'a eklenir — computed, DB'de saklanmaz
 - [x] Hesaplama kuralları daha detaylı readiness modeliyle yapılır:
-  - [x] **Temel bilgiler (20):** title dolu (+8), description dolu (+6), coverPhotoUrl var (+6)
-  - [x] **Seyahat bilgileri (25):** origin/originCountry dolu (+8), startDate/endDate mantıklı (+7), personCount > 0 (+4), travelStyles seçilmiş (+6)
-  - [x] **Destinasyon planı (25):** en az 1 destination var (+15), destination tarihleri dolu ve sıralı (+5), birden fazla destination varsa order düzgün (+5)
-  - [x] **Timeline/itinerary (20):** en az 1 timeline entry var (+10), her destination için en az 1 entry var (+7), entry'lerde start/end time veya dayNumber var (+3)
-  - [x] **Bütçe (10):** budgetTier var (+5), estimatedCost veya manualBudget var (+5)
+  - [x] **Temel bilgiler (15):** title dolu (+5), description dolu (+5), coverPhotoUrl var (+5)
+  - [x] **Seyahat bilgileri (20):** origin/originCountry dolu (+5), startDate/endDate mantıklı (+6), personCount > 0 (+3), travelStyles seçilmiş (+6)
+  - [x] **Destinasyon planı (20):** en az 1 destination var (+10), destination tarihleri dolu ve sıralı (+5), birden fazla destination varsa order düzgün (+5)
+  - [x] **Timeline/itinerary (40):** en az 1 timeline entry var (+8), her destination için en az 1 entry var (+10), entry'lerde start time veya dayNumber var (+6), her destination için timed entry var (+6), yeterli timeline derinliği var (+10)
+  - [x] **Bütçe (5):** estimatedCost veya manualBudget var (+5)
 - [x] Sonuç 0-100 aralığında clamp edilir; eksik ilişkiler yüklenemiyorsa ilgili alt puan 0 sayılır, hesaplama hata fırlatmaz
 - [x] `GetMyTripsQuery` handler'ında hesaplanır; sadece kendi trip'lerinde döner (public trip response'da 0 veya null)
 
@@ -133,34 +133,34 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 ### Task B0.7: Trip Görüntülenme Sayacı
 
 **Tahmini Süre:** 2 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bağlam:** My Trips / Published tab'ında "231 Görüntülenme" gibi bir metrik gösterilecek.
 >
 > **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.1`
 
-- [ ] `Trip` entity'sine `ViewCount` (int, default 0) kolonu ekle
-- [ ] EF Core konfigürasyonu: `HasDefaultValue(0)`
-- [ ] Migration
-- [ ] `GET /api/v1/Trips/{id}` handler'ında: **istek sahibi trip'in owner'ı değilse** `ViewCount++` (atomic increment, `ExecuteUpdateAsync`) — **anonim istekler de dahil** (B0.10 ile Published trip'ler anonime açıldığı için, koşul "authenticated + owner değil" değil, sadece "owner değil"; anonim zaten hiçbir zaman owner olamayacağı için bu koşulu otomatik sağlar ve sayaca dahil olur)
-- [ ] `TripResponse`'a `ViewCount` alanı eklenir
+- [x] `Trip` entity'sine `ViewCount` (int, default 0) kolonu ekle — mevcut şemada var
+- [x] EF Core konfigürasyonu: `HasDefaultValue(0)` — mevcut konfigürasyonda var
+- [x] Migration — yeni migration gerekmedi; `view_count` initial migration'da mevcut
+- [x] `GET /api/v1/Trips/{id}` handler'ında: **istek sahibi trip'in owner'ı değilse** `ViewCount++` (atomic increment, `ExecuteUpdateAsync`) — B0.7'de mevcut auth davranışı korunur; anonim erişim B0.10'da açıldığında aynı owner dışı kuralı çalışır
+- [x] `TripResponse`'a `ViewCount` alanı eklenir — mevcut response'da var
 
 ---
 
 ### Task B0.8: Trip Kapak Fotoğrafı Yükleme
 
 **Tahmini Süre:** 1.5 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bağlam:** My Trips kartlarında ve Trip Detail'de gerçek kapak fotoğrafı gösterilecek. Kullanıcı profil fotoğrafı için `POST /api/v1/users/me/profile-photo` zaten var; trip için eşdeğeri eksik.
 >
 > **Mobil karşılığı:** `MOBILE_ROADMAP.md → M3 / Task 3.1, 3.2`
 
-- [ ] `UploadTripCoverPhotoCommand` — multipart/form-data, owner kontrolü
-- [ ] Mevcut `BlobService` kullanılır (yeni altyapı gerekmez)
-- [ ] Trip entity'sindeki `CoverPhotoUrl` güncellenir
-- [ ] Endpoint: `POST /api/v1/trips/{id}/cover-photo` → `{ "coverPhotoUrl": "..." }` döner
-- [ ] `CompletionPercentage` hesabında kapak fotoğrafının varlığı bu alan üzerinden kontrol edilir (B0.6 ile koordineli)
+- [x] `UploadTripCoverPhotoCommand` — multipart/form-data, owner kontrolü
+- [x] Mevcut `BlobService` kullanılır (yeni altyapı gerekmez)
+- [x] Trip entity'sindeki `CoverPhotoUrl` güncellenir
+- [x] Endpoint: `POST /api/v1/Trips/{id}/cover-photo` → `{ "coverPhotoUrl": "..." }` döner
+- [x] `CompletionPercentage` hesabında kapak fotoğrafının varlığı bu alan üzerinden kontrol edilir (B0.6 ile koordineli)
 
 ---
 

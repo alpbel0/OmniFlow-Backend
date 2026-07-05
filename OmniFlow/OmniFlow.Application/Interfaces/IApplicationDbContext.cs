@@ -35,5 +35,7 @@ public interface IApplicationDbContext
 
 	DatabaseFacade Database { get; }
 
+	Task<int> IncrementTripViewCountAsync(Guid tripId, CancellationToken cancellationToken = default);
+
 	Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

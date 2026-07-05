@@ -11,6 +11,7 @@ using OmniFlow.Application.Features.Trips.Commands.ForkTrip;
 using OmniFlow.Application.Features.Trips.Commands.PublishTrip;
 using OmniFlow.Application.Features.Trips.Commands.RemoveUpvoteTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
+using OmniFlow.Application.Features.Trips.Commands.UploadTripCoverPhoto;
 using OmniFlow.Application.Features.Trips.Commands.UpvoteTrip;
 using OmniFlow.Application.Features.Trips.Queries.GetBudgetSummary;
 using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
@@ -26,6 +27,15 @@ namespace OmniFlow.WebApi.Controllers.v1;
 /// </summary>
 public class TripsController : BaseApiController
 {
+    private const long MaxCoverPhotoBytes = 5 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedCoverPhotoContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp"
+    };
+
 	private readonly IValidator<CreateTripRequest> _createValidator;
 	private readonly IValidator<UpdateTripRequest> _updateValidator;
 
@@ -198,6 +208,38 @@ public class TripsController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>Upload and set a trip cover photo.</summary>
+    [HttpPost("{id:guid}/cover-photo")]
+    [RequestSizeLimit(MaxCoverPhotoBytes)]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(UploadTripCoverPhotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadCoverPhoto(
+        [FromRoute] Guid id,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var validationError = ValidateCoverPhoto(file);
+        if (validationError is not null)
+            return BadRequest(new { message = validationError });
+
+        await using var stream = file.OpenReadStream();
+        var result = await Mediator.Send(
+            new UploadTripCoverPhotoCommand
+            {
+                TripId = id,
+                FileStream = stream,
+                ContentType = file.ContentType,
+                FileName = file.FileName
+            },
+            cancellationToken);
+
+        return Ok(result);
+    }
+
     /// <summary>Delete a trip (soft delete).</summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -302,5 +344,19 @@ public class TripsController : BaseApiController
         var command = new ForkTripCommand { TripId = id };
         var forkedTripId = await Mediator.Send(command);
         return CreatedAtAction(nameof(GetById), new { id = forkedTripId }, forkedTripId);
+    }
+
+    private static string? ValidateCoverPhoto(IFormFile file)
+    {
+        if (file is null || file.Length == 0)
+            return "Dosya gerekli.";
+
+        if (file.Length > MaxCoverPhotoBytes)
+            return $"Dosya en fazla {MaxCoverPhotoBytes / (1024 * 1024)} MB olabilir.";
+
+        if (!AllowedCoverPhotoContentTypes.Contains(file.ContentType ?? string.Empty))
+            return "Yalnızca jpeg, png veya webp resim dosyaları kabul edilir.";
+
+        return null;
     }
 }

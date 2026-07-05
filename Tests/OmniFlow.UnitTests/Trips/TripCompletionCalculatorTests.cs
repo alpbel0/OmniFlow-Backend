@@ -26,8 +26,16 @@ public class TripCompletionCalculatorTests
             "Museum",
             new TimeOnly(10, 0),
             90);
+        var secondEntry = TimelineEntry.CreateCustomEventEntry(
+            trip.Id,
+            destination.Id,
+            1,
+            1001,
+            "Dinner",
+            new TimeOnly(19, 0),
+            60);
 
-        var result = TripCompletionCalculator.Calculate(trip, [destination], [entry]);
+        var result = TripCompletionCalculator.Calculate(trip, [destination], [entry, secondEntry]);
 
         result.Should().Be(100);
     }
@@ -39,7 +47,7 @@ public class TripCompletionCalculatorTests
 
         var result = TripCompletionCalculator.Calculate(trip, [], []);
 
-        result.Should().Be(31);
+        result.Should().Be(19);
     }
 
     [Fact]
@@ -64,7 +72,7 @@ public class TripCompletionCalculatorTests
 
         var result = TripCompletionCalculator.Calculate(trip, [destination], []);
 
-        result.Should().Be(25);
+        result.Should().Be(20);
     }
 
     [Fact]
@@ -76,7 +84,7 @@ public class TripCompletionCalculatorTests
 
         var result = TripCompletionCalculator.Calculate(trip, [firstDestination, secondDestination], []);
 
-        result.Should().Be(20);
+        result.Should().Be(15);
     }
 
     private static Trip CreateBaseTrip()

@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.TimelineEntries;
 using OmniFlow.Application.DTOs.TripDestinations;
@@ -123,6 +126,49 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task GetById_AsOwner_DoesNotIncrementViewCount()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateTripAsync(authClient, "Owner View Count Trip");
+
+        var response = await authClient.GetAsync($"/api/v1/trips/{tripId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var trip = JsonSerializer.Deserialize<TripResponse>(await response.Content.ReadAsStringAsync(), _json);
+        trip.Should().NotBeNull();
+        trip!.ViewCount.Should().Be(0);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.Trips.Single(t => t.Id == tripId).ViewCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetById_AsDifferentUser_IncrementsViewCount()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var ownerClient = CreateAuthenticatedClient(ownerToken);
+        var tripId = await CreateTripAsync(ownerClient, "Visitor View Count Trip");
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+
+        var response = await visitorClient.GetAsync($"/api/v1/trips/{tripId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var trip = JsonSerializer.Deserialize<TripResponse>(await response.Content.ReadAsStringAsync(), _json);
+        trip.Should().NotBeNull();
+        trip!.ViewCount.Should().Be(1);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.Trips.Single(t => t.Id == tripId).ViewCount.Should().Be(1);
+    }
+
     // ── POST Create Trip ──────────────────────────────────────────────────────────
 
     [Fact]
@@ -233,6 +279,87 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         var response = await _client.PutAsJsonAsync($"/api/v1/trips/{Guid.NewGuid()}", request);
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UploadCoverPhoto_WithoutToken_Returns401()
+    {
+        using var client = CreateClientWithFakeBlobService();
+        using var content = CreateMultipart("file", "cover.jpg", "image/jpeg", "fake image");
+
+        var response = await client.PostAsync($"/api/v1/Trips/{Guid.NewGuid()}/cover-photo", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UploadCoverPhoto_AsOwner_ReturnsUrlAndUpdatesTrip()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        using var authClient = CreateClientWithFakeBlobService(token);
+        var tripId = await CreateTripAsync(authClient, "Cover Photo Trip");
+        using var content = CreateMultipart("file", "cover.jpg", "image/jpeg", "fake image");
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/cover-photo", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = JsonSerializer.Deserialize<UploadTripCoverPhotoResponse>(
+            await response.Content.ReadAsStringAsync(),
+            _json);
+
+        result.Should().NotBeNull();
+        result!.CoverPhotoUrl.Should().Be("https://blob.test/trip-cover-photos/cover.jpg");
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.Trips.Single(t => t.Id == tripId).CoverPhotoUrl.Should().Be(result.CoverPhotoUrl);
+    }
+
+    [Fact]
+    public async Task UploadCoverPhoto_AsNonOwner_Returns403()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        using var ownerClient = CreateClientWithFakeBlobService(ownerToken);
+        var tripId = await CreateTripAsync(ownerClient, "Forbidden Cover Photo Trip");
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        using var visitorClient = CreateClientWithFakeBlobService(visitorToken);
+        using var content = CreateMultipart("file", "cover.jpg", "image/jpeg", "fake image");
+
+        var response = await visitorClient.PostAsync($"/api/v1/Trips/{tripId}/cover-photo", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.Trips.Single(t => t.Id == tripId).CoverPhotoUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UploadCoverPhoto_WithUnsupportedContentType_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        using var authClient = CreateClientWithFakeBlobService(token);
+        var tripId = await CreateTripAsync(authClient, "Unsupported Cover Photo Trip");
+        using var content = CreateMultipart("file", "notes.txt", "text/plain", "not an image");
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/cover-photo", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UploadCoverPhoto_WithEmptyFile_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        using var authClient = CreateClientWithFakeBlobService(token);
+        var tripId = await CreateTripAsync(authClient, "Empty Cover Photo Trip");
+        using var content = CreateMultipart("file", "empty.jpg", "image/jpeg", string.Empty);
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/cover-photo", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     // ── DELETE Trip ────────────────────────────────────────────────────────────────
@@ -945,5 +1072,73 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         return tripId;
+    }
+
+    private async Task<Guid> CreateTripAsync(HttpClient authClient, string title)
+    {
+        var createRequest = new CreateTripRequest
+        {
+            Title = title,
+            Origin = "Antalya",
+            OriginCountry = "Turkey",
+            StartDate = new DateOnly(2026, 12, 1),
+            EndDate = new DateOnly(2026, 12, 5),
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Adventure }
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips", createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(
+            await createResponse.Content.ReadAsStringAsync(),
+            _json);
+
+        return createResult!.TripId;
+    }
+
+    private HttpClient CreateClientWithFakeBlobService(string? token = null)
+    {
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IBlobService>();
+                services.AddScoped<IBlobService, FakeBlobService>();
+            });
+        }).CreateClient();
+
+        if (!string.IsNullOrWhiteSpace(token))
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return client;
+    }
+
+    private static MultipartFormDataContent CreateMultipart(
+        string name,
+        string fileName,
+        string contentType,
+        string body)
+    {
+        var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes(body));
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        content.Add(fileContent, name, fileName);
+        return content;
+    }
+
+    private sealed class FakeBlobService : IBlobService
+    {
+        public Task<string> UploadAsync(
+            Stream stream,
+            string contentType,
+            string? originalFileName,
+            string? folder = null,
+            CancellationToken cancellationToken = default)
+        {
+            var safeFolder = string.IsNullOrWhiteSpace(folder) ? "root" : folder.Trim('/');
+            return Task.FromResult($"https://blob.test/{safeFolder}/{originalFileName}");
+        }
     }
 }

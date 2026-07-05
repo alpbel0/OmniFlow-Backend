@@ -46,6 +46,15 @@ public class ApplicationDbContext
 
 	public new DbSet<T> Set<T>() where T : class => base.Set<T>();
 
+	public Task<int> IncrementTripViewCountAsync(Guid tripId, CancellationToken cancellationToken = default)
+	{
+		return Trips
+			.Where(t => t.Id == tripId && t.DeletedAt == null)
+			.ExecuteUpdateAsync(
+				setters => setters.SetProperty(t => t.ViewCount, t => t.ViewCount + 1),
+				cancellationToken);
+	}
+
 	protected override void OnModelCreating(ModelBuilder builder)
 	{
 		base.OnModelCreating(builder);
