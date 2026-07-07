@@ -21,14 +21,10 @@ public class UsersController : BaseApiController
 	private const long MaxProfilePhotoBytes = 5 * 1024 * 1024;
 
 	private readonly IAuthenticatedUserService _authenticatedUserService;
-	private readonly IBlobService _blobService;
 
-	public UsersController(
-		IAuthenticatedUserService authenticatedUserService,
-		IBlobService blobService)
+	public UsersController(IAuthenticatedUserService authenticatedUserService)
 	{
 		_authenticatedUserService = authenticatedUserService;
-		_blobService = blobService;
 	}
 
 	[HttpGet("me")]
@@ -181,6 +177,7 @@ public class UsersController : BaseApiController
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
 	public async Task<IActionResult> UploadProfilePhoto(
 		IFormFile file,
+		[FromServices] IBlobService blobService,
 		CancellationToken cancellationToken)
 	{
 		if (file is null || file.Length == 0)
@@ -194,7 +191,7 @@ public class UsersController : BaseApiController
 			return BadRequest(new { message = "Yalnızca resim dosyaları kabul edilir." });
 
 		await using var stream = file.OpenReadStream();
-		var url = await _blobService.UploadAsync(
+		var url = await blobService.UploadAsync(
 			stream,
 			contentType,
 			file.FileName,
