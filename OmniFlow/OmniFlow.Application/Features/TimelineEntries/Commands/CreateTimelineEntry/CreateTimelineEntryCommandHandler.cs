@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.TimelineEntries;
 using OmniFlow.Application.Exceptions;
+using OmniFlow.Application.Features.Trips.Checklist;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Domain.Entities;
@@ -62,8 +63,12 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
         var destination = trip.Destinations.FirstOrDefault(d => d.Id == request.DestinationId && d.DeletedAt == null)
             ?? throw new EntityNotFoundException("TripDestination", request.DestinationId);
 
+        var planningSlotKey = ResolvePlanningSlotKey(request.PlanningSlotKey, trip.Destinations);
+        await EnsurePlanningSlotAvailableAsync(request.TripId, planningSlotKey, cancellationToken);
+
         // 5. Factory by EntryType
         TimelineEntry entry = await CreateEntryFromRequestAsync(request, trip, destination);
+        entry.SetPlanningSlotKey(planningSlotKey);
 
         // 6. LexoRank
         var lastEntry = await _timelineRepo.GetLastEntryInDayAsync(request.TripId, request.DestinationId, request.DayNumber);
@@ -87,6 +92,38 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
         }
 
         return _mapper.Map<TimelineEntryResponse>(entry);
+    }
+
+    private static string? ResolvePlanningSlotKey(string? planningSlotKey, IEnumerable<TripDestination> destinations)
+    {
+        if (string.IsNullOrWhiteSpace(planningSlotKey))
+            return null;
+
+        var trimmedKey = planningSlotKey.Trim();
+        var validItemKey = TripChecklistItemKeyGenerator
+            .Generate(destinations.Where(d => d.DeletedAt == null))
+            .FirstOrDefault(itemKey => itemKey.Equals(trimmedKey, StringComparison.OrdinalIgnoreCase));
+
+        return validItemKey ?? throw new EntityNotFoundException("TripChecklistConfirmation", trimmedKey);
+    }
+
+    private async Task EnsurePlanningSlotAvailableAsync(
+        Guid tripId,
+        string? planningSlotKey,
+        CancellationToken cancellationToken)
+    {
+        if (planningSlotKey is null)
+            return;
+
+        var slotAlreadyUsed = await _context.TimelineEntries
+            .AnyAsync(
+                entry => entry.TripId == tripId &&
+                         entry.PlanningSlotKey == planningSlotKey &&
+                         entry.DeletedAt == null,
+                cancellationToken);
+
+        if (slotAlreadyUsed)
+            throw new ApiException("A timeline entry already exists for this planning slot.", 409);
     }
 
     private async Task<TimelineEntry> CreateEntryFromRequestAsync(

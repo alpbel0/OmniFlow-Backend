@@ -12,6 +12,11 @@ public class CreateTimelineEntryRequestValidator : TimelineEntryBaseValidator<Cr
         RuleFor(x => x.DayNumber).GreaterThan(0).WithMessage("DayNumber must be greater than 0.");
         RuleFor(x => x.EntryType).IsInEnum().WithMessage("Invalid EntryType.");
 
+        RuleFor(x => x.PlanningSlotKey)
+            .MaximumLength(160)
+            .When(x => x.PlanningSlotKey != null)
+            .WithMessage("PlanningSlotKey must be 160 characters or fewer.");
+
         RuleFor(x => x)
             .Must(x => !(x.ProviderFlightId.HasValue && x.ProviderHotelId.HasValue))
             .WithMessage("ProviderFlightId and ProviderHotelId cannot both be set.");

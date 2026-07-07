@@ -38,6 +38,7 @@ public class TimelineController : BaseApiController
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateEntry(
         [FromRoute] Guid tripId,
         [FromBody] CreateTimelineEntryRequest request)
@@ -75,7 +76,8 @@ public class TimelineController : BaseApiController
             CurrencyCode: request.CurrencyCode,
             ProviderFlightId: request.ProviderFlightId,
             ProviderHotelId: request.ProviderHotelId,
-            Notes: request.Notes
+            Notes: request.Notes,
+            PlanningSlotKey: request.PlanningSlotKey
         );
 
         var result = await Mediator.Send(command);

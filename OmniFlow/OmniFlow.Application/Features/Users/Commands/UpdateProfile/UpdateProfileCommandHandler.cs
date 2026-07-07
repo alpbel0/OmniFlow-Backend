@@ -9,13 +9,16 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
 {
 	private readonly IUserRepositoryAsync _userRepository;
 	private readonly IAuthenticatedUserService _authenticatedUserService;
+	private readonly IGeocodingService _geocodingService;
 
 	public UpdateProfileCommandHandler(
 		IUserRepositoryAsync userRepository,
-		IAuthenticatedUserService authenticatedUserService)
+		IAuthenticatedUserService authenticatedUserService,
+		IGeocodingService geocodingService)
 	{
 		_userRepository = userRepository;
 		_authenticatedUserService = authenticatedUserService;
+		_geocodingService = geocodingService;
 	}
 
 	public async Task<Unit> Handle(UpdateProfileCommand request, CancellationToken cancellationToken)
@@ -42,11 +45,29 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
 				: request.ProfilePhotoUrl.Trim();
 		}
 
-		if (request.UpdateLocation)
+		var hasManualLocation = request.UpdateLocation && !string.IsNullOrWhiteSpace(request.Location);
+		var resolvedLocation = hasManualLocation
+			? request.Location!.Trim()
+			: null;
+
+		if (!hasManualLocation &&
+			request.UpdateLocationCoordinates &&
+			request.LocationLatitude.HasValue &&
+			request.LocationLongitude.HasValue)
 		{
-			user.Location = string.IsNullOrWhiteSpace(request.Location)
+			var reverseResult = await _geocodingService.ReverseGeocodeAsync(
+				request.LocationLatitude.Value,
+				request.LocationLongitude.Value,
+				cancellationToken);
+
+			resolvedLocation = string.IsNullOrWhiteSpace(reverseResult?.DisplayName)
 				? null
-				: request.Location.Trim();
+				: reverseResult.DisplayName.Trim();
+		}
+
+		if (request.UpdateLocation || resolvedLocation is not null)
+		{
+			user.Location = resolvedLocation;
 		}
 
 		if (request.UpdateLocationCoordinates)

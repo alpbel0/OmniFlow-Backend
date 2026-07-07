@@ -11,6 +11,7 @@ public class TimelineEntry : AuditableBaseEntity
     public Guid DestinationId { get; private set; }
     public int DayNumber { get; private set; }
     public TimelineEntryType EntryType { get; private set; }
+    public string? PlanningSlotKey { get; private set; }
 
     // === Ordering (public setter for reorder service) ===
     public double OrderIndex { get; set; }
@@ -453,6 +454,13 @@ public class TimelineEntry : AuditableBaseEntity
 
         DestinationId = destinationId;
         DayNumber = dayNumber;
+    }
+
+    public void SetPlanningSlotKey(string? planningSlotKey)
+    {
+        PlanningSlotKey = string.IsNullOrWhiteSpace(planningSlotKey)
+            ? null
+            : planningSlotKey.Trim();
     }
 
     // ------------------------------------------------------------------

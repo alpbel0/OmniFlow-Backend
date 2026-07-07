@@ -45,5 +45,6 @@ public record CreateTimelineEntryCommand(
     Guid? ProviderFlightId,
     Guid? ProviderHotelId,
 
-    string? Notes
+    string? Notes,
+    string? PlanningSlotKey = null
 ) : IRequest<OmniFlow.Application.DTOs.TimelineEntries.TimelineEntryResponse>;

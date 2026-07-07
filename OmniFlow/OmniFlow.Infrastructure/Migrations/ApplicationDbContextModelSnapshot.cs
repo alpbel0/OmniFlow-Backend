@@ -166,7 +166,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("blocked_user_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.HasKey("BlockerId", "BlockedUserId");
@@ -193,11 +193,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("content");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsVisible")
@@ -220,7 +220,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("post_id");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.Property<int>("UpvoteCount")
@@ -266,7 +266,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.HasKey("CommentId", "UserId");
@@ -290,11 +290,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("content");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsVisible")
@@ -312,7 +312,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("trip_id");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.Property<int>("UpvoteCount")
@@ -348,10 +348,10 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -362,10 +362,10 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("SentAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
@@ -392,7 +392,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("arrival_at");
 
                     b.Property<DateTime?>("BookedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("booked_at");
 
                     b.Property<string>("BookingReference")
@@ -410,7 +410,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("currency_code");
 
                     b.Property<DateTime>("DataFetchedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("data_fetched_at");
 
                     b.Property<string>("DataSource")
@@ -519,7 +519,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("following_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.HasKey("FollowerId", "FollowingId");
@@ -533,6 +533,79 @@ namespace OmniFlow.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OmniFlow.Domain.Entities.GeocodingCacheEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("country");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("ForwardKey")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)")
+                        .HasColumnName("forward_key");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ReverseKey")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("reverse_key");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "ForwardKey")
+                        .IsUnique()
+                        .HasDatabaseName("idx_geocoding_cache_forward")
+                        .HasFilter("forward_key IS NOT NULL AND deleted_at IS NULL");
+
+                    b.HasIndex("Provider", "ReverseKey")
+                        .IsUnique()
+                        .HasDatabaseName("idx_geocoding_cache_reverse")
+                        .HasFilter("reverse_key IS NOT NULL AND deleted_at IS NULL");
+
+                    b.ToTable("geocoding_cache_entries", (string)null);
+                });
+
             modelBuilder.Entity("OmniFlow.Domain.Entities.Hotel", b =>
                 {
                     b.Property<Guid>("Id")
@@ -541,7 +614,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<DateTime?>("BookedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("booked_at");
 
                     b.Property<string>("BookingReference")
@@ -571,7 +644,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("currency_code");
 
                     b.Property<DateTime>("DataFetchedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("data_fetched_at");
 
                     b.Property<string>("DataSource")
@@ -669,7 +742,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("actor_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<string>("EventType")
@@ -729,7 +802,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("actor_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<bool>("IsRead")
@@ -744,7 +817,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("notification_type");
 
                     b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("read_at");
 
                     b.Property<Guid?>("TargetId")
@@ -784,17 +857,17 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UsedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1035,11 +1108,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("country");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsVisible")
@@ -1080,7 +1153,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("trip_id");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.Property<int>("UpvoteCount")
@@ -1134,7 +1207,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.HasKey("PostId", "UserId");
@@ -1400,7 +1473,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<string>("DeviceFingerprint")
@@ -1408,11 +1481,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("device_fingerprint");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("expires_at");
 
                     b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("revoked_at");
 
                     b.Property<string>("TokenHash")
@@ -1452,7 +1525,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("trip_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.HasKey("UserId", "TripId");
@@ -1475,11 +1548,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("accommodation_address");
 
                     b.Property<DateTime?>("AccommodationCheckIn")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("accommodation_check_in");
 
                     b.Property<DateTime?>("AccommodationCheckOut")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("accommodation_check_out");
 
                     b.Property<string>("AddedBy")
@@ -1500,7 +1573,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("buffer_minutes");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<string>("CurrencyCode")
@@ -1539,7 +1612,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("day_number");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid>("DestinationId")
@@ -1556,11 +1629,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("entry_type");
 
                     b.Property<DateTime?>("FlightArrivalAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("flight_arrival_at");
 
                     b.Property<DateTime?>("FlightDepartureAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("flight_departure_at");
 
                     b.Property<string>("FlightFromAirport")
@@ -1607,6 +1680,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("place_id");
 
+                    b.Property<string>("PlanningSlotKey")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("planning_slot_key");
+
                     b.Property<decimal>("Price")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("numeric")
@@ -1646,11 +1724,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("trip_id");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.Property<DateTime?>("VisitedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("visited_at");
 
                     b.HasKey("Id");
@@ -1668,6 +1746,11 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.HasIndex("ProviderHotelId")
                         .HasDatabaseName("idx_timeline_entries_provider_hotel")
                         .HasFilter("provider_hotel_id IS NOT NULL");
+
+                    b.HasIndex("TripId", "PlanningSlotKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_timeline_entries_trip_planning_slot_active")
+                        .HasFilter("planning_slot_key IS NOT NULL AND deleted_at IS NULL");
 
                     b.HasIndex("TripId", "DestinationId", "DayNumber", "OrderIndex")
                         .HasDatabaseName("idx_timeline_entries_trip_dest_day_order");
@@ -1701,7 +1784,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.HasKey("TipId", "UserId");
@@ -1733,11 +1816,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("cover_photo_url");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<string>("Description")
@@ -1832,7 +1915,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("travel_styles");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.Property<int>("UpvoteCount")
@@ -1880,7 +1963,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<DateTime?>("ConfirmedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("confirmed_at");
 
                     b.Property<bool>("IsConfirmed")
@@ -1928,16 +2011,24 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("country");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<DateOnly>("DepartureDate")
                         .HasColumnType("date")
                         .HasColumnName("departure_date");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
 
                     b.Property<int>("NightCount")
                         .HasColumnType("integer")
@@ -1952,7 +2043,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("trip_id");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
@@ -1976,6 +2067,56 @@ namespace OmniFlow.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OmniFlow.Domain.Entities.TripRouteCache", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("response_json");
+
+                    b.Property<string>("RouteSignature")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("route_signature");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TripId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_trip_route_caches_trip_id_unique")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("trip_route_caches", (string)null);
+                });
+
             modelBuilder.Entity("OmniFlow.Domain.Entities.TripUpvote", b =>
                 {
                     b.Property<Guid>("TripId")
@@ -1987,7 +2128,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.HasKey("TripId", "UserId");
@@ -2009,11 +2150,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnName("bio");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<string>("Email")
@@ -2082,7 +2223,7 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasDefaultValueSql("'[]'::jsonb");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.Property<string>("Username")
@@ -2564,6 +2705,17 @@ namespace OmniFlow.Infrastructure.Migrations
                 {
                     b.HasOne("OmniFlow.Domain.Entities.Trip", "Trip")
                         .WithMany("Destinations")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("OmniFlow.Domain.Entities.TripRouteCache", b =>
+                {
+                    b.HasOne("OmniFlow.Domain.Entities.Trip", "Trip")
+                        .WithMany()
                         .HasForeignKey("TripId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

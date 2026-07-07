@@ -16,19 +16,22 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
     private readonly IAuthenticatedUserService _authenticatedUserService;
     private readonly IBudgetCalculationService _budgetService;
     private readonly IMapper _mapper;
+    private readonly IGeocodingService _geocodingService;
 
     public CreateTripWizardCommandHandler(
         IApplicationDbContext context,
         ITripRepositoryAsync tripRepository,
         IAuthenticatedUserService authenticatedUserService,
         IBudgetCalculationService budgetService,
-        IMapper mapper)
+        IMapper mapper,
+        IGeocodingService geocodingService)
     {
         _context = context;
         _tripRepository = tripRepository;
         _authenticatedUserService = authenticatedUserService;
         _budgetService = budgetService;
         _mapper = mapper;
+        _geocodingService = geocodingService;
     }
 
     public async Task<CreateTripWizardResponse> Handle(CreateTripWizardCommand request, CancellationToken cancellationToken)
@@ -39,6 +42,11 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
 
         foreach (var destRequest in request.Destinations.OrderBy(d => d.OrderIndex))
         {
+            var geocodingResult = await _geocodingService.GeocodeAsync(
+                destRequest.City,
+                destRequest.Country,
+                cancellationToken);
+
             var destination = new TripDestination(
                 destRequest.ArrivalDate,
                 destRequest.DepartureDate,
@@ -48,6 +56,7 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
             {
                 TripId = trip.Id
             };
+            destination.SetCoordinates(geocodingResult?.Latitude, geocodingResult?.Longitude);
 
             trip.Destinations.Add(destination);
         }

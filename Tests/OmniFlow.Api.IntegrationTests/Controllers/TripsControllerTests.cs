@@ -231,6 +231,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         result.Status.Should().Be(TripStatus.Draft);
         result.Destinations.Should().HaveCount(1);
         result.Destinations[0].City.Should().Be("Antalya");
+        result.Destinations[0].Latitude.Should().Be(41.0082);
+        result.Destinations[0].Longitude.Should().Be(28.9784);
     }
 
     [Fact]
@@ -738,6 +740,143 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    // ── POST Unpublish Trip ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Unpublish_WithoutToken_Returns401()
+    {
+        var response = await _client.PostAsync($"/api/v1/Trips/{Guid.NewGuid()}/unpublish", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Unpublish_AsOwnerForPublishedTrip_Returns204AndMovesTripToDraft()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateAndPublishTripAsync(authClient);
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unpublish", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.Trips.Single(t => t.Id == tripId).Status.Should().Be(TripStatus.Draft);
+    }
+
+    [Fact]
+    public async Task Unpublish_AsNonOwner_Returns403()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var ownerClient = CreateAuthenticatedClient(ownerToken);
+        var tripId = await CreateAndPublishTripAsync(ownerClient);
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+
+        var response = await visitorClient.PostAsync($"/api/v1/Trips/{tripId}/unpublish", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Unpublish_ForDraftTrip_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateTripAsync(authClient, "Draft Unpublish Trip");
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unpublish", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Unpublish_ForArchivedTrip_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateAndArchiveTripAsync(authClient);
+
+        var response = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unpublish", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Unpublish_AfterSuccess_HidesTripFromAnonymousAndNonOwnerButOwnerCanRead()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var ownerClient = CreateAuthenticatedClient(ownerToken);
+        var tripId = await CreateAndPublishTripAsync(ownerClient);
+
+        var unpublishResponse = await ownerClient.PostAsync($"/api/v1/Trips/{tripId}/unpublish", null);
+        unpublishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var anonymousResponse = await _client.GetAsync($"/api/v1/Trips/{tripId}");
+        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+        var visitorResponse = await visitorClient.GetAsync($"/api/v1/Trips/{tripId}");
+        visitorResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var ownerResponse = await ownerClient.GetAsync($"/api/v1/Trips/{tripId}");
+        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Unpublish_PreservesEngagementCountsAndSavedTrips()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var ownerClient = CreateAuthenticatedClient(ownerToken);
+        var tripId = await CreateAndPublishTripAsync(ownerClient);
+
+        var visitorToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var visitorClient = CreateAuthenticatedClient(visitorToken);
+        var saveResponse = await visitorClient.PostAsync($"/api/v1/Trips/{tripId}/save", null);
+        saveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var trip = db.Trips.Single(t => t.Id == tripId);
+            trip.UpvoteCount = 7;
+            trip.ForkCount = 4;
+            await db.SaveChangesAsync();
+        }
+
+        var response = await ownerClient.PostAsync($"/api/v1/Trips/{tripId}/unpublish", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var unpublishedTrip = verifyDb.Trips.Single(t => t.Id == tripId);
+        unpublishedTrip.Status.Should().Be(TripStatus.Draft);
+        unpublishedTrip.UpvoteCount.Should().Be(7);
+        unpublishedTrip.ForkCount.Should().Be(4);
+        verifyDb.SavedTrips.Count(savedTrip => savedTrip.TripId == tripId).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Unpublish_ThenPublishAgain_AllowsAnonymousRead()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateAndPublishTripAsync(authClient);
+
+        var unpublishResponse = await authClient.PostAsync($"/api/v1/Trips/{tripId}/unpublish", null);
+        unpublishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var publishResponse = await authClient.PostAsync($"/api/v1/Trips/{tripId}/publish", null);
+        publishResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var getResponse = await _client.GetAsync($"/api/v1/Trips/{tripId}");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     // ── Full Flow Test ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -974,6 +1113,20 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var adminClient = CreateAuthenticatedClient(adminToken);
         var tripId = await CreateAndPublishTripAsync(adminClient, entryCount: 3);
 
+        using (var setupScope = _factory.Services.CreateScope())
+        {
+            var setupDb = setupScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var originalDestinationId = setupDb.TripDestinations
+                .Where(d => d.TripId == tripId && d.DeletedAt == null)
+                .OrderBy(d => d.OrderIndex)
+                .Select(d => d.Id)
+                .First();
+            var originalEntry = setupDb.TimelineEntries
+                .First(e => e.TripId == tripId && e.DeletedAt == null);
+            originalEntry.SetPlanningSlotKey($"hotel-night:{originalDestinationId:D}:1");
+            await setupDb.SaveChangesAsync();
+        }
+
         // Get original trip fork count
         var getOriginalResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}");
         var originalTrip = JsonSerializer.Deserialize<TripResponse>(await getOriginalResponse.Content.ReadAsStringAsync(), _json);
@@ -1019,6 +1172,8 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         forkedDestinations.Select(d => (d.City, d.Country, d.ArrivalDate, d.DepartureDate, d.OrderIndex))
             .Should().BeEquivalentTo(originalDestinations.Select(d => (d.City, d.Country, d.ArrivalDate, d.DepartureDate, d.OrderIndex)));
         forkedTimelineEntries.Should().HaveCount(originalTimelineEntries.Count);
+        originalTimelineEntries.Should().Contain(e => e.PlanningSlotKey != null);
+        forkedTimelineEntries.Should().OnlyContain(e => e.PlanningSlotKey == null);
         forkedTimelineEntries.Select(e => (e.DayNumber, e.OrderIndex, e.EntryType, e.CustomName, e.IsVisited))
             .Should().BeEquivalentTo(originalTimelineEntries.Select(e => (e.DayNumber, e.OrderIndex, e.EntryType, e.CustomName, IsVisited: false)));
         forkedTimelineEntries.Should().OnlyContain(e => !e.IsVisited);

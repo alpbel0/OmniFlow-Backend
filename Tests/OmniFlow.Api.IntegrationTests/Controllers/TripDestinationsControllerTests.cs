@@ -251,7 +251,9 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
         var body = await getResponse.Content.ReadAsStringAsync();
         var destinations = JsonSerializer.Deserialize<List<TripDestinationResponse>>(body, _json);
         destinations!.Should().HaveCount(2);
-        destinations.Should().Contain(d => d.City == "Paris");
+        var paris = destinations.Single(d => d.City == "Paris");
+        paris.Latitude.Should().Be(41.0082);
+        paris.Longitude.Should().Be(28.9784);
     }
 
     [Fact]
@@ -409,7 +411,10 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
         var getResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/destinations");
         var body = await getResponse.Content.ReadAsStringAsync();
         var destinations = JsonSerializer.Deserialize<List<TripDestinationResponse>>(body, _json);
-        destinations!.First().City.Should().Be("Updated City");
+        var updatedDestination = destinations!.First();
+        updatedDestination.City.Should().Be("Updated City");
+        updatedDestination.Latitude.Should().Be(41.0082);
+        updatedDestination.Longitude.Should().Be(28.9784);
     }
 
     [Fact]

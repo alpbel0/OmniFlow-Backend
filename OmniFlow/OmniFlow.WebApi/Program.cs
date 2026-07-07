@@ -22,6 +22,8 @@ using OmniFlow.Infrastructure.Seeds;
 using OmniFlow.WebApi.Middlewares;
 using OmniFlow.WebApi.Services;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Application (MediatR, AutoMapper, FluentValidation, ValidationBehaviour) ──

@@ -202,7 +202,7 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 	public async Task GetTopContributors_WithoutToken_Returns200AndExcludesSuspendedUsers()
 	{
 		var suffix = Guid.NewGuid().ToString("N")[..8];
-		var activeUser = await CreateUserAsync($"000_leader_{suffix}", int.MaxValue, isSuspended: false, "https://cdn.example.com/leader.jpg");
+		var activeUser = await CreateUserAsync($"000000_leader_{suffix}", int.MaxValue, isSuspended: false, "https://cdn.example.com/leader.jpg");
 		var suspendedUser = await CreateUserAsync($"zzz_suspended_{suffix}", 1_000_000, isSuspended: true);
 
 		using (var scope = _factory.Services.CreateScope())
@@ -236,7 +236,7 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 			await db.SaveChangesAsync();
 		}
 
-		var response = await _client.GetAsync("/api/v1/users/top-contributors?limit=5");
+		var response = await _client.GetAsync("/api/v1/users/top-contributors?limit=50");
 
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 

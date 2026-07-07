@@ -10,6 +10,7 @@ public class TimelineEntryResponse
     public Guid DestinationId { get; set; }
     public int DayNumber { get; set; }
     public TimelineEntryType EntryType { get; set; }
+    public string? PlanningSlotKey { get; set; }
     public double OrderIndex { get; set; }
 
     // Place

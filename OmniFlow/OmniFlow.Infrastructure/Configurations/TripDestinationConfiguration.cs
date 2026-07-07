@@ -19,6 +19,8 @@ public class TripDestinationConfiguration : IEntityTypeConfiguration<TripDestina
 		builder.Property(d => d.TripId).HasColumnName("trip_id").IsRequired();
 		builder.Property(d => d.City).HasColumnName("city").IsRequired();
 		builder.Property(d => d.Country).HasColumnName("country").IsRequired();
+		builder.Property(d => d.Latitude).HasColumnName("latitude");
+		builder.Property(d => d.Longitude).HasColumnName("longitude");
 
 		// Backing fields for EF Core materialization to avoid premature RecalculateNightCount calls
 		builder.Property(d => d.ArrivalDate)

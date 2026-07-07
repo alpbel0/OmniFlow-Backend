@@ -267,7 +267,7 @@ public class TripsControllerSaveUpvoteTests : IClassFixture<CustomWebApplication
     }
 
     [Fact]
-    public async Task Save_DraftTrip_Returns400()
+    public async Task Save_DraftTrip_Returns204()
     {
         var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
         var authClient = CreateAuthenticatedClient(token);
@@ -275,7 +275,7 @@ public class TripsControllerSaveUpvoteTests : IClassFixture<CustomWebApplication
         var tripId = await CreateTripAsync(authClient);
 
         var response = await authClient.PostAsync($"/api/v1/trips/{tripId}/save", null);
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]

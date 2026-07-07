@@ -11,13 +11,16 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
 {
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
+    private readonly IGeocodingService _geocodingService;
 
     public CreateTripDestinationCommandHandler(
         IApplicationDbContext context,
-        IAuthenticatedUserService authenticatedUserService)
+        IAuthenticatedUserService authenticatedUserService,
+        IGeocodingService geocodingService)
     {
         _context = context;
         _authenticatedUserService = authenticatedUserService;
+        _geocodingService = geocodingService;
     }
 
     public async Task<Guid> Handle(CreateTripDestinationCommand request, CancellationToken cancellationToken)
@@ -40,6 +43,11 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
             if (trip.Status != TripStatus.Draft)
                 throw new ApiException("Only draft trips can be modified.");
 
+            var geocodingResult = await _geocodingService.GeocodeAsync(
+                request.City,
+                request.Country,
+                cancellationToken);
+
             var toShift = trip.Destinations
                 .Where(d => d.OrderIndex >= request.OrderIndex && d.DeletedAt == null)
                 .ToList();
@@ -56,6 +64,7 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
             {
                 TripId = trip.Id
             };
+            destination.SetCoordinates(geocodingResult?.Latitude, geocodingResult?.Longitude);
 
             await _context.TripDestinations.AddAsync(destination, cancellationToken);
 

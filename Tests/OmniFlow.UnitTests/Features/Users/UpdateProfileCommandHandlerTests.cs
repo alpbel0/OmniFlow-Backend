@@ -1,4 +1,5 @@
 using Moq;
+using OmniFlow.Application.DTOs.Geocoding;
 using OmniFlow.Application.Exceptions;
 using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
 using OmniFlow.Application.Interfaces;
@@ -12,6 +13,7 @@ public class UpdateProfileCommandHandlerTests
 {
 	private readonly Mock<IUserRepositoryAsync> _userRepositoryMock = new();
 	private readonly Mock<IAuthenticatedUserService> _authenticatedUserServiceMock = new();
+	private readonly Mock<IGeocodingService> _geocodingServiceMock = new();
 
 	[Fact]
 	public async Task Handle_UserNotFound_ShouldThrowEntityNotFoundException()
@@ -22,7 +24,8 @@ public class UpdateProfileCommandHandlerTests
 
 		var handler = new UpdateProfileCommandHandler(
 			_userRepositoryMock.Object,
-			_authenticatedUserServiceMock.Object);
+			_authenticatedUserServiceMock.Object,
+			_geocodingServiceMock.Object);
 
 		var act = async () => await handler.Handle(new UpdateProfileCommand
 		{
@@ -67,7 +70,8 @@ public class UpdateProfileCommandHandlerTests
 
 		var handler = new UpdateProfileCommandHandler(
 			_userRepositoryMock.Object,
-			_authenticatedUserServiceMock.Object);
+			_authenticatedUserServiceMock.Object,
+			_geocodingServiceMock.Object);
 
 		await handler.Handle(new UpdateProfileCommand
 		{
@@ -117,7 +121,8 @@ public class UpdateProfileCommandHandlerTests
 
 		var handler = new UpdateProfileCommandHandler(
 			_userRepositoryMock.Object,
-			_authenticatedUserServiceMock.Object);
+			_authenticatedUserServiceMock.Object,
+			_geocodingServiceMock.Object);
 
 		await handler.Handle(new UpdateProfileCommand
 		{
@@ -149,7 +154,8 @@ public class UpdateProfileCommandHandlerTests
 
 		var handler = new UpdateProfileCommandHandler(
 			_userRepositoryMock.Object,
-			_authenticatedUserServiceMock.Object);
+			_authenticatedUserServiceMock.Object,
+			_geocodingServiceMock.Object);
 
 		await handler.Handle(new UpdateProfileCommand
 		{
@@ -160,6 +166,116 @@ public class UpdateProfileCommandHandlerTests
 
 		user.LocationLatitude.Should().BeNull();
 		user.LocationLongitude.Should().BeNull();
+		_userRepositoryMock.Verify(x => x.UpdateAsync(user), Times.Once);
+	}
+
+	[Fact]
+	public async Task Handle_CoordinatesWithoutManualLocation_UsesReverseGeocodingLocation()
+	{
+		var currentUserId = Guid.NewGuid();
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+
+		var user = new User
+		{
+			Id = currentUserId,
+			Username = "alice",
+			Email = "alice@example.com"
+		};
+
+		_userRepositoryMock.Setup(x => x.GetByIdAsync(currentUserId)).ReturnsAsync(user);
+		_userRepositoryMock.Setup(x => x.UpdateAsync(user)).Returns(Task.CompletedTask);
+		_geocodingServiceMock
+			.Setup(x => x.ReverseGeocodeAsync(41.0082, 28.9784, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(new GeocodingResult { DisplayName = "Istanbul, Turkiye" });
+
+		var handler = new UpdateProfileCommandHandler(
+			_userRepositoryMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_geocodingServiceMock.Object);
+
+		await handler.Handle(new UpdateProfileCommand
+		{
+			LocationLatitude = 41.0082,
+			LocationLongitude = 28.9784,
+			UpdateLocationCoordinates = true
+		}, CancellationToken.None);
+
+		user.Location.Should().Be("Istanbul, Turkiye");
+		user.LocationLatitude.Should().Be(41.0082);
+		user.LocationLongitude.Should().Be(28.9784);
+	}
+
+	[Fact]
+	public async Task Handle_ManualLocation_DoesNotOverrideWithReverseGeocodingResult()
+	{
+		var currentUserId = Guid.NewGuid();
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+
+		var user = new User
+		{
+			Id = currentUserId,
+			Username = "alice",
+			Email = "alice@example.com"
+		};
+
+		_userRepositoryMock.Setup(x => x.GetByIdAsync(currentUserId)).ReturnsAsync(user);
+		_userRepositoryMock.Setup(x => x.UpdateAsync(user)).Returns(Task.CompletedTask);
+
+		var handler = new UpdateProfileCommandHandler(
+			_userRepositoryMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_geocodingServiceMock.Object);
+
+		await handler.Handle(new UpdateProfileCommand
+		{
+			Location = "  Manual Location  ",
+			UpdateLocation = true,
+			LocationLatitude = 41.0082,
+			LocationLongitude = 28.9784,
+			UpdateLocationCoordinates = true
+		}, CancellationToken.None);
+
+		user.Location.Should().Be("Manual Location");
+		_geocodingServiceMock.Verify(
+			x => x.ReverseGeocodeAsync(It.IsAny<double>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
+			Times.Never);
+	}
+
+	[Fact]
+	public async Task Handle_ReverseGeocodingFailure_DoesNotFailProfileUpdate()
+	{
+		var currentUserId = Guid.NewGuid();
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+
+		var user = new User
+		{
+			Id = currentUserId,
+			Username = "alice",
+			Email = "alice@example.com",
+			Location = "Old Location"
+		};
+
+		_userRepositoryMock.Setup(x => x.GetByIdAsync(currentUserId)).ReturnsAsync(user);
+		_userRepositoryMock.Setup(x => x.UpdateAsync(user)).Returns(Task.CompletedTask);
+		_geocodingServiceMock
+			.Setup(x => x.ReverseGeocodeAsync(41.0082, 28.9784, It.IsAny<CancellationToken>()))
+			.ReturnsAsync((GeocodingResult?)null);
+
+		var handler = new UpdateProfileCommandHandler(
+			_userRepositoryMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_geocodingServiceMock.Object);
+
+		await handler.Handle(new UpdateProfileCommand
+		{
+			LocationLatitude = 41.0082,
+			LocationLongitude = 28.9784,
+			UpdateLocationCoordinates = true
+		}, CancellationToken.None);
+
+		user.Location.Should().Be("Old Location");
+		user.LocationLatitude.Should().Be(41.0082);
+		user.LocationLongitude.Should().Be(28.9784);
 		_userRepositoryMock.Verify(x => x.UpdateAsync(user), Times.Once);
 	}
 }

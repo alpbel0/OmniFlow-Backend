@@ -113,8 +113,8 @@ public static class TestDatabaseSeeder
     {
         var dbContext = serviceProvider.GetRequiredService<IApplicationDbContext>();
 
-        var now = DateTime.UtcNow;
         var baseDate = ProviderSeedDate.ToDateTime(new TimeOnly(10, 0), DateTimeKind.Unspecified);
+        var hotelValidDate = ProviderSeedDate.AddDays(1);
 
         await UpsertProviderFlightAsync(dbContext, new ProviderFlight
         {
@@ -251,7 +251,7 @@ public static class TestDatabaseSeeder
             Stars = 2,
             Rating = 3.5,
             ReviewCount = 120,
-            ValidDate = DateOnly.FromDateTime(now),
+            ValidDate = hotelValidDate,
             PricePerNight = 80,
             CurrencyCode = "USD",
             IsAvailable = true,
@@ -267,7 +267,7 @@ public static class TestDatabaseSeeder
             Stars = 3,
             Rating = 4.0,
             ReviewCount = 350,
-            ValidDate = DateOnly.FromDateTime(now),
+            ValidDate = hotelValidDate,
             PricePerNight = 150,
             CurrencyCode = "USD",
             IsAvailable = true,
@@ -283,12 +283,42 @@ public static class TestDatabaseSeeder
             Stars = 5,
             Rating = 4.8,
             ReviewCount = 890,
-            ValidDate = DateOnly.FromDateTime(now),
+            ValidDate = hotelValidDate,
             PricePerNight = 300,
             CurrencyCode = "USD",
             IsAvailable = true,
             ProviderName = "MockProvider"
         });
+
+        var supplementalParisHotelPrices = new[]
+        {
+            (Id: "b4444444-4444-4444-4444-444444444444", Name: "Paris Hostel", Stars: 1, Rating: 3.2, Reviews: 80, Price: 50m),
+            (Id: "b5555555-5555-5555-5555-555555555555", Name: "Paris Central Lodge", Stars: 2, Rating: 3.7, Reviews: 140, Price: 100m),
+            (Id: "b6666666-6666-6666-6666-666666666666", Name: "Paris Garden Hotel", Stars: 3, Rating: 3.9, Reviews: 190, Price: 120m),
+            (Id: "b7777777-7777-7777-7777-777777777777", Name: "Paris River Hotel", Stars: 3, Rating: 4.1, Reviews: 260, Price: 180m),
+            (Id: "b8888888-8888-8888-8888-888888888888", Name: "Paris Boutique Stay", Stars: 4, Rating: 4.3, Reviews: 320, Price: 200m),
+            (Id: "b9999999-9999-9999-9999-999999999999", Name: "Paris Grand Hotel", Stars: 4, Rating: 4.4, Reviews: 410, Price: 250m),
+            (Id: "baaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", Name: "Paris Luxury Suites", Stars: 5, Rating: 4.9, Reviews: 670, Price: 500m)
+        };
+
+        foreach (var hotel in supplementalParisHotelPrices)
+        {
+            await UpsertProviderHotelAsync(dbContext, new ProviderHotel
+            {
+                Id = Guid.Parse(hotel.Id),
+                HotelName = hotel.Name,
+                City = "Paris",
+                Country = "France",
+                Stars = hotel.Stars,
+                Rating = hotel.Rating,
+                ReviewCount = hotel.Reviews,
+                ValidDate = hotelValidDate,
+                PricePerNight = hotel.Price,
+                CurrencyCode = "USD",
+                IsAvailable = true,
+                ProviderName = "MockProvider"
+            });
+        }
 
         await dbContext.SaveChangesAsync();
     }

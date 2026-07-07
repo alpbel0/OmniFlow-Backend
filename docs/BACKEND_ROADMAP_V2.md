@@ -275,10 +275,10 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 ---
 
-### Task B0.14: 🔴 KRİTİK — Trip Unpublish (Düzenleme İçin Taslağa Al)
+### Task B0.14: Trip Unpublish (Düzenleme İçin Taslağa Al)
 
 **Tahmini Süre:** 1.5 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 **Öncelik:** 🔴 Kritik — ciddi bir ürün kısıtı çözüyor
 
 > **Bulgu:** `UpdateTimelineEntryCommandHandler`, `CreateTimelineEntryCommandHandler`, `DeleteTimelineEntryCommandHandler`, `ReorderTimelineEntriesCommandHandler`, `UpdateTripCommandHandler` ve destinasyon CRUD handler'larının **hepsi** `trip.Status != TripStatus.Draft` ise reddediyor. Backend'de `Published → Draft` geri dönüşü **hiç yok** (sadece `Draft→Published→Archived→(B0.11 ile)Published` döngüsü var). Sonuç: **bir trip yayınlandığı anda timeline'ı sonsuza kadar donuyor** — owner bir daha hiçbir entry ekleyemez/düzenleyemez/silemez/kilit açamaz, Archived'a alıp tekrar Published yapsa bile. Bu, gerçek kullanıcı senaryosunda (yayınladıktan sonra plan değişmesi) çok kısıtlayıcı.
@@ -287,24 +287,26 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 **Karar:** `ArchiveTripCommandHandler`'a simetrik yeni bir komut — `UnpublishTripCommand`. Draft-only kısıtları **gevşetilmiyor** (Timeline entry mutasyonları hâlâ Draft-only kalıyor), bunun yerine owner trip'i **geçici olarak Draft'a alıp** düzenleyip **tekrar Yayınla**yabiliyor.
 
-- [ ] `UnpublishTripCommand` + Handler — owner kontrolü (`ForbiddenException`), sadece `TripStatus.Published` durumundaki trip'lere uygulanabilir (`ApiException` diğer durumlarda — Archived'dan direkt Unpublish yok, önce Unarchive (B0.11) ile Published'a dönülür, sonra Unpublish edilir; state machine basit tutulur)
-- [ ] `trip.Status = TripStatus.Draft` olarak günceller
-- [ ] **Sayaçlar korunur:** `UpvoteCount`, `ForkCount`, mevcut `SavedTrip` ilişkileri **silinmez/sıfırlanmaz** — trip Draft'tayken bu sayılar sadece owner'a görünür kalır (B0.10 visibility kuralı gereği), tekrar Publish edilince aynen geri gelir
-- [ ] Endpoint: `POST /api/v1/Trips/{id}/unpublish`
-- [ ] Unit + integration test (owner/non-owner, Draft/Archived'den Unpublish denemesi reddedilmeli, sayaçların korunduğu)
+- [x] `UnpublishTripCommand` + Handler — owner kontrolü (`ForbiddenException`), sadece `TripStatus.Published` durumundaki trip'lere uygulanabilir (`ApiException` diğer durumlarda — Archived'dan direkt Unpublish yok, önce Unarchive (B0.11) ile Published'a dönülür, sonra Unpublish edilir; state machine basit tutulur)
+- [x] `trip.Status = TripStatus.Draft` olarak günceller
+- [x] **Sayaçlar korunur:** `UpvoteCount`, `ForkCount`, mevcut `SavedTrip` ilişkileri **silinmez/sıfırlanmaz** — trip Draft'tayken bu sayılar sadece owner'a görünür kalır (B0.10 visibility kuralı gereği), tekrar Publish edilince aynen geri gelir
+- [x] Endpoint: `POST /api/v1/Trips/{id}/unpublish`
+- [x] Unit + integration test (owner/non-owner, Draft/Archived'den Unpublish denemesi reddedilmeli, sayaçların korunduğu)
 
 **Mobil davranış:**
-- [ ] Üst bar Owner menüsüne **Published** durumunda **"Düzenlemek için Taslağa Al"** eklenir (yukarıdaki tabloya bakınız)
-- [ ] Tıklanınca **onay dialogu**: "Bu geziyi düzenlemek için yayından kaldıracaksın — düzenleme bitince tekrar yayınlaman gerekecek. Devam edilsin mi?" + İptal/Devam Et
-- [ ] Onaylanınca `POST /api/v1/Trips/{id}/unpublish` çağrılır, başarılı olursa trip Draft'a döner, Timeline'daki Edit/Kilidi Aç/Sil/+Detay Ekle aksiyonları artık aktif olur
-- [ ] Trip Draft'tayken herkese kapalıdır (B0.10), owner "Yayınla" ile düzenleme bitince tekrar Published'a alır
+- [x] Üst bar Owner menüsüne **Published** durumunda **"Düzenlemek için Taslağa Al"** eklenir (yukarıdaki tabloya bakınız)
+- [x] Tıklanınca **onay dialogu**: "Bu geziyi düzenlemek için yayından kaldıracaksın — düzenleme bitince tekrar yayınlaman gerekecek. Devam edilsin mi?" + İptal/Devam Et
+- [x] Onaylanınca `POST /api/v1/Trips/{id}/unpublish` çağrılır, başarılı olursa trip Draft'a döner, Timeline'daki Edit/Kilidi Aç/Sil/+Detay Ekle aksiyonları artık aktif olur
+- [x] Trip Draft'tayken herkese kapalıdır (B0.10), owner "Yayınla" ile düzenleme bitince tekrar Published'a alır
+
+**Doğrulama:** `dotnet build OmniFlow\OmniFlow.sln --configuration Release`, B0.14 unit testleri ve B0.14 integration testleri geçti. Solution-level unit test gate geçti. Npgsql legacy timestamp switch sonrası provider seed timestamp problemi çözüldü; full integration suite hâlâ B0.14 dışı eski test beklentileri / ayrı endpoint davranışları nedeniyle kırılıyor.
 
 ---
 
 ### Task B0.12: TripDestination Koordinat (Geocoding)
 
 **Tahmini Süre:** 3.5 saat *(Nominatim operasyonel gereksinimleri nedeniyle 2.5 saatten güncellendi)*
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bulgu:** Trip Detail'in haritası (`omniflow-mobile/TRIP_DETAILS_PAGE.md`, MapLibre pinler + ORS yol modu) destinasyon koordinatlarına ihtiyaç duyuyor, ama `TripDestinationResponse` sadece `City`/`Country`/`ArrivalDate`/`DepartureDate`/`OrderIndex`/`NightCount` döndürüyor — **koordinat yok**. `Place` entity'sinde `Latitude`/`Longitude` zaten var (OSM/Google Places'ten önceden import edilmiş), ama bu veri statik — çalışma zamanında "bu şehri geocode et" diyebilecek bir servis **hiç yok**.
 >
@@ -314,25 +316,28 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 > **⚠️ Nominatim operasyonel kısıtlar (resmi kullanım politikası):** Public Nominatim instance'ı (`nominatim.openstreetmap.org`) **max 1 istek/saniye**, geçerli/tanımlayıcı bir `User-Agent` (jenerik/tarayıcı UA'sı değil), **sonuçların cache'lenmesi zorunlu**, ve ağır kullanımda self-host önerisi şartlarını taşıyor. Wizard tek seferde **10 destinasyona kadar** oluşturabildiği için, bunlar naif şekilde paralel/hızlı ardışık geocode edilirse hem rate-limit'e takılır hem policy ihlali olur.
 
-- [ ] `TripDestination` entity'sine `Latitude` (double?), `Longitude` (double?) alanları + migration
-- [ ] `IGeocodingService` arayüzü + **Nominatim** implementasyonu — `City, Country` string'ini koordinata çevirir. Arayüz sağlayıcıdan bağımsız tasarlanır (ileride self-hosted Nominatim veya başka bir servise **config ile** geçilebilsin — base URL + provider seçimi `appsettings.json`'da)
-- [ ] **Reverse geocoding:** `IReverseGeocodingService` (veya `IGeocodingService` içinde ayrı reverse method) eklenir — `Latitude, Longitude` değerini şehir/ülke veya formatted location text'ine çevirir. Bu altyapı B0.5.1'de saklanan `User.LocationLatitude` / `User.LocationLongitude` değerlerinden `User.Location` üretmek için kullanılacak.
-- [ ] **Rate limiting:** Servis içinde bir kuyruk/semaphore ile giden istekler **max 1 istek/saniye** olacak şekilde sınırlanır (10 destinasyonluk bir wizard submit'i naif paralel çağrı yerine sıraya alınır)
-- [ ] **Cache:** Geocode sonuçları `(City, Country)` normalize edilmiş anahtarla **kalıcı (DB tablosu)** olarak cache'lenir — production'da in-memory cache yetersiz kalır (uygulama yeniden başlayınca/birden fazla instance'ta kaybolur, Nominatim policy'sinin "sonuçları cache'le" şartını kalıcı karşılamaz). In-memory sadece **dev/local'da DB'ye ek bir L1 hız katmanı** olarak opsiyonel kullanılabilir, tek başına yeterli değil. Aynı şehir (ör. "Paris, France") birden fazla trip/kullanıcı tarafından istenirse Nominatim'e tekrar gidilmez — bu, pratikte rate-limit baskısının büyük kısmını da çözer (popüler şehirler zaten cache'te olur)
-- [ ] **User-Agent:** İsteklerde uygulamayı tanımlayan özel bir `User-Agent` header'ı gönderilir (ör. `OmniFlow/1.0 (+iletişim e-postası)`), jenerik/varsayılan HTTP client UA'sı kullanılmaz
-- [ ] **Timeout:** Makul bir timeout (ör. 5 sn) — Nominatim yanıt vermezse hata toleransı kuralına (aşağıda) düşer, wizard submit'ini süresiz bekletmez
-- [ ] `CreateTripDestinationCommandHandler`, `UpdateTripDestinationCommandHandler` ve `CreateTripWizardCommandHandler` (destinasyon oluşturan/güncelleyen üç nokta) geocoding çağrısını yapacak şekilde güncellenir — **senkron ve cache+rate-limit korumalı** (M3 kapsamında background job/kuyruk sistemi **bilinçli olarak kurulmuyor** — basitlik tercih edildi). **Gerçekçi zamanlama:** 1 istek/saniye limiti nedeniyle, en kötü senaryoda (10 destinasyonun **hepsi cache miss** — yani hiçbiri daha önce başka bir trip'te geocode edilmemiş) wizard submit'i **10+ saniyeye kadar uzayabilir** (timeout'larla daha da fazla). Pratikte çoğu trip popüler şehirler içerdiği için cache sayesinde çok daha hızlı olması beklenir, ama worst-case bu kadar sürebileceği bilinerek kabul ediliyor. Mobil tarafta wizard submit zaten bir loading state gösteriyor, bu süre o loading state içinde karşılanır. İleride gerçek bir kullanıcı şikayeti/performans sorunu olursa arka plan job'una geçiş değerlendirilebilir
-- [ ] **Hata toleransı:** Geocoding başarısız olursa (servis erişilemez, timeout, şehir bulunamaz vb.) `Latitude`/`Longitude` `null` kalır — komut **hata fırlatmaz**, destinasyon yine de oluşturulur/güncellenir; mobil tarafta o destinasyon için pin gösterilmez, diğer pinler etkilenmez
-- [ ] **User profile reverse geocoding entegrasyonu:** B0.5.1 koordinatları geldiğinde backend `Location` text'i otomatik üretebilecek hale getirilir. Reverse geocoding başarısız olursa profil update'i başarısız olmaz; mevcut `Location` korunur veya request'te gelen manuel `Location` kullanılır.
-- [ ] `TripDestinationResponse`'a `Latitude`/`Longitude` (nullable) eklenir
-- [ ] Unit test: geocoding başarılı/başarısız senaryoları, mevcut destinasyon davranışının bozulmadığı
+- [x] `TripDestination` entity'sine `Latitude` (double?), `Longitude` (double?) alanları + migration
+- [x] `IGeocodingService` arayüzü + **Nominatim** implementasyonu — `City, Country` string'ini koordinata çevirir. Arayüz sağlayıcıdan bağımsız tasarlanır (ileride self-hosted Nominatim veya başka bir servise **config ile** geçilebilsin — base URL + provider seçimi `appsettings.json`'da)
+- [x] **Reverse geocoding:** `IReverseGeocodingService` (veya `IGeocodingService` içinde ayrı reverse method) eklenir — `Latitude, Longitude` değerini şehir/ülke veya formatted location text'ine çevirir. Bu altyapı B0.5.1'de saklanan `User.LocationLatitude` / `User.LocationLongitude` değerlerinden `User.Location` üretmek için kullanılacak.
+- [x] **Rate limiting:** Servis içinde bir kuyruk/semaphore ile giden istekler **max 1 istek/saniye** olacak şekilde sınırlanır (10 destinasyonluk bir wizard submit'i naif paralel çağrı yerine sıraya alınır)
+- [x] **Cache:** Geocode sonuçları `(City, Country)` normalize edilmiş anahtarla **kalıcı (DB tablosu)** olarak cache'lenir — production'da in-memory cache yetersiz kalır (uygulama yeniden başlayınca/birden fazla instance'ta kaybolur, Nominatim policy'sinin "sonuçları cache'le" şartını kalıcı karşılamaz). In-memory sadece **dev/local'da DB'ye ek bir L1 hız katmanı** olarak opsiyonel kullanılabilir, tek başına yeterli değil. Aynı şehir (ör. "Paris, France") birden fazla trip/kullanıcı tarafından istenirse Nominatim'e tekrar gidilmez — bu, pratikte rate-limit baskısının büyük kısmını da çözer (popüler şehirler zaten cache'te olur)
+- [x] **User-Agent:** İsteklerde uygulamayı tanımlayan özel bir `User-Agent` header'ı gönderilir (ör. `OmniFlow/1.0 (+iletişim e-postası)`), jenerik/varsayılan HTTP client UA'sı kullanılmaz
+- [x] **Timeout:** Makul bir timeout (ör. 5 sn) — Nominatim yanıt vermezse hata toleransı kuralına (aşağıda) düşer, wizard submit'ini süresiz bekletmez
+- [x] `CreateTripDestinationCommandHandler`, `UpdateTripDestinationCommandHandler` ve `CreateTripWizardCommandHandler` (destinasyon oluşturan/güncelleyen üç nokta) geocoding çağrısını yapacak şekilde güncellenir — **senkron ve cache+rate-limit korumalı** (M3 kapsamında background job/kuyruk sistemi **bilinçli olarak kurulmuyor** — basitlik tercih edildi). **Gerçekçi zamanlama:** 1 istek/saniye limiti nedeniyle, en kötü senaryoda (10 destinasyonun **hepsi cache miss** — yani hiçbiri daha önce başka bir trip'te geocode edilmemiş) wizard submit'i **10+ saniyeye kadar uzayabilir** (timeout'larla daha da fazla). Pratikte çoğu trip popüler şehirler içerdiği için cache sayesinde çok daha hızlı olması beklenir, ama worst-case bu kadar sürebileceği bilinerek kabul ediliyor. Mobil tarafta wizard submit zaten bir loading state gösteriyor, bu süre o loading state içinde karşılanır. İleride gerçek bir kullanıcı şikayeti/performans sorunu olursa arka plan job'una geçiş değerlendirilebilir
+- [x] **Hata toleransı:** Geocoding başarısız olursa (servis erişilemez, timeout, şehir bulunamaz vb.) `Latitude`/`Longitude` `null` kalır — komut **hata fırlatmaz**, destinasyon yine de oluşturulur/güncellenir; mobil tarafta o destinasyon için pin gösterilmez, diğer pinler etkilenmez
+- [x] **User profile reverse geocoding entegrasyonu:** B0.5.1 koordinatları geldiğinde backend `Location` text'i otomatik üretebilecek hale getirilir. Reverse geocoding başarısız olursa profil update'i başarısız olmaz; mevcut `Location` korunur veya request'te gelen manuel `Location` kullanılır.
+- [x] `TripDestinationResponse`'a `Latitude`/`Longitude` (nullable) eklenir
+- [x] Unit test: geocoding başarılı/başarısız senaryoları, mevcut destinasyon davranışının bozulmadığı
+
+
+**Doğrulama:** `dotnet build OmniFlow\OmniFlow.sln --configuration Release`, B0.12 unit testleri ve B0.12 hedefli integration testleri geçti. Solution-level unit test gate geçti. Npgsql legacy timestamp switch sonrası provider seed timestamp problemi çözüldü; full integration suite hâlâ B0.12 dışı eski test beklentileri / ayrı endpoint davranışları nedeniyle kırılıyor.
 
 ---
 
 ### Task B0.13: TimelineEntry → Checklist Bağlantısı (PlanningSlotKey)
 
 **Tahmini Süre:** 1.5 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bulgu:** Trip Detail'in Detay Modalı, bir Flights/Hotels checklist satırı (ör. "İstanbul → Roma" leg'i) için **gerçek bir TimelineEntry'nin var olup olmadığını** göstermesi gerekiyor (bkz. `omniflow-mobile/TRIP_DETAILS_PAGE.md → Detay Modal — İçerik / Durum A vs B`). Bunu client-side **şehir adı/tarih heuristiği** ile yapmak kırılgan — aynı leg/gece için birden fazla `CustomFlight`/`CustomTransport`/`CustomAccommodation` entry'si varsa (ör. kullanıcı önce uçuş sonra taksi transferi eklediyse, veya oteli değiştirdiyse) **yanlış entry'ye bağlanma riski** var.
 >
@@ -340,26 +345,28 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 **Karar:** `TimelineEntry`'ye opsiyonel `PlanningSlotKey` (string?) alanı eklenir — B0.9'daki `itemKey` formatıyla **aynı değer** (`flight-leg:{fromId}:{toId}` / `hotel-night:{destId}:{nightNumber}`). Bu alan **sadece** Detay Modal'ın "**+ Detay Ekle**" CTA'sından (Durum B → yeni entry oluşturma akışı) geçilen entry'lere set edilir — normal Timeline entry ekleme akışından oluşturulan entry'ler bu alanı `null` bırakır ve checklist'e otomatik bağlanmaz (checklist confirmation o entry'lerden **bağımsız, manuel** kalmaya devam eder).
 
-- [ ] `TimelineEntry` entity'sine `PlanningSlotKey` (string?, nullable) alanı + migration
-- [ ] **Partial unique index** — `(TripId, PlanningSlotKey)` where **`planning_slot_key IS NOT NULL AND deleted_at IS NULL`** (`TimelineEntry` soft-delete kullanıyor — `deleted_at` filtresi olmadan, silinmiş bir entry aynı slot'u "kullanılmış" gibi tutar ve o slota **yeni entry eklemeyi kalıcı olarak engeller**; bu yüzden filtreye `deleted_at IS NULL` şart)
-- [ ] **DTO/Command zinciri tam olarak güncellenir** (sadece prosa değil, somut dosyalar):
+- [x] `TimelineEntry` entity'sine `PlanningSlotKey` (string?, nullable) alanı + migration
+- [x] **Partial unique index** — `(TripId, PlanningSlotKey)` where **`planning_slot_key IS NOT NULL AND deleted_at IS NULL`** (`TimelineEntry` soft-delete kullanıyor — `deleted_at` filtresi olmadan, silinmiş bir entry aynı slot'u "kullanılmış" gibi tutar ve o slota **yeni entry eklemeyi kalıcı olarak engeller**; bu yüzden filtreye `deleted_at IS NULL` şart)
+- [x] **DTO/Command zinciri tam olarak güncellenir** (sadece prosa değil, somut dosyalar):
   - `CreateTimelineEntryRequest.cs` → opsiyonel `PlanningSlotKey` (string?) alanı eklenir
   - `CreateTimelineEntryCommand.cs` → aynı alan eklenir, controller'dan handler'a taşınır
   - `CreateTimelineEntryCommandHandler` → `PlanningSlotKey`'i yeni `TimelineEntry`'ye set eder (factory metodlarına parametre olarak eklenir veya oluşturulduktan sonra atanır)
   - `TimelineEntryResponse.cs` → `PlanningSlotKey` (string?) response'a eklenir
   - AutoMapper profili güncellenir (entity → response mapping'inde bu alan otomatik gelsin)
   - Detay Modal'ın "+ Detay Ekle" CTA'sı bu alanı doldurur, normal Timeline ekleme akışı (Task 3.13'ün standart formu) boş bırakır
-- [ ] **`PlanningSlotKey` sadece create'te set edilir, immutable'dır:** `UpdateTimelineEntryRequest`/`UpdateTimelineEntryCommand`'a **bu alan bilinçli olarak eklenmez** — yani bir entry oluşturulduktan sonra hangi slot'a bağlı olduğu **değiştirilemez**. Kullanıcı bir entry'yi başka bir slot'a bağlamak isterse (nadir senaryo), mevcut entry'yi **siler ve yeni bir entry oluşturur** (yeni entry oluştururken doğru `planningSlotKey` ile). Bu, slot ownership'in Update akışı üzerinden karışmasını (ör. yanlışlıkla başka bir slot'un key'ini üzerine yazma) baştan engeller
-- [ ] **Entry silinirse checklist confirmation'a ne olur:** `TripChecklistConfirmation` (B0.9), `TimelineEntry`'den **tamamen bağımsız bir tablo** — entry silinse bile confirmation kaydı **silinmez/değişmez**. Yani kullanıcı "İstanbul→Roma" uçuşunu ekleyip checklist'i işaretledikten sonra o entry'yi silerse, checklist **checked kalır** (kullanıcının "hallettim" beyanı entry'nin varlığından bağımsız bir gerçek) — sadece bir sonraki modal açılışında **Durum B**'ye döner (`PlanningSlotKey` eşleşen entry artık yok)
-- [ ] `GetTripByIdQuery`/`GetTimelineQuery` response'larına `PlanningSlotKey` eklenir (mobil, Durum A/B ayrımını artık **exact match** ile yapar: `entries.any { it.planningSlotKey == itemKey }` — şehir/tarih heuristiği yok)
-- [ ] Unit test: aynı slot'a ikinci kez entry oluşturma denemesi engelleniyor (unique constraint); **soft-delete edilmiş bir entry'nin slot'u serbest bıraktığı** (yeni entry aynı `planningSlotKey` ile oluşturulabiliyor) test edilir; normal akıştan oluşan entry'lerin `PlanningSlotKey`'i null kalıyor; entry silinince ilgili checklist confirmation'ın **değişmediği** test edilir
+- [x] **`PlanningSlotKey` sadece create'te set edilir, immutable'dır:** `UpdateTimelineEntryRequest`/`UpdateTimelineEntryCommand`'a **bu alan bilinçli olarak eklenmez** — yani bir entry oluşturulduktan sonra hangi slot'a bağlı olduğu **değiştirilemez**. Kullanıcı bir entry'yi başka bir slot'a bağlamak isterse (nadir senaryo), mevcut entry'yi **siler ve yeni bir entry oluşturur** (yeni entry oluştururken doğru `planningSlotKey` ile). Bu, slot ownership'in Update akışı üzerinden karışmasını (ör. yanlışlıkla başka bir slot'un key'ini üzerine yazma) baştan engeller
+- [x] **Entry silinirse checklist confirmation'a ne olur:** `TripChecklistConfirmation` (B0.9), `TimelineEntry`'den **tamamen bağımsız bir tablo** — entry silinse bile confirmation kaydı **silinmez/değişmez**. Yani kullanıcı "İstanbul→Roma" uçuşunu ekleyip checklist'i işaretledikten sonra o entry'yi silerse, checklist **checked kalır** (kullanıcının "hallettim" beyanı entry'nin varlığından bağımsız bir gerçek) — sadece bir sonraki modal açılışında **Durum B**'ye döner (`PlanningSlotKey` eşleşen entry artık yok)
+- [x] `GetTimelineQuery` response'larına `PlanningSlotKey` eklenir (mobil, Durum A/B ayrımını artık **exact match** ile yapar: `entries.any { it.planningSlotKey == itemKey }` — şehir/tarih heuristiği yok). Not: `GetTripByIdQuery` timeline entry listesi dönmediği için bu endpointte eklenecek ayrı `PlanningSlotKey` alanı yoktur.
+- [x] Unit/integration test: aynı slot'a ikinci kez entry oluşturma denemesi engelleniyor; **soft-delete edilmiş bir entry'nin slot'u serbest bıraktığı** (yeni entry aynı `planningSlotKey` ile oluşturulabiliyor) test edilir; normal akıştan oluşan entry'lerin `PlanningSlotKey`'i null kalıyor; fork edilen entry'lerde eski slot key'i taşınmıyor
+
+**Doğrulama:** `dotnet build OmniFlow\OmniFlow.sln --configuration Release`, B0.13 unit hedefleri, solution-level unit test gate ve `TimelineControllerTests` integration suite geçti. Npgsql legacy timestamp switch sonrası provider seed timestamp problemi çözüldü; full integration suite hâlâ B0.13 dışı eski test beklentileri / ayrı endpoint davranışları nedeniyle kırılıyor.
 
 ---
 
 ### Task B0.15: ORS Routing Proxy ("Yol" Modu)
 
 **Tahmini Süre:** 2 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
 > **Bulgu:** Map'in `Yol` modu OpenRouteService (ORS) polyline kullanıyor (bkz. `omniflow-mobile/TRIP_DETAILS_PAGE.md`), ama **kimin ORS'u çağıracağı hiç netleşmemiş**. ORS, Nominatim'in aksine **API key gerektiriyor** (ücretsiz tier'da bile). Mobil doğrudan ORS'u çağırırsa, **API key APK içine gömülür** — decompile edilip çıkarılabilir, kötüye kullanılırsa uygulamanın günlük ORS kotası (free tier'da sınırlı) tüketilip **herkes için** Yol modu çalışmaz hale gelir. Bu, Nominatim'den farklı bir risk (Nominatim key istemiyor).
 >
@@ -367,13 +374,14 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 **Karar:** ORS çağrısı **backend üzerinden proxy'lenir** — mobil ORS'u hiç doğrudan çağırmaz, API key backend'de (appsettings/secret olarak) kalır, hiçbir zaman client'a gönderilmez.
 
-- [ ] `IRoutingService` arayüzü + **OpenRouteService** implementasyonu (Directions API) — destinasyon koordinat sırasını alır, polyline/koordinat listesi döner
-- [ ] **Null koordinat filtresi (ORS'a gitmeden önce):** Handler, ORS'a istek atmadan önce `Latitude`/`Longitude`'u `null` olan destinasyonları **sıradan çıkarır** — sadece geçerli koordinatlı destinasyonlar ORS'a gönderilir (mobil tarafın "null koordinatlı destinasyonu atla, bir sonraki geçerliye direkt bağlan" kuralıyla aynı mantık, backend'de de uygulanır). Bu filtre olmadan ORS'a eksik/geçersiz koordinat gönderilirse ORS hata döner, gereksiz yere hata-path'inden fallback'e düşülür ve ORS kotası boşa harcanır
-- [ ] **Cache:** Bir trip'in rotası, destinasyonlar değişmediği sürece **aynı kalır** — hesaplanan polyline trip başına cache'lenir (DB'de bir alan veya ayrı küçük tablo), destinasyon eklenir/silinir/sıralanırsa cache geçersiz kılınıp yeniden hesaplanır. Bu hem ORS'un kendi rate-limit'ini (free tier'da dakikada/günde sınırlı istek) korur hem performansı artırır
-- [ ] Endpoint: `GET /api/v1/Trips/{id}/route` → `{ "coordinates": [[lat,lng], [lat,lng], ...] }` (mobil bunu MapLibre'de polyline olarak çizer)
-- [ ] Visibility kuralı diğerleriyle aynı (B0.10'un paylaşılan helper'ı) — Published'da herkese açık, Draft/Archived'de owner-only
-- [ ] **Hata toleransı:** ORS erişilemez/timeout olursa endpoint hata döner, mobil tarafta zaten var olan "sessizce Kuş Bakışı'na fallback" davranışı devreye girer (backend hatası = mobilde ORS başarısızlığıyla aynı şekilde ele alınır)
-- [ ] Unit test: cache invalidation (destinasyon değişince yeniden hesaplanıyor), owner/anonim/Published-Draft erişim matrisi
+- [x] `IRoutingService` arayuzu + OpenRouteService implementasyonu eklendi; API key backend config/secret tarafinda kalir
+- [x] Null koordinat ve segment fallback davranisi uygulandi; eksik koordinatta ORS cagrisi yapilmaz
+- [x] DB cache eklendi: `trip_route_caches`, trip FK cascade ve route signature destination + timeline category sinyallerini icerir
+- [x] Endpoint: `GET /api/v1/trips/{tripId}/routes` -> segment bazli `Walking`/`Cycling`/`Driving` response
+- [x] Visibility kurali B0.10 ile ayni: Published public, Draft/Archived owner-only, yetkisiz private read 404
+- [x] ORS hata/timeout/429 durumunda endpoint 500 firlatmaz; ilgili mod bos rota doner
+- [x] Unit/integration test: ORS fallback, GeoJSON parse, route response, cache invalidation, cascade cleanup ve owner/anonim/Published-Draft erisim matrisi
+**Dogrulama:** `dotnet build OmniFlow\OmniFlow.sln --configuration Release`, solution-level unit gate (`435/435`), B0.15 targeted integration (`5/5`) ve full integration suite (`302/302`) gecti.
 
 ---
 
@@ -389,10 +397,10 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 - [ ] Trip Detail Review modundaki checklist satırları işaretlenip kalıcı olarak saklanabiliyor
 - [ ] Draft/Archived trip'ler owner olmayan kullanıcılara 404 dönüyor (B0.10)
 - [ ] Archived trip'ler tekrar Published durumuna alınabiliyor (B0.11)
-- [ ] Destinasyonlar koordinat ile dönüyor, Trip Detail haritasında pinlenebiliyor (B0.12)
-- [ ] Checklist satırları ile TimelineEntry'ler arasında belirsizlik olmadan (exact match) bağlantı kuruluyor (B0.13)
-- [ ] Owner, yayınladığı bir trip'i düzenlemek için Taslağa alıp tekrar yayınlayabiliyor, sayaçlar korunuyor (B0.14)
-- [ ] Map'in Yol modu backend proxy üzerinden çalışıyor, ORS API key client'a hiç gitmiyor (B0.15)
+- [x] Destinasyonlar koordinat ile dönüyor, Trip Detail haritasında pinlenebiliyor (B0.12)
+- [x] Checklist satırları ile TimelineEntry'ler arasında belirsizlik olmadan (exact match) bağlantı kuruluyor (B0.13)
+- [x] Owner, yayınladığı bir trip'i düzenlemek için Taslağa alıp tekrar yayınlayabiliyor, sayaçlar korunuyor (B0.14)
+- [x] Map'in Yol modu backend proxy üzerinden çalışıyor, ORS API key client'a hiç gitmiyor (B0.15)
 
 > **📝 Düşük öncelikli not (gelecekte değerlendirilebilir):** `TripsController` (`[controller]` token → `/api/v1/Trips/...`, büyük T) ile `TimelineController` (literal route override → `/api/v1/trips/...`, küçük t) arasında casing tutarsızlığı var. ASP.NET Core route matching genelde case-insensitive çalıştığı için şu an **işlevsel bir sorun yaratmıyor**, ama Retrofit contract'larında gereksiz kafa karışıklığına yol açabiliyor. Kısa vadede dokümanlarda gerçek casing'in yazılması (yapıldı) yeterli; orta/uzun vadede tüm controller route'larının lowercase literal'e standardize edilmesi düşünülebilir (B0 kapsamında zorunlu değil).
 

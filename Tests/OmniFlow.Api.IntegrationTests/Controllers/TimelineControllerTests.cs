@@ -111,7 +111,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
             DestinationId = destinationId,
             DayNumber = 1,
             EntryType = TimelineEntryType.Place,
-            PlaceId = Guid.NewGuid()
+            PlaceId = GetExistingPlaceId()
         };
 
         var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
@@ -119,6 +119,15 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         var body = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<TimelineEntryResponse>(body, _json);
         return result!.Id;
+    }
+
+    private Guid GetExistingPlaceId()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        return db.Places
+            .Select(p => p.Id)
+            .First();
     }
 
     // ── GET Timeline Tests ──────────────────────────────────────────────────────────
@@ -221,6 +230,117 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         result.CustomName.Should().Be("Test Event");
         result.IsLocked.Should().BeTrue();
         result.BufferMinutes.Should().Be(0);
+        result.PlanningSlotKey.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateEntry_WithPlanningSlotKey_ReturnsKeyAndGetTimelineIncludesKey()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+        var planningSlotKey = $"hotel-night:{destinationId:D}:1";
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.Place,
+            PlaceId = GetExistingPlaceId(),
+            PlanningSlotKey = $"  {planningSlotKey.ToUpperInvariant()}  "
+        };
+
+        var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<TimelineEntryResponse>(body, _json);
+        result!.PlanningSlotKey.Should().Be(planningSlotKey);
+
+        var timelineResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/timeline");
+        timelineResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var timeline = JsonSerializer.Deserialize<List<TimelineEntryResponse>>(
+            await timelineResponse.Content.ReadAsStringAsync(),
+            _json);
+        timeline.Should().ContainSingle(e => e.PlanningSlotKey == planningSlotKey);
+    }
+
+    [Fact]
+    public async Task CreateEntry_DuplicateActivePlanningSlotKey_Returns409()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+        var planningSlotKey = $"hotel-night:{destinationId:D}:1";
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.Place,
+            PlaceId = GetExistingPlaceId(),
+            PlanningSlotKey = planningSlotKey
+        };
+
+        var firstResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var duplicateResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        duplicateResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task CreateEntry_StalePlanningSlotKey_Returns404()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.Place,
+            PlaceId = GetExistingPlaceId(),
+            PlanningSlotKey = $"hotel-night:{Guid.NewGuid():D}:1"
+        };
+
+        var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CreateEntry_SoftDeletedPlanningSlotKey_CanBeReused()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+        var planningSlotKey = $"hotel-night:{destinationId:D}:1";
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.Place,
+            PlaceId = GetExistingPlaceId(),
+            PlanningSlotKey = planningSlotKey
+        };
+
+        var firstResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var firstResult = JsonSerializer.Deserialize<TimelineEntryResponse>(
+            await firstResponse.Content.ReadAsStringAsync(),
+            _json);
+
+        var deleteResponse = await authClient.DeleteAsync($"/api/v1/trips/{tripId}/timeline/entry/{firstResult!.Id}");
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var secondResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.Created);
     }
 
     [Fact]

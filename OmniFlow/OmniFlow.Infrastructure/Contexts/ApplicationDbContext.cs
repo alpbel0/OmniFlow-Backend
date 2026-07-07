@@ -22,6 +22,8 @@ public class ApplicationDbContext
 
 	public DbSet<Trip> Trips => Set<Trip>();
 	public DbSet<TripDestination> TripDestinations => Set<TripDestination>();
+	public DbSet<GeocodingCacheEntry> GeocodingCacheEntries => Set<GeocodingCacheEntry>();
+	public DbSet<TripRouteCache> TripRouteCaches => Set<TripRouteCache>();
 	public DbSet<TripChecklistConfirmation> TripChecklistConfirmations => Set<TripChecklistConfirmation>();
 	public DbSet<TimelineEntry> TimelineEntries => Set<TimelineEntry>();
 	public DbSet<Place> Places => Set<Place>();

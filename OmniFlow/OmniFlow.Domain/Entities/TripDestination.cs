@@ -14,6 +14,10 @@ public class TripDestination : AuditableBaseEntity
 
 	public string Country { get; set; } = string.Empty;
 
+	public double? Latitude { get; set; }
+
+	public double? Longitude { get; set; }
+
 	public DateOnly ArrivalDate
 	{
 		get => _arrivalDate;
@@ -85,6 +89,12 @@ public class TripDestination : AuditableBaseEntity
 
 		City = city.Trim();
 		Country = country.Trim();
+	}
+
+	public void SetCoordinates(double? latitude, double? longitude)
+	{
+		Latitude = latitude;
+		Longitude = longitude;
 	}
 
 	private void RecalculateNightCount()

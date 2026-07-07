@@ -13,6 +13,7 @@ using OmniFlow.Application.Features.Trips.Commands.PublishTrip;
 using OmniFlow.Application.Features.Trips.Commands.RemoveUpvoteTrip;
 using OmniFlow.Application.Features.Trips.Commands.ToggleChecklistItem;
 using OmniFlow.Application.Features.Trips.Commands.UnarchiveTrip;
+using OmniFlow.Application.Features.Trips.Commands.UnpublishTrip;
 using OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 using OmniFlow.Application.Features.Trips.Commands.UploadTripCoverPhoto;
 using OmniFlow.Application.Features.Trips.Commands.UpvoteTrip;
@@ -21,6 +22,7 @@ using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
 using OmniFlow.Application.Features.Trips.Queries.GetRecommendedPlaces;
 using OmniFlow.Application.Features.Trips.Queries.GetTripChecklistStatus;
 using OmniFlow.Application.Features.Trips.Queries.GetTripById;
+using OmniFlow.Application.Features.Trips.Queries.GetTripRoutes;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.WebApi.Controllers.v1;
@@ -84,7 +86,17 @@ public class TripsController : BaseApiController
         return Ok(result);
     }
 
-    /// <summary>Create a new trip (backward compatible — maps to wizard flow).</summary>
+    /// <summary>Get map route segments for a trip.</summary>
+    [AllowAnonymous]
+    [HttpGet("/api/v1/trips/{tripId:guid}/routes")]
+    [ProducesResponseType(typeof(OmniFlow.Application.DTOs.Routes.TripRoutesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRoutes([FromRoute] Guid tripId)
+    {
+        var result = await Mediator.Send(new GetTripRoutesQuery { TripId = tripId });
+        return Ok(result);
+    }
+
     [HttpPost]
     [Obsolete("Use POST /api/v1/trips/wizard instead.")]
     [ProducesResponseType(typeof(CreateTripWizardResponse), StatusCodes.Status201Created)]
@@ -330,6 +342,20 @@ public class TripsController : BaseApiController
     public async Task<IActionResult> Unarchive([FromRoute] Guid id)
     {
         var command = new UnarchiveTripCommand { TripId = id };
+        await Mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>Unpublish a published trip and move it back to draft.</summary>
+    [HttpPost("{id:guid}/unpublish")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Unpublish([FromRoute] Guid id)
+    {
+        var command = new UnpublishTripCommand { TripId = id };
         await Mediator.Send(command);
         return NoContent();
     }

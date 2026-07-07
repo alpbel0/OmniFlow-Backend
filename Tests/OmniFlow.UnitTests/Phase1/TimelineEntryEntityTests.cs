@@ -28,6 +28,39 @@ public class TimelineEntryEntityTests
 		entry.PlaceId.Should().Be(PlaceId);
 		entry.IsLocked.Should().BeFalse();
 		entry.BufferMinutes.Should().BeNull();
+		entry.PlanningSlotKey.Should().BeNull();
+	}
+
+	[Fact]
+	public void SetPlanningSlotKey_ValidInput_TrimsValue()
+	{
+		var entry = TimelineEntry.CreatePlaceEntry(TripId, DestinationId, DayNumber, OrderIndex, PlaceId);
+
+		entry.SetPlanningSlotKey("  hotel-night:11111111-1111-1111-1111-111111111111:1  ");
+
+		entry.PlanningSlotKey.Should().Be("hotel-night:11111111-1111-1111-1111-111111111111:1");
+	}
+
+	[Fact]
+	public void SetPlanningSlotKey_Whitespace_ClearsValue()
+	{
+		var entry = TimelineEntry.CreatePlaceEntry(TripId, DestinationId, DayNumber, OrderIndex, PlaceId);
+		entry.SetPlanningSlotKey("hotel-night:11111111-1111-1111-1111-111111111111:1");
+
+		entry.SetPlanningSlotKey("   ");
+
+		entry.PlanningSlotKey.Should().BeNull();
+	}
+
+	[Fact]
+	public void CloneForFork_DoesNotCopyPlanningSlotKey()
+	{
+		var entry = TimelineEntry.CreatePlaceEntry(TripId, DestinationId, DayNumber, OrderIndex, PlaceId);
+		entry.SetPlanningSlotKey($"hotel-night:{DestinationId:D}:1");
+
+		var clone = entry.CloneForFork(Guid.NewGuid(), Guid.NewGuid());
+
+		clone.PlanningSlotKey.Should().BeNull();
 	}
 
 	[Fact]

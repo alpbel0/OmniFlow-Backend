@@ -11,6 +11,7 @@ using OmniFlow.Infrastructure.Contexts;
 using OmniFlow.Infrastructure.Models;
 using OmniFlow.Infrastructure.Repositories;
 using OmniFlow.Infrastructure.Services;
+using OmniFlow.Infrastructure.Settings;
 
 namespace OmniFlow.Infrastructure;
 
@@ -42,6 +43,10 @@ public static class ServiceRegistration
 		});
 		services.Configure<AzureStorageSettings>(options =>
 			configuration.GetSection("AzureStorageSettings").Bind(options));
+		services.Configure<GeocodingSettings>(options =>
+			configuration.GetSection("Geocoding").Bind(options));
+		services.Configure<OpenRouteServiceSettings>(options =>
+			configuration.GetSection("Routing:OpenRouteService").Bind(options));
 		services.AddSingleton(sp =>
 		{
 			var opts = sp.GetRequiredService<IOptions<AzureStorageSettings>>().Value;
@@ -56,6 +61,25 @@ public static class ServiceRegistration
 		services.AddScoped<IBudgetCalculationService, BudgetCalculationService>();
 		services.AddSingleton<ITimelineService, TimelineService>();
 		services.AddScoped<IRecommendationService, RecommendationService>();
+		services.AddHttpClient<IGeocodingService, NominatimGeocodingService>((sp, client) =>
+		{
+			var settings = sp.GetRequiredService<IOptions<GeocodingSettings>>().Value;
+			client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(settings.BaseUrl)
+				? "https://nominatim.openstreetmap.org"
+				: settings.BaseUrl.TrimEnd('/'));
+			client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds <= 0 ? 5 : settings.TimeoutSeconds);
+			client.DefaultRequestHeaders.UserAgent.ParseAdd(string.IsNullOrWhiteSpace(settings.UserAgent)
+				? "OmniFlow/1.0 (+omniflowinc@gmail.com)"
+				: settings.UserAgent);
+		});
+		services.AddHttpClient<IRoutingService, OpenRouteServiceRoutingService>((sp, client) =>
+		{
+			var settings = sp.GetRequiredService<IOptions<OpenRouteServiceSettings>>().Value;
+			client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(settings.BaseUrl)
+				? "https://api.openrouteservice.org"
+				: settings.BaseUrl.TrimEnd('/'));
+			client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds <= 0 ? 8 : settings.TimeoutSeconds);
+		});
 		services.AddMemoryCache();
 
 		// Open-Generic DI registration for Generic Repository

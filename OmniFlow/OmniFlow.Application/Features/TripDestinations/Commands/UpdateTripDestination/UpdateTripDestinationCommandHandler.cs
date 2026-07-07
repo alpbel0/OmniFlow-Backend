@@ -10,13 +10,16 @@ public class UpdateTripDestinationCommandHandler : IRequestHandler<UpdateTripDes
 {
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
+    private readonly IGeocodingService _geocodingService;
 
     public UpdateTripDestinationCommandHandler(
         IApplicationDbContext context,
-        IAuthenticatedUserService authenticatedUserService)
+        IAuthenticatedUserService authenticatedUserService,
+        IGeocodingService geocodingService)
     {
         _context = context;
         _authenticatedUserService = authenticatedUserService;
+        _geocodingService = geocodingService;
     }
 
     public async Task<Unit> Handle(UpdateTripDestinationCommand request, CancellationToken cancellationToken)
@@ -41,6 +44,12 @@ public class UpdateTripDestinationCommandHandler : IRequestHandler<UpdateTripDes
 
             if (trip.Status != TripStatus.Draft)
                 throw new ApiException("Only draft trips can be modified.");
+
+            var cityChanged = !string.Equals(destination.City, request.City.Trim(), StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(destination.Country, request.Country.Trim(), StringComparison.OrdinalIgnoreCase);
+            var geocodingResult = cityChanged
+                ? await _geocodingService.GeocodeAsync(request.City, request.Country, cancellationToken)
+                : null;
 
             var oldOrderIndex = destination.OrderIndex;
             var newOrderIndex = request.OrderIndex;
@@ -81,6 +90,8 @@ public class UpdateTripDestinationCommandHandler : IRequestHandler<UpdateTripDes
 
             destination.UpdateDates(request.ArrivalDate, request.DepartureDate);
             destination.UpdateCity(request.City, request.Country);
+            if (cityChanged)
+                destination.SetCoordinates(geocodingResult?.Latitude, geocodingResult?.Longitude);
 
             trip.RecalculateFromDestinations();
 

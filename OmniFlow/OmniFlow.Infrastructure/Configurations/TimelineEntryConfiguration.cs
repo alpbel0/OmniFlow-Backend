@@ -33,6 +33,7 @@ public class TimelineEntryConfiguration : IEntityTypeConfiguration<TimelineEntry
 		builder.Property(e => e.DayNumber).HasColumnName("day_number").IsRequired();
 		builder.Property(e => e.OrderIndex).HasColumnName("order_index").HasColumnType("double precision").IsRequired();
 		builder.Property(e => e.EntryType).HasColumnName("entry_type").HasConversion<string>().IsRequired();
+		builder.Property(e => e.PlanningSlotKey).HasColumnName("planning_slot_key").HasMaxLength(160);
 
 		// Place
 		builder.Property(e => e.PlaceId).HasColumnName("place_id");
@@ -121,6 +122,11 @@ public class TimelineEntryConfiguration : IEntityTypeConfiguration<TimelineEntry
 		// === Indexes ===
 		builder.HasIndex(e => new { e.TripId, e.DestinationId, e.DayNumber, e.OrderIndex })
 			.HasDatabaseName("idx_timeline_entries_trip_dest_day_order");
+
+		builder.HasIndex(e => new { e.TripId, e.PlanningSlotKey })
+			.HasFilter("planning_slot_key IS NOT NULL AND deleted_at IS NULL")
+			.IsUnique()
+			.HasDatabaseName("ux_timeline_entries_trip_planning_slot_active");
 
 		builder.HasIndex(e => e.PlaceId)
 			.HasFilter("place_id IS NOT NULL")
