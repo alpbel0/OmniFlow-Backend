@@ -98,7 +98,7 @@ public class ErrorHandlerMiddleware
 			default:
 				_logger.LogError(exception, "Unhandled exception: {Message}", exception.Message);
 				statusCode = (int)HttpStatusCode.InternalServerError;
-				response = new ErrorResponse("An unexpected error occurred. Please try again later.");
+				response = new ErrorResponse(exception.ToString());
 				break;
 		}
 
