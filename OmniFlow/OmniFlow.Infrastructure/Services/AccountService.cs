@@ -6,24 +6,30 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.Exceptions;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Settings;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
+using OmniFlow.Infrastructure.Contexts;
 using OmniFlow.Infrastructure.Models;
 
 namespace OmniFlow.Infrastructure.Services;
 
 public class AccountService : IAccountService
 {
+	private const string GoogleLoginProvider = "Google";
+	private const string GoogleProviderDisplayName = "Google";
 	private const string EmailVerificationPurpose = "email-verification";
+	private const int GoogleUsernameCreateMaxAttempts = 5;
 	private static readonly TimeSpan VerificationEmailCooldown = TimeSpan.FromSeconds(60);
 	private const int DailyVerificationEmailLimit = 5;
 
 	private readonly UserManager<ApplicationUser> _userManager;
 	private readonly IApplicationDbContext _context;
+	private readonly IGoogleTokenValidator _googleTokenValidator;
 	private readonly JWTSettings _jwtSettings;
 	private readonly IEmailService _emailService;
 	private readonly MailSettings _mailSettings;
@@ -31,12 +37,14 @@ public class AccountService : IAccountService
 	public AccountService(
 		UserManager<ApplicationUser> userManager,
 		IApplicationDbContext context,
+		IGoogleTokenValidator googleTokenValidator,
 		IOptions<JWTSettings> jwtSettings,
 		IOptions<MailSettings> mailSettings,
 		IEmailService emailService)
 	{
 		_userManager = userManager;
 		_context = context;
+		_googleTokenValidator = googleTokenValidator;
 		_jwtSettings = jwtSettings.Value;
 		_mailSettings = mailSettings.Value;
 		_emailService = emailService;
@@ -116,31 +124,32 @@ public class AccountService : IAccountService
 		if (domainUser.IsSuspended)
 			throw new ApiException("Your account has been suspended.", 403);
 
-		var roles = await _userManager.GetRolesAsync(applicationUser);
-		var role = roles.FirstOrDefault() ?? Roles.Traveler.ToString();
+		return await IssueAuthenticationResponseAsync(applicationUser);
+	}
 
-		var accessToken = GenerateJwtToken(applicationUser, role);
-		var (rawRefreshToken, hashedRefreshToken) = GenerateRefreshToken();
+	public async Task<AuthenticationResponse> GoogleLoginAsync(GoogleLoginRequest request)
+	{
+		var payload = await _googleTokenValidator.ValidateAsync(request.IdToken);
 
-		_context.RefreshTokens.Add(new RefreshToken
+		var applicationUser = await _userManager.FindByLoginAsync(GoogleLoginProvider, payload.Subject);
+		if (applicationUser is not null)
 		{
-			UserId = applicationUser.Id,
-			TokenHash = hashedRefreshToken,
-			ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
-			CreatedAt = DateTime.UtcNow
-		});
+			await EnsureGoogleVerifiedAccountCanSignInAsync(applicationUser);
+			return await IssueAuthenticationResponseAsync(applicationUser);
+		}
 
-		await _context.SaveChangesAsync();
+		applicationUser = await _userManager.FindByEmailAsync(payload.Email);
 
-		return new AuthenticationResponse
+		if (applicationUser is null)
 		{
-			AccessToken = accessToken,
-			RefreshToken = rawRefreshToken,
-			Id = applicationUser.Id,
-			Username = applicationUser.UserName ?? string.Empty,
-			Email = applicationUser.Email ?? string.Empty,
-			Role = role
-		};
+			applicationUser = await CreateGoogleUserAsync(payload);
+		}
+		else
+		{
+			await LinkGoogleLoginAsync(applicationUser, payload);
+		}
+
+		return await IssueAuthenticationResponseAsync(applicationUser);
 	}
 
 	public async Task VerifyEmailAsync(VerifyEmailRequest request)
@@ -280,31 +289,7 @@ public class AccountService : IAccountService
 		if (applicationUser is null)
 			throw new ApiException("User not found.", 401);
 
-		var roles = await _userManager.GetRolesAsync(applicationUser);
-		var role = roles.FirstOrDefault() ?? Roles.Traveler.ToString();
-
-		var accessToken = GenerateJwtToken(applicationUser, role);
-		var (rawRefreshToken, hashedRefreshToken) = GenerateRefreshToken();
-
-		_context.RefreshTokens.Add(new RefreshToken
-		{
-			UserId = applicationUser.Id,
-			TokenHash = hashedRefreshToken,
-			ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
-			CreatedAt = DateTime.UtcNow
-		});
-
-		await _context.SaveChangesAsync();
-
-		return new AuthenticationResponse
-		{
-			AccessToken = accessToken,
-			RefreshToken = rawRefreshToken,
-			Id = applicationUser.Id,
-			Username = applicationUser.UserName ?? string.Empty,
-			Email = applicationUser.Email ?? string.Empty,
-			Role = role
-		};
+		return await IssueAuthenticationResponseAsync(applicationUser);
 	}
 
 	public async Task ForgotPasswordAsync(string email)
@@ -427,6 +412,210 @@ public class AccountService : IAccountService
 
 		await _context.SaveChangesAsync();
 		await transaction.CommitAsync();
+	}
+
+	private async Task<ApplicationUser> CreateGoogleUserAsync(GoogleTokenPayload payload)
+	{
+		for (var attempt = 0; attempt < GoogleUsernameCreateMaxAttempts; attempt++)
+		{
+			var username = await GenerateUniqueGoogleUsernameAsync(payload);
+			var applicationUser = new ApplicationUser
+			{
+				Id = Guid.NewGuid(),
+				UserName = username,
+				Email = payload.Email,
+				EmailConfirmed = true
+			};
+
+			try
+			{
+				await using var transaction = await _context.Database.BeginTransactionAsync();
+
+				var createResult = await _userManager.CreateAsync(applicationUser);
+				if (!createResult.Succeeded)
+				{
+					if (IsDuplicateUsername(createResult) && attempt < GoogleUsernameCreateMaxAttempts - 1)
+						continue;
+
+					ThrowIdentityFailure("Google registration failed", createResult);
+				}
+
+				var roleResult = await _userManager.AddToRoleAsync(applicationUser, Roles.Traveler.ToString());
+				if (!roleResult.Succeeded)
+					ThrowIdentityFailure("Google registration failed", roleResult);
+
+				_context.Users.Add(new User
+				{
+					Id = applicationUser.Id,
+					Username = username,
+					Email = payload.Email,
+					KarmaScore = 0,
+					Role = Roles.Traveler,
+					IsVerified = true
+				});
+
+				await AddGoogleLoginOrThrowAsync(applicationUser, payload);
+				await _context.SaveChangesAsync();
+				await transaction.CommitAsync();
+
+				return applicationUser;
+			}
+			catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex) && attempt < GoogleUsernameCreateMaxAttempts - 1)
+			{
+				DetachGoogleRegistrationEntities(applicationUser.Id);
+			}
+		}
+
+		throw new ApiException("Could not create a unique Google username.", 409);
+	}
+
+	private async Task LinkGoogleLoginAsync(ApplicationUser applicationUser, GoogleTokenPayload payload)
+	{
+		await using var transaction = await _context.Database.BeginTransactionAsync();
+
+		var domainUser = await GetDomainUserOrThrowAsync(applicationUser.Id);
+		if (domainUser.IsSuspended)
+			throw new ApiException("Your account has been suspended.", 403);
+
+		if (!applicationUser.EmailConfirmed)
+		{
+			applicationUser.EmailConfirmed = true;
+			var updateResult = await _userManager.UpdateAsync(applicationUser);
+			if (!updateResult.Succeeded)
+				ThrowIdentityFailure("Google account linking failed", updateResult);
+		}
+
+		if (!domainUser.IsVerified)
+			domainUser.IsVerified = true;
+
+		await AddGoogleLoginOrThrowAsync(applicationUser, payload);
+		await _context.SaveChangesAsync();
+		await transaction.CommitAsync();
+	}
+
+	private async Task EnsureGoogleVerifiedAccountCanSignInAsync(ApplicationUser applicationUser)
+	{
+		var domainUser = await GetDomainUserOrThrowAsync(applicationUser.Id);
+		if (domainUser.IsSuspended)
+			throw new ApiException("Your account has been suspended.", 403);
+
+		var hasChanges = false;
+		if (!applicationUser.EmailConfirmed)
+		{
+			applicationUser.EmailConfirmed = true;
+			var updateResult = await _userManager.UpdateAsync(applicationUser);
+			if (!updateResult.Succeeded)
+				ThrowIdentityFailure("Google login failed", updateResult);
+		}
+
+		if (!domainUser.IsVerified)
+		{
+			domainUser.IsVerified = true;
+			hasChanges = true;
+		}
+
+		if (hasChanges)
+			await _context.SaveChangesAsync();
+	}
+
+	private async Task AddGoogleLoginOrThrowAsync(ApplicationUser applicationUser, GoogleTokenPayload payload)
+	{
+		var loginInfo = new UserLoginInfo(
+			GoogleLoginProvider,
+			payload.Subject,
+			GoogleProviderDisplayName);
+
+		var loginResult = await _userManager.AddLoginAsync(applicationUser, loginInfo);
+		if (!loginResult.Succeeded)
+			ThrowIdentityFailure("Google account linking failed", loginResult);
+	}
+
+	private async Task<string> GenerateUniqueGoogleUsernameAsync(GoogleTokenPayload payload)
+	{
+		var baseUsername = GoogleUsernameGenerator.CreateBaseUsername(payload);
+
+		for (var suffix = 0; suffix < 10000; suffix++)
+		{
+			var candidate = GoogleUsernameGenerator.WithSuffix(baseUsername, suffix);
+			var identityUser = await _userManager.FindByNameAsync(candidate);
+			var domainUserExists = await _context.Users.AnyAsync(user => user.Username == candidate);
+
+			if (identityUser is null && !domainUserExists)
+				return candidate;
+		}
+
+		throw new ApiException("Could not generate a unique username.", 409);
+	}
+
+	private static bool IsDuplicateUsername(IdentityResult result)
+	{
+		return result.Errors.Any(error =>
+			string.Equals(error.Code, nameof(IdentityErrorDescriber.DuplicateUserName), StringComparison.OrdinalIgnoreCase)
+			|| error.Code.Contains("DuplicateUserName", StringComparison.OrdinalIgnoreCase));
+	}
+
+	private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+	{
+		return exception.InnerException is PostgresException postgresException
+			&& postgresException.SqlState == PostgresErrorCodes.UniqueViolation;
+	}
+
+	private void DetachGoogleRegistrationEntities(Guid userId)
+	{
+		if (_context is not ApplicationDbContext dbContext)
+			return;
+
+		foreach (var entry in dbContext.ChangeTracker.Entries()
+			.Where(entry =>
+				entry.Entity is ApplicationUser applicationUser && applicationUser.Id == userId
+				|| entry.Entity is User domainUser && domainUser.Id == userId))
+		{
+			entry.State = EntityState.Detached;
+		}
+	}
+
+	private async Task<AuthenticationResponse> IssueAuthenticationResponseAsync(ApplicationUser applicationUser)
+	{
+		var roles = await _userManager.GetRolesAsync(applicationUser);
+		var role = roles.FirstOrDefault() ?? Roles.Traveler.ToString();
+
+		var accessToken = GenerateJwtToken(applicationUser, role);
+		var (rawRefreshToken, hashedRefreshToken) = GenerateRefreshToken();
+
+		_context.RefreshTokens.Add(new RefreshToken
+		{
+			UserId = applicationUser.Id,
+			TokenHash = hashedRefreshToken,
+			ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
+			CreatedAt = DateTime.UtcNow
+		});
+
+		await _context.SaveChangesAsync();
+
+		return new AuthenticationResponse
+		{
+			AccessToken = accessToken,
+			RefreshToken = rawRefreshToken,
+			Id = applicationUser.Id,
+			Username = applicationUser.UserName ?? string.Empty,
+			Email = applicationUser.Email ?? string.Empty,
+			Role = role
+		};
+	}
+
+	private async Task<User> GetDomainUserOrThrowAsync(Guid userId)
+	{
+		var domainUser = await _context.Users.FirstOrDefaultAsync(user => user.Id == userId);
+		if (domainUser is null)
+			throw new ApiException("User account is incomplete.", 500);
+
+		return domainUser;
+	}
+
+	private static void ThrowIdentityFailure(string message, IdentityResult result)
+	{
+		var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+		throw new ApiException($"{message}: {errors}");
 	}
 
 	private string GenerateJwtToken(ApplicationUser user, string role)

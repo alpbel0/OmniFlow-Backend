@@ -37,6 +37,12 @@ public static class ServiceRegistration
 			configuration.GetSection("JWTSettings").Bind(options));
 		services.Configure<MailSettings>(options =>
 			configuration.GetSection("MailSettings").Bind(options));
+		services
+			.AddOptions<GoogleAuthSettings>()
+			.Bind(configuration.GetSection("GoogleAuth"))
+			.Validate(settings => settings.AllowedClientIds.Any(id => !string.IsNullOrWhiteSpace(id)),
+				"GoogleAuth:AllowedClientIds must contain at least one client id.")
+			.ValidateOnStart();
 		services.Configure<DataProtectionTokenProviderOptions>(options =>
 		{
 			options.TokenLifespan = TimeSpan.FromHours(24);
@@ -57,6 +63,8 @@ public static class ServiceRegistration
 		services.AddScoped<IAccountService, AccountService>();
 		services.AddScoped<IEmailService, EmailService>();
 		services.AddScoped<IBlobService, BlobService>();
+		services.AddSingleton<IGoogleJsonWebSignatureValidator, GoogleJsonWebSignatureValidator>();
+		services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
 		services.AddSingleton<IScoringService, ScoringService>();
 		services.AddScoped<IBudgetCalculationService, BudgetCalculationService>();
 		services.AddSingleton<ITimelineService, TimelineService>();

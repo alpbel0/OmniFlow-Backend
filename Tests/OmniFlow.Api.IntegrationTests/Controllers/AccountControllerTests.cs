@@ -28,6 +28,7 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
         _factory = factory;
         _client = factory.CreateClient();
         factory.EmailService.Reset();
+        factory.GoogleTokenValidator.Reset();
 
         using var scope = factory.Services.CreateScope();
         TestDatabaseSeeder.SeedAsync(scope.ServiceProvider).GetAwaiter().GetResult();
@@ -124,6 +125,297 @@ public class AccountControllerTests : IClassFixture<CustomWebApplicationFactory>
         });
 
         loginResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WithValidToken_CreatesVerifiedUserAndReturnsWebCookieSession()
+    {
+        var email = $"google_new_{Guid.NewGuid():N}@test.com";
+        var subject = $"google-subject-{Guid.NewGuid():N}";
+        var uniqueNamePart = $"ozgur_{Guid.NewGuid():N}".Substring(0, 14);
+        var expectedUsername = $"yigit_{uniqueNamePart}";
+        _factory.GoogleTokenValidator.UsePayload(email, subject, $"Yigit {uniqueNamePart}");
+
+        var response = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.TryGetValues("Set-Cookie", out var cookies).Should().BeTrue();
+        cookies!.Any(cookie => cookie.Contains("refreshToken=", StringComparison.OrdinalIgnoreCase)).Should().BeTrue();
+
+        var result = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await response.Content.ReadAsStringAsync(), _json)!;
+        result.AccessToken.Should().NotBeNullOrWhiteSpace();
+        result.RefreshToken.Should().BeNull();
+        result.Email.Should().Be(email);
+        result.Username.Should().Be(expectedUsername);
+        _factory.EmailService.VerificationEmailCount.Should().Be(0);
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        var identityUser = await userManager.FindByEmailAsync(email);
+        identityUser.Should().NotBeNull();
+        identityUser!.EmailConfirmed.Should().BeTrue();
+        (await userManager.IsInRoleAsync(identityUser, "Traveler")).Should().BeTrue();
+        (await userManager.GetLoginsAsync(identityUser))
+            .Should().Contain(login => login.LoginProvider == "Google" && login.ProviderKey == subject);
+
+        var domainUser = await db.Users.SingleAsync(user => user.Id == identityUser.Id);
+        domainUser.IsVerified.Should().BeTrue();
+        domainUser.Username.Should().Be(expectedUsername);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WithMobileHeader_ReturnsRefreshTokenInBody()
+    {
+        var email = $"google_mobile_{Guid.NewGuid():N}@test.com";
+        _factory.GoogleTokenValidator.UsePayload(email, $"google-subject-{Guid.NewGuid():N}", "Mobile User");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/account/google")
+        {
+            Content = JsonContent.Create(new GoogleLoginRequest { IdToken = "valid-google-token" })
+        };
+        request.Headers.Add("X-Platform", "mobile");
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await response.Content.ReadAsStringAsync(), _json)!;
+        result.RefreshToken.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WhenCalledAgain_UsesExistingProviderLinkWithoutDuplicateLogin()
+    {
+        var email = $"google_repeat_{Guid.NewGuid():N}@test.com";
+        var subject = $"google-subject-{Guid.NewGuid():N}";
+        _factory.GoogleTokenValidator.UsePayload(email, subject, "Repeat User");
+
+        var firstResponse = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+        var secondResponse = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var first = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await firstResponse.Content.ReadAsStringAsync(), _json)!;
+        var second = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await secondResponse.Content.ReadAsStringAsync(), _json)!;
+        second.Id.Should().Be(first.Id);
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var identityUser = await userManager.FindByEmailAsync(email);
+        (await userManager.GetLoginsAsync(identityUser!))
+            .Count(login => login.LoginProvider == "Google" && login.ProviderKey == subject)
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WithExistingEmailPasswordUser_LinksAndReturnsSameUser()
+    {
+        var email = $"google_link_{Guid.NewGuid():N}@test.com";
+        var username = $"glink_{Guid.NewGuid():N}".Substring(0, 20);
+        var userId = await RegisterPendingUserAsync(username, email, "ValidPass1!");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var identityUser = await userManager.FindByEmailAsync(email);
+            identityUser!.EmailConfirmed = true;
+            await userManager.UpdateAsync(identityUser);
+        }
+
+        var subject = $"google-subject-{Guid.NewGuid():N}";
+        _factory.GoogleTokenValidator.UsePayload(email, subject, "Linked User");
+        _factory.EmailService.Reset();
+
+        var response = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await response.Content.ReadAsStringAsync(), _json)!;
+        result.Id.Should().Be(userId);
+        result.Username.Should().Be(username);
+        _factory.EmailService.VerificationEmailCount.Should().Be(0);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyUserManager = verifyScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var linkedUser = await verifyUserManager.FindByEmailAsync(email);
+        (await verifyUserManager.GetLoginsAsync(linkedUser!))
+            .Should().Contain(login => login.LoginProvider == "Google" && login.ProviderKey == subject);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WithExistingUnverifiedEmailPasswordUser_ConfirmsAndLinksAccount()
+    {
+        var email = $"google_confirm_{Guid.NewGuid():N}@test.com";
+        var username = $"gconfirm_{Guid.NewGuid():N}".Substring(0, 20);
+        var userId = await RegisterPendingUserAsync(username, email, "ValidPass1!");
+        _factory.EmailService.Reset();
+
+        _factory.GoogleTokenValidator.UsePayload(email, $"google-subject-{Guid.NewGuid():N}", "Confirm User");
+
+        var response = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await response.Content.ReadAsStringAsync(), _json)!;
+        result.Id.Should().Be(userId);
+        _factory.EmailService.VerificationEmailCount.Should().Be(0);
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var identityUser = await userManager.FindByEmailAsync(email);
+        identityUser!.EmailConfirmed.Should().BeTrue();
+        (await db.Users.SingleAsync(user => user.Id == userId)).IsVerified.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WithSuspendedUser_Returns403()
+    {
+        var email = $"google_suspended_{Guid.NewGuid():N}@test.com";
+        var username = $"gsuspend_{Guid.NewGuid():N}".Substring(0, 20);
+        var userId = await RegisterPendingUserAsync(username, email, "ValidPass1!");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var domainUser = await db.Users.SingleAsync(user => user.Id == userId);
+            domainUser.IsSuspended = true;
+            await db.SaveChangesAsync();
+        }
+
+        _factory.GoogleTokenValidator.UsePayload(email, $"google-subject-{Guid.NewGuid():N}", "Suspended User");
+
+        var response = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WithInvalidToken_Returns401()
+    {
+        _factory.GoogleTokenValidator.RejectWith401();
+
+        var response = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "invalid-google-token"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GoogleLogin_WithBlankToken_Returns422(string idToken)
+    {
+        var response = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = idToken
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WhenUsernameCollides_AppendsNumericSuffix()
+    {
+        var uniqueBase = $"collision_{Guid.NewGuid():N}".Substring(0, 18);
+        var name = uniqueBase.Replace('_', ' ');
+
+        _factory.GoogleTokenValidator.UsePayload(
+            $"google_collision_1_{Guid.NewGuid():N}@test.com",
+            $"google-subject-{Guid.NewGuid():N}",
+            name);
+        var firstResponse = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+
+        _factory.GoogleTokenValidator.UsePayload(
+            $"google_collision_2_{Guid.NewGuid():N}@test.com",
+            $"google-subject-{Guid.NewGuid():N}",
+            name);
+        var secondResponse = await _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = "valid-google-token"
+        });
+
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var first = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await firstResponse.Content.ReadAsStringAsync(), _json)!;
+        var second = JsonSerializer.Deserialize<AuthenticationResponse>(
+            await secondResponse.Content.ReadAsStringAsync(), _json)!;
+        first.Username.Should().Be(uniqueBase);
+        second.Username.Should().Be($"{uniqueBase}_1");
+    }
+
+    [Fact]
+    public async Task GoogleLogin_WithConcurrentSameNameRegistrations_ReturnsSuccessfulUniqueUsernames()
+    {
+        var uniqueBase = $"race_{Guid.NewGuid():N}".Substring(0, 18);
+        var name = uniqueBase.Replace('_', ' ');
+        var firstToken = $"google-token-{Guid.NewGuid():N}";
+        var secondToken = $"google-token-{Guid.NewGuid():N}";
+
+        _factory.GoogleTokenValidator.UsePayloadForToken(
+            firstToken,
+            $"google_race_1_{Guid.NewGuid():N}@test.com",
+            $"google-subject-{Guid.NewGuid():N}",
+            name);
+        _factory.GoogleTokenValidator.UsePayloadForToken(
+            secondToken,
+            $"google_race_2_{Guid.NewGuid():N}@test.com",
+            $"google-subject-{Guid.NewGuid():N}",
+            name);
+
+        var firstTask = _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = firstToken
+        });
+        var secondTask = _client.PostAsJsonAsync("/api/account/google", new GoogleLoginRequest
+        {
+            IdToken = secondToken
+        });
+
+        var responses = await Task.WhenAll(firstTask, secondTask);
+
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+        var results = new List<AuthenticationResponse>();
+        foreach (var response in responses)
+        {
+            results.Add(JsonSerializer.Deserialize<AuthenticationResponse>(
+                await response.Content.ReadAsStringAsync(), _json)!);
+        }
+
+        results.Select(result => result.Id).Should().OnlyHaveUniqueItems();
+        results.Select(result => result.Username)
+            .Should().BeEquivalentTo([uniqueBase, $"{uniqueBase}_1"]);
     }
 
     [Fact]

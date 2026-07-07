@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using OmniFlow.Application.DTOs.Account;
@@ -17,6 +18,7 @@ public class AccountController : ControllerBase
 	private readonly JWTSettings _jwtSettings;
 	private readonly IValidator<RegisterRequest> _registerValidator;
 	private readonly IValidator<AuthenticationRequest> _loginValidator;
+	private readonly IValidator<GoogleLoginRequest> _googleLoginValidator;
 	private readonly IValidator<VerifyEmailRequest> _verifyEmailValidator;
 	private readonly IValidator<ResendVerificationEmailRequest> _resendVerificationEmailValidator;
 	private readonly IValidator<ChangeVerificationEmailRequest> _changeVerificationEmailValidator;
@@ -27,6 +29,7 @@ public class AccountController : ControllerBase
 		IOptions<JWTSettings> jwtSettings,
 		IValidator<RegisterRequest> registerValidator,
 		IValidator<AuthenticationRequest> loginValidator,
+		IValidator<GoogleLoginRequest> googleLoginValidator,
 		IValidator<VerifyEmailRequest> verifyEmailValidator,
 		IValidator<ResendVerificationEmailRequest> resendVerificationEmailValidator,
 		IValidator<ChangeVerificationEmailRequest> changeVerificationEmailValidator,
@@ -36,6 +39,7 @@ public class AccountController : ControllerBase
 		_jwtSettings = jwtSettings.Value;
 		_registerValidator = registerValidator;
 		_loginValidator = loginValidator;
+		_googleLoginValidator = googleLoginValidator;
 		_verifyEmailValidator = verifyEmailValidator;
 		_resendVerificationEmailValidator = resendVerificationEmailValidator;
 		_changeVerificationEmailValidator = changeVerificationEmailValidator;
@@ -68,12 +72,24 @@ public class AccountController : ControllerBase
 			throw new ValidationException(validation.Errors);
 
 		var result = await _accountService.LoginAsync(request);
-		SetRefreshTokenCookie(result.RefreshToken!);
+		return Authenticated(result);
+	}
 
-		if (!IsMobileRequest())
-			result.RefreshToken = null;
+	/// <summary>Authenticate or register with a Google id token.</summary>
+	[AllowAnonymous]
+	[HttpPost("google")]
+	[ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
+	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+	public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+	{
+		var validation = await _googleLoginValidator.ValidateAsync(request);
+		if (!validation.IsValid)
+			throw new ValidationException(validation.Errors);
 
-		return Ok(result);
+		var result = await _accountService.GoogleLoginAsync(request);
+		return Authenticated(result);
 	}
 
 	/// <summary>Verify email confirmation token.</summary>
@@ -200,6 +216,16 @@ public class AccountController : ControllerBase
 			Request.Headers["X-Platform"].ToString(),
 			"mobile",
 			StringComparison.OrdinalIgnoreCase);
+
+	private IActionResult Authenticated(AuthenticationResponse result)
+	{
+		SetRefreshTokenCookie(result.RefreshToken!);
+
+		if (!IsMobileRequest())
+			result.RefreshToken = null;
+
+		return Ok(result);
+	}
 
 	private void SetRefreshTokenCookie(string refreshToken)
 	{

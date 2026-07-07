@@ -12,6 +12,7 @@
 	<ItemGroup>
 	  <FrameworkReference Include="Microsoft.AspNetCore.App" />
 	  <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
+	  <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
 	  <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
 	  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.15">
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

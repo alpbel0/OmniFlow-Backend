@@ -387,16 +387,16 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 ### Definition of Done (B0)
 
-- [ ] Dokümanlar koddaki gerçeği yansıtıyor
-- [ ] `dotnet test` çözüm seviyesinde çalışıyor ve CI'da koşuyor
-- [ ] Provider verisinin tazeliği API'den görülebiliyor
-- [ ] User profili konum ve seyahat stili alanlarını destekliyor
-- [ ] Draft trip'lerde tamamlanma yüzdesi hesaplanıp dönüyor
-- [ ] Published trip'lerde görüntülenme sayısı (`ViewCount`, anonim dahil) doğru artıyor ve gösteriliyor
-- [ ] Trip kapak fotoğrafı yüklenebiliyor
-- [ ] Trip Detail Review modundaki checklist satırları işaretlenip kalıcı olarak saklanabiliyor
-- [ ] Draft/Archived trip'ler owner olmayan kullanıcılara 404 dönüyor (B0.10)
-- [ ] Archived trip'ler tekrar Published durumuna alınabiliyor (B0.11)
+- [x] Dokümanlar koddaki gerçeği yansıtıyor
+- [x] `dotnet test` çözüm seviyesinde çalışıyor ve CI'da koşuyor
+- [x] Provider verisinin tazeliği API'den görülebiliyor
+- [x] User profili konum ve seyahat stili alanlarını destekliyor
+- [x] Draft trip'lerde tamamlanma yüzdesi hesaplanıp dönüyor
+- [x] Published trip'lerde görüntülenme sayısı (`ViewCount`, anonim dahil) doğru artıyor ve gösteriliyor
+- [x] Trip kapak fotoğrafı yüklenebiliyor
+- [x] Trip Detail Review modundaki checklist satırları işaretlenip kalıcı olarak saklanabiliyor
+- [x] Draft/Archived trip'ler owner olmayan kullanıcılara 404 dönüyor (B0.10)
+- [x] Archived trip'ler tekrar Published durumuna alınabiliyor (B0.11)
 - [x] Destinasyonlar koordinat ile dönüyor, Trip Detail haritasında pinlenebiliyor (B0.12)
 - [x] Checklist satırları ile TimelineEntry'ler arasında belirsizlik olmadan (exact match) bağlantı kuruluyor (B0.13)
 - [x] Owner, yayınladığı bir trip'i düzenlemek için Taslağa alıp tekrar yayınlayabiliyor, sayaçlar korunuyor (B0.14)
@@ -414,43 +414,68 @@ Email/şifre + JWT akışının yanına Google ile giriş eklenir. Mobilde Googl
 
 **Mobil karşılığı:** `MOBILE_ROADMAP.md → M7`
 
+### B1 Kararları / Contract
+
+- **Token doğrulama:** Backend sadece Google `idToken` kabul eder; access token veya authorization code bu fazın kapsamı değildir. `GoogleJsonWebSignature.ValidationSettings` içinde `Audience` olarak birden fazla client id desteklenir.
+- **Allowed client id listesi:** Android ve Web client id'leri `GoogleAuthSettings.AllowedClientIds` listesinde tutulur. Yarın iOS/web eklenirse aynı listeye yeni client id eklenir; repo'ya gerçek client id yazılmaz.
+- **Email doğrulama:** Google payload `email_verified=false` dönerse login reddedilir ve `401 Unauthorized` döner. Google ile kayıt olan kabul edilmiş kullanıcılar için `ApplicationUser.EmailConfirmed = true` ve domain `User.IsVerified = true` yazılır; ayrıca doğrulama maili gönderilmez.
+- **Username üretimi:** Önce Google `name` normalize edilir (`Yiğit Özgür` → `yigit_ozgur`). `name` boşsa email local-part kullanılır (`yigit@gmail.com` → `yigit`). Türkçe karakterler ASCII karşılığına çevrilir, boşluklar `_` olur, geçersiz karakterler temizlenir. Çakışma varsa sıralı suffix denenir: `yigit_ozgur_1`, `yigit_ozgur_2`, ...
+- **Account linking:** Aynı email ile mevcut e-posta/şifre hesabı varsa yeni kullanıcı oluşturulmaz; Google provider kaydı mevcut `ApplicationUser` hesabına bağlanır ve kullanıcının eski trip/profil verisi korunur.
+- **Response contract:** Google login response'u normal email/şifre login ile aynı formatta kalır: OmniFlow JWT access token + refresh token + mevcut kullanıcı detayları. Mobil token/session yönetimi ayrı bir response shape öğrenmek zorunda kalmaz.
+- **Secrets:** Local geliştirmede `dotnet user-secrets`, canlıda Azure App Service Configuration / environment variables kullanılır. Örnek env formatı: `GoogleAuth__AllowedClientIds__0`, `GoogleAuth__AllowedClientIds__1`.
+
 ### Task B1.1: Google Token Doğrulama Altyapısı
 
 **Tahmini Süre:** 2 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
-- [ ] `Google.Apis.Auth` NuGet paketi
-- [ ] `GoogleAuthSettings.cs` (ClientId — web + android client id'leri)
-- [ ] `IGoogleTokenValidator` + implementasyon — gelen ID token'ı doğrular, payload (email, name, sub, picture) döner
-- [ ] Geçersiz/expired token → `ApiException` (401)
+- [x] `Google.Apis.Auth` NuGet paketi
+- [x] `GoogleAuthSettings.cs` — `AllowedClientIds: List<string>` (Android + Web client id'leri; ileride iOS eklenebilir)
+- [x] `IGoogleTokenValidator` + implementasyon — gelen ID token'ı doğrular, audience listesini kontrol eder, payload (email, email_verified, name, sub, picture) döner
+- [x] Geçersiz/expired/audience uyuşmayan token → `ApiException` (401)
+- [x] `email_verified=false` veya email boş/null → `ApiException` (401)
+
+**Doğrulama:** `dotnet build OmniFlow\OmniFlow.sln --configuration Release`, solution-level unit test gate (`453/453`) ve full integration suite (`313/313`) geçti.
 
 ### Task B1.2: External Login Akışı
 
 **Tahmini Süre:** 3 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
-- [ ] `IAccountService`'e `GoogleLoginAsync(string idToken)` eklensin
-- [ ] Email ile mevcut `ApplicationUser` bul:
-  - [ ] Varsa → JWT + refresh token üret (mevcut akış)
-  - [ ] Yoksa → yeni `ApplicationUser` + aynı Id ile Domain `User` oluştur (username Google adından türetilir + benzersizleştirilir), `IsVerified = true`
-- [ ] `AspNetUserLogins` üzerinden Google provider eşlemesi kaydedilsin
-- [ ] `GoogleLoginRequest.cs` (IdToken) + validator
-- [ ] `POST /api/account/google` endpoint'i (dual platform: web cookie / mobile body — mevcut refresh pattern'i ile aynı)
+- [x] `IAccountService`'e `GoogleLoginAsync(string idToken)` eklensin
+- [x] Email ile mevcut `ApplicationUser` bul:
+  - [x] Varsa → mevcut kullanıcıya Google provider link'i ekle/varsa tekrar kullan, JWT + refresh token üret
+  - [x] Yoksa → yeni `ApplicationUser` + aynı Id ile Domain `User` oluştur; `EmailConfirmed = true`, `IsVerified = true`
+- [x] Username üretimi: Google `name` → normalize; yoksa email local-part; çakışmada sıralı suffix (`_1`, `_2`, ...)
+- [x] `AspNetUserLogins` üzerinden Google provider eşlemesi kaydedilsin
+- [x] `GoogleLoginRequest.cs` (IdToken) + validator
+- [x] `POST /api/account/google` endpoint'i — body: `{ "idToken": "..." }`, response normal login response'u ile aynı
+- [x] Google ile yeni kayıt akışında doğrulama maili gönderilmez
 
 ### Task B1.3: Test & Doğrulama
 
 **Tahmini Süre:** 1 saat
-**Durum:** [ ] Bekliyor
+**Durum:** [x] Tamamlandı
 
-- [ ] Geçerli token → 200 + token pair
-- [ ] Yeni kullanıcı otomatik oluşuyor, ikinci girişte aynı kullanıcı dönüyor
-- [ ] Geçersiz token → 401
+- [x] Geçerli token → 200 + token pair
+- [x] Yeni kullanıcı otomatik oluşuyor, `EmailConfirmed=true`, `IsVerified=true`, ikinci girişte aynı kullanıcı dönüyor
+- [x] Mevcut email/password hesabı Google login ile aynı hesaba linkleniyor; yeni duplicate user oluşmuyor
+- [x] Geçersiz token → 401
+- [x] `email_verified=false` → 401
+- [x] Audience listesinde olmayan client id → 401
+- [x] Username çakışması sıralı suffix ile çözülüyor
+- [x] Eşzamanlı aynı isimli Google kayıtları 500'e düşmeden benzersiz username alıyor
+- [x] Response shape email/password login ile aynı kalıyor
+
+**Doğrulama:** `dotnet build OmniFlow\OmniFlow.sln --configuration Release`, solution-level unit test gate (`453/453`) ve full integration suite (`313/313`) geçti.
 
 ### Definition of Done (B1)
 
-- [ ] Mobil bir Google ID token gönderip OmniFlow JWT'si alabiliyor
-- [ ] Hem yeni hem mevcut kullanıcı senaryosu çalışıyor
-- [ ] Username çakışması güvenli biçimde çözülüyor
+- [x] Mobil bir Google ID token gönderip OmniFlow JWT'si alabiliyor
+- [x] Hem yeni hem mevcut kullanıcı senaryosu çalışıyor
+- [x] Username çakışması güvenli biçimde çözülüyor
+- [x] Doğrulanmamış Google email'i kabul edilmiyor
+- [x] Google client id'leri repo'ya yazılmadan config/secret üzerinden çalışıyor
 
 ---
 
