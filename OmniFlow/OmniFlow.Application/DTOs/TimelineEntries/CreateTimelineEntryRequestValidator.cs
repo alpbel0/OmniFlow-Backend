@@ -7,7 +7,6 @@ public class CreateTimelineEntryRequestValidator : TimelineEntryBaseValidator<Cr
 {
     public CreateTimelineEntryRequestValidator()
     {
-        RuleFor(x => x.TripId).NotEmpty().WithMessage("TripId is required.");
         RuleFor(x => x.DestinationId).NotEmpty().WithMessage("DestinationId is required.");
         RuleFor(x => x.DayNumber).GreaterThan(0).WithMessage("DayNumber must be greater than 0.");
         RuleFor(x => x.EntryType).IsInEnum().WithMessage("Invalid EntryType.");
