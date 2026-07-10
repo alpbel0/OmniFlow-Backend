@@ -1,9 +1,11 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OmniFlow.Application.DTOs.TripDestinations;
 using OmniFlow.Application.DTOs.Trips;
 using OmniFlow.Application.Features.SavedTrips.Commands.SaveTrip;
 using OmniFlow.Application.Features.SavedTrips.Commands.UnsaveTrip;
+using OmniFlow.Application.Features.TripDestinations.Commands.ReorderDestinations;
 using OmniFlow.Application.Features.Trips.Commands.CreateTrip;
 using OmniFlow.Application.Features.Trips.Commands.CreateTripWizard;
 using OmniFlow.Application.Features.Trips.Commands.ArchiveTrip;
@@ -221,6 +223,27 @@ public class TripsController : BaseApiController
             ManualBudget = request.ManualBudget,
             CoverPhotoUrl = request.CoverPhotoUrl,
             Tags = request.Tags
+        };
+
+        await Mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>Reorder draft trip destinations and shift destination dates/timeline days.</summary>
+    [HttpPut("{id:guid}/destinations/reorder")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReorderDestinations(
+        [FromRoute] Guid id,
+        [FromBody] ReorderDestinationsRequest request)
+    {
+        var command = new ReorderDestinationsCommand
+        {
+            TripId = id,
+            OrderedDestinationIds = request.OrderedDestinationIds
         };
 
         await Mediator.Send(command);

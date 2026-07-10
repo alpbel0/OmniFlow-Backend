@@ -87,6 +87,60 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
         return (tripId, destinationId);
     }
 
+    private async Task<(Guid TripId, List<TripDestinationResponse> Destinations)> CreateDraftTripWithThreeDestinationsAsync(HttpClient authClient)
+    {
+        var createRequest = new CreateTripWizardRequest
+        {
+            Title = "Draft Multi Destination Trip",
+            Description = "Trip used for reorder tests",
+            Origin = "Istanbul",
+            OriginCountry = "Turkey",
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelCompanion = TravelCompanion.Couple,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural },
+            Tempo = Tempo.Moderate,
+            TransportPreference = TransportPreference.Walking,
+            ManualBudget = 1500,
+            CoverPhotoUrl = "https://example.com/cover.jpg",
+            Destinations =
+            [
+                new CreateTripDestinationRequest
+                {
+                    City = "Istanbul",
+                    Country = "Turkey",
+                    ArrivalDate = new DateOnly(2026, 8, 10),
+                    DepartureDate = new DateOnly(2026, 8, 12),
+                    OrderIndex = 1
+                },
+                new CreateTripDestinationRequest
+                {
+                    City = "Rome",
+                    Country = "Italy",
+                    ArrivalDate = new DateOnly(2026, 8, 12),
+                    DepartureDate = new DateOnly(2026, 8, 15),
+                    OrderIndex = 2
+                },
+                new CreateTripDestinationRequest
+                {
+                    City = "Paris",
+                    Country = "France",
+                    ArrivalDate = new DateOnly(2026, 8, 15),
+                    DepartureDate = new DateOnly(2026, 8, 15),
+                    OrderIndex = 3
+                }
+            ]
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync("/api/v1/trips/wizard", createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createBody = await createResponse.Content.ReadAsStringAsync();
+        var createResult = JsonSerializer.Deserialize<CreateTripWizardResponse>(createBody, _json);
+
+        return (createResult!.TripId, createResult.Destinations.OrderBy(d => d.OrderIndex).ToList());
+    }
+
     private async Task<(Guid TripId, Guid DestinationId)> CreatePublishedTripWithDestinationAsync(HttpClient authClient)
     {
         var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
@@ -373,6 +427,141 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
     }
 
     // ── PUT Tests ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ReorderDestinations_WithoutToken_Returns401()
+    {
+        var request = new ReorderDestinationsRequest
+        {
+            OrderedDestinationIds = [Guid.NewGuid()]
+        };
+
+        var response = await _client.PutAsJsonAsync($"/api/v1/Trips/{Guid.NewGuid()}/destinations/reorder", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ReorderDestinations_OwnerDraft_ShiftsDatesAndTimelineDays()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinations) = await CreateDraftTripWithThreeDestinationsAsync(authClient);
+        var istanbul = destinations.First(d => d.City == "Istanbul");
+        var rome = destinations.First(d => d.City == "Rome");
+        var paris = destinations.First(d => d.City == "Paris");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            await db.TimelineEntries.AddRangeAsync(
+                TimelineEntry.CreateCustomEventEntry(tripId, istanbul.Id, 1, 1000.0, "Istanbul Event", new TimeOnly(10, 0), 60),
+                TimelineEntry.CreateCustomEventEntry(tripId, rome.Id, 3, 1000.0, "Rome Event", new TimeOnly(12, 0), 60));
+            await db.SaveChangesAsync();
+        }
+
+        var request = new ReorderDestinationsRequest
+        {
+            OrderedDestinationIds = [rome.Id, istanbul.Id, paris.Id]
+        };
+
+        var response = await authClient.PutAsJsonAsync($"/api/v1/Trips/{tripId}/destinations/reorder", request);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var updatedDestinations = verifyDb.TripDestinations
+            .Where(d => d.TripId == tripId && d.DeletedAt == null)
+            .OrderBy(d => d.OrderIndex)
+            .ToList();
+
+        updatedDestinations.Select(d => d.Id).Should().ContainInOrder(rome.Id, istanbul.Id, paris.Id);
+        updatedDestinations[0].ArrivalDate.Should().Be(new DateOnly(2026, 8, 10));
+        updatedDestinations[0].DepartureDate.Should().Be(new DateOnly(2026, 8, 13));
+        updatedDestinations[0].NightCount.Should().Be(3);
+        updatedDestinations[1].ArrivalDate.Should().Be(new DateOnly(2026, 8, 13));
+        updatedDestinations[1].DepartureDate.Should().Be(new DateOnly(2026, 8, 15));
+        updatedDestinations[1].NightCount.Should().Be(2);
+        updatedDestinations[2].ArrivalDate.Should().Be(new DateOnly(2026, 8, 15));
+        updatedDestinations[2].DepartureDate.Should().Be(new DateOnly(2026, 8, 15));
+        updatedDestinations[2].NightCount.Should().Be(0);
+
+        var updatedEntries = verifyDb.TimelineEntries
+            .Where(e => e.TripId == tripId && e.DeletedAt == null)
+            .ToList();
+        updatedEntries.First(e => e.DestinationId == rome.Id).DayNumber.Should().Be(1);
+        updatedEntries.First(e => e.DestinationId == istanbul.Id).DayNumber.Should().Be(4);
+
+        var updatedTrip = verifyDb.Trips.First(t => t.Id == tripId);
+        updatedTrip.StartDate.Should().Be(new DateOnly(2026, 8, 10));
+        updatedTrip.EndDate.Should().Be(new DateOnly(2026, 8, 15));
+    }
+
+    [Fact]
+    public async Task ReorderDestinations_DuplicateIds_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinations) = await CreateDraftTripWithThreeDestinationsAsync(authClient);
+
+        var request = new ReorderDestinationsRequest
+        {
+            OrderedDestinationIds = [destinations[0].Id, destinations[0].Id, destinations[1].Id]
+        };
+
+        var response = await authClient.PutAsJsonAsync($"/api/v1/Trips/{tripId}/destinations/reorder", request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ReorderDestinations_MissingDestination_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinations) = await CreateDraftTripWithThreeDestinationsAsync(authClient);
+
+        var request = new ReorderDestinationsRequest
+        {
+            OrderedDestinationIds = [destinations[1].Id, destinations[0].Id]
+        };
+
+        var response = await authClient.PutAsJsonAsync($"/api/v1/Trips/{tripId}/destinations/reorder", request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ReorderDestinations_PublishedTrip_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreatePublishedTripWithDestinationAsync(authClient);
+
+        var request = new ReorderDestinationsRequest
+        {
+            OrderedDestinationIds = [destinationId]
+        };
+
+        var response = await authClient.PutAsJsonAsync($"/api/v1/Trips/{tripId}/destinations/reorder", request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ReorderDestinations_OtherUser_Returns403()
+    {
+        var ownerToken = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var ownerClient = CreateAuthenticatedClient(ownerToken);
+        var (tripId, destinations) = await CreateDraftTripWithThreeDestinationsAsync(ownerClient);
+
+        var otherToken = await GetAccessTokenAsync(TestDatabaseSeeder.AdminEmail, TestDatabaseSeeder.AdminPassword);
+        var otherClient = CreateAuthenticatedClient(otherToken);
+
+        var request = new ReorderDestinationsRequest
+        {
+            OrderedDestinationIds = destinations.Select(d => d.Id).Reverse().ToList()
+        };
+
+        var response = await otherClient.PutAsJsonAsync($"/api/v1/Trips/{tripId}/destinations/reorder", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 
     [Fact]
     public async Task UpdateDestination_WithoutToken_Returns401()
