@@ -238,6 +238,45 @@ public class TimelineEntryEntityTests
 	}
 
 	[Fact]
+	public void CreateCustomEventEntry_WithCoordinates_SetsCustomLatitudeAndLongitude()
+	{
+		var entry = TimelineEntry.CreateCustomEventEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			"Map Point", new TimeOnly(14, 0), 60,
+			customLatitude: 41.0082,
+			customLongitude: 28.9784);
+
+		entry.CustomLatitude.Should().Be(41.0082);
+		entry.CustomLongitude.Should().Be(28.9784);
+	}
+
+	[Fact]
+	public void CreateCustomEventEntry_WithIsLockedFalse_CreatesUnlockedEntry()
+	{
+		var entry = TimelineEntry.CreateCustomEventEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			"Map Place", new TimeOnly(14, 0), 60,
+			isLocked: false);
+
+		entry.IsLocked.Should().BeFalse();
+	}
+
+	[Fact]
+	public void CreateCustomEventEntry_WithIsLockedTrueOrNull_CreatesLockedEntry()
+	{
+		var lockedEntry = TimelineEntry.CreateCustomEventEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			"Reserved Event", new TimeOnly(14, 0), 60,
+			isLocked: true);
+		var defaultEntry = TimelineEntry.CreateCustomEventEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			"Default Event", new TimeOnly(15, 0), 60);
+
+		lockedEntry.IsLocked.Should().BeTrue();
+		defaultEntry.IsLocked.Should().BeTrue();
+	}
+
+	[Fact]
 	public void CreateCustomEventEntry_EmptyName_Throws()
 	{
 		var act = () => TimelineEntry.CreateCustomEventEntry(

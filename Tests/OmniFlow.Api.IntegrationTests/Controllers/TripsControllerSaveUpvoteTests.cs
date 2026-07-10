@@ -93,9 +93,14 @@ public class TripsControllerSaveUpvoteTests : IClassFixture<CustomWebApplication
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var dest = db.TripDestinations.First(d => d.TripId == tripId);
+        var trip = db.Trips.First(t => t.Id == tripId);
+        trip.Description = "Publishable trip for save and upvote tests";
+        trip.CoverPhotoUrl = "https://example.com/cover.jpg";
+        trip.EstimatedCost = 1200;
 
-        var entry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
-        await db.TimelineEntries.AddAsync(entry);
+        var firstEntry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
+        var secondEntry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1001, "Dinner", new TimeOnly(19, 0), 60);
+        await db.TimelineEntries.AddRangeAsync(firstEntry, secondEntry);
         await db.SaveChangesAsync();
 
         // 3. Publish trip

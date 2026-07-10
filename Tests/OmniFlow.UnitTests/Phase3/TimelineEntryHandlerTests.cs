@@ -357,7 +357,7 @@ public class TimelineEntryHandlerTests
 
         var command = new CreateTimelineEntryCommand(
             TripId: trip.Id, DestinationId: dest.Id, DayNumber: 1, EntryType: TimelineEntryType.CustomEvent,
-            PlaceId: null, CustomName: "Coldplay Concert", CustomCategory: PlaceCategory.Entertainment, CustomPhotoUrl: null, CustomLatitude: null, CustomLongitude: null, CustomDescription: null,
+            PlaceId: null, CustomName: "Coldplay Concert", CustomCategory: PlaceCategory.Entertainment, CustomPhotoUrl: null, CustomLatitude: 41.0082, CustomLongitude: 28.9784, CustomDescription: null,
             StartTime: new TimeOnly(20, 0), DurationMinutes: 180,
             FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
             TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
@@ -366,7 +366,71 @@ public class TimelineEntryHandlerTests
 
         var result = await _createHandler.Handle(command, CancellationToken.None);
         result.Should().NotBeNull();
-        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e => e.IsLocked && e.BufferMinutes == 0)), Times.Once);
+        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e =>
+            e.IsLocked &&
+            e.BufferMinutes == 0 &&
+            e.CustomLatitude == 41.0082 &&
+            e.CustomLongitude == 28.9784)), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CreateCustomEventEntry_WithIsLockedFalse_CreatesUnlockedEntry()
+    {
+        var userId = Guid.NewGuid();
+        var trip = CreateTestTrip(userId);
+        var dest = new TripDestination(new DateOnly(2026, 8, 10), new DateOnly(2026, 8, 13), "Rome", "Italy", 1) { Id = Guid.NewGuid(), TripId = trip.Id };
+        trip.Destinations.Add(dest);
+
+        _authServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+        _contextMock.Setup(x => x.Trips).Returns(CreateAsyncMockDbSet(new List<Trip> { trip }).Object);
+        _timelineRepoMock.Setup(x => x.GetLastEntryInDayAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>())).ReturnsAsync((TimelineEntry?)null);
+        _timelineRepoMock.Setup(x => x.GetByTripAndDayAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>())).ReturnsAsync(new List<TimelineEntry>());
+        _timelineServiceMock.Setup(x => x.GetLexoRankBetween(null, null)).Returns(500.0);
+        _timelineServiceMock.Setup(x => x.ValidateNewEntry(It.IsAny<TimelineEntry>(), It.IsAny<IEnumerable<TimelineEntry>>(), It.IsAny<Tempo>(), It.IsAny<DateOnly>())).Returns(TimelineValidationResult.Valid());
+
+        var command = new CreateTimelineEntryCommand(
+            TripId: trip.Id, DestinationId: dest.Id, DayNumber: 1, EntryType: TimelineEntryType.CustomEvent,
+            PlaceId: null, CustomName: "Map Place", CustomCategory: PlaceCategory.Attraction, CustomPhotoUrl: null, CustomLatitude: null, CustomLongitude: null, CustomDescription: null,
+            StartTime: new TimeOnly(14, 0), DurationMinutes: 60,
+            FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
+            TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
+            AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
+            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: false);
+
+        await _createHandler.Handle(command, CancellationToken.None);
+
+        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e => !e.IsLocked)), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CreateCustomAccommodationEntry_WithIsLockedFalse_StaysLocked()
+    {
+        var userId = Guid.NewGuid();
+        var trip = CreateTestTrip(userId);
+        var dest = new TripDestination(new DateOnly(2026, 8, 10), new DateOnly(2026, 8, 13), "Rome", "Italy", 1) { Id = Guid.NewGuid(), TripId = trip.Id };
+        trip.Destinations.Add(dest);
+
+        _authServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+        _contextMock.Setup(x => x.Trips).Returns(CreateAsyncMockDbSet(new List<Trip> { trip }).Object);
+        _timelineRepoMock.Setup(x => x.GetLastEntryInDayAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>())).ReturnsAsync((TimelineEntry?)null);
+        _timelineRepoMock.Setup(x => x.GetByTripAndDayAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>())).ReturnsAsync(new List<TimelineEntry>());
+        _timelineServiceMock.Setup(x => x.GetLexoRankBetween(null, null)).Returns(500.0);
+        _timelineServiceMock.Setup(x => x.ValidateNewEntry(It.IsAny<TimelineEntry>(), It.IsAny<IEnumerable<TimelineEntry>>(), It.IsAny<Tempo>(), It.IsAny<DateOnly>())).Returns(TimelineValidationResult.Valid());
+
+        var command = new CreateTimelineEntryCommand(
+            TripId: trip.Id, DestinationId: dest.Id, DayNumber: 1, EntryType: TimelineEntryType.CustomAccommodation,
+            PlaceId: null, CustomName: "Hotel Artis", CustomCategory: null, CustomPhotoUrl: null, CustomLatitude: null, CustomLongitude: null, CustomDescription: null,
+            StartTime: null, DurationMinutes: null,
+            FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
+            TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
+            AccommodationCheckIn: new DateTime(2026, 8, 10, 14, 0, 0, DateTimeKind.Utc),
+            AccommodationCheckOut: new DateTime(2026, 8, 11, 12, 0, 0, DateTimeKind.Utc),
+            AccommodationAddress: "Rome",
+            Price: 120, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: false);
+
+        await _createHandler.Handle(command, CancellationToken.None);
+
+        _timelineRepoMock.Verify(x => x.AddAsync(It.Is<TimelineEntry>(e => e.IsLocked)), Times.Once);
     }
 
     [Fact]
@@ -550,6 +614,59 @@ public class TimelineEntryHandlerTests
         entry.DurationMinutes.Should().Be(90);
         entry.Price.Should().Be(25);
         entry.Notes.Should().Be("Updated notes");
+    }
+
+    [Fact]
+    public async Task Handle_UpdateUnlockedCustomEvent_UpdatesCoordinatesAndPreservesOnNull()
+    {
+        var userId = Guid.NewGuid();
+        var trip = CreateTestTrip(userId);
+        var dest = new TripDestination(new DateOnly(2026, 8, 10), new DateOnly(2026, 8, 13), "Rome", "Italy", 1) { Id = Guid.NewGuid(), TripId = trip.Id };
+        trip.Destinations.Add(dest);
+
+        var entry = TimelineEntry.CreateCustomEventEntry(
+            trip.Id,
+            dest.Id,
+            1,
+            1000,
+            "Map Event",
+            new TimeOnly(10, 0),
+            60,
+            customLatitude: 41.0082,
+            customLongitude: 28.9784);
+        entry.Unlock();
+
+        _authServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+        _timelineRepoMock.Setup(x => x.GetByIdAsync(entry.Id)).ReturnsAsync(entry);
+        _contextMock.Setup(x => x.Trips).Returns(CreateAsyncMockDbSet(new List<Trip> { trip }).Object);
+        _timelineRepoMock.Setup(x => x.GetByTripAndDayAsync(trip.Id, dest.Id, 1)).ReturnsAsync(new List<TimelineEntry>());
+        _timelineServiceMock.Setup(x => x.CheckConflict(It.IsAny<TimelineEntry>(), It.IsAny<IEnumerable<TimelineEntry>>(), It.IsAny<DateOnly>())).Returns(TimelineValidationResult.Valid());
+
+        var updateCoordinates = new UpdateTimelineEntryCommand(
+            Id: entry.Id, DestinationId: dest.Id, DayNumber: 1,
+            PlaceId: null, CustomName: "Updated Map Event", CustomCategory: null, CustomPhotoUrl: null, CustomLatitude: 40.7128, CustomLongitude: -74.0060, CustomDescription: null,
+            StartTime: new TimeOnly(11, 0), DurationMinutes: 90,
+            FlightFromAirport: null, FlightToAirport: null, FlightFromCity: null, FlightToCity: null, FlightDepartureAt: null, FlightArrivalAt: null, Airline: null, FlightNumber: null,
+            TransportType: null, TransportFromStation: null, TransportToStation: null, TransportCompany: null,
+            AccommodationCheckIn: null, AccommodationCheckOut: null, AccommodationAddress: null,
+            Price: 0, CurrencyCode: "USD", ProviderFlightId: null, ProviderHotelId: null, Notes: null, IsLocked: null);
+
+        await _updateHandler.Handle(updateCoordinates, CancellationToken.None);
+
+        entry.CustomLatitude.Should().Be(40.7128);
+        entry.CustomLongitude.Should().Be(-74.0060);
+
+        var preserveCoordinates = updateCoordinates with
+        {
+            CustomName = "Null Coordinate Update",
+            CustomLatitude = null,
+            CustomLongitude = null
+        };
+
+        await _updateHandler.Handle(preserveCoordinates, CancellationToken.None);
+
+        entry.CustomLatitude.Should().Be(40.7128);
+        entry.CustomLongitude.Should().Be(-74.0060);
     }
 
     [Fact]

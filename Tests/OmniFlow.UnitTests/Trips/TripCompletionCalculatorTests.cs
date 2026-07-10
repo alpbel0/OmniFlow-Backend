@@ -1,4 +1,4 @@
-using OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
+using OmniFlow.Application.Features.Trips.Completion;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
 

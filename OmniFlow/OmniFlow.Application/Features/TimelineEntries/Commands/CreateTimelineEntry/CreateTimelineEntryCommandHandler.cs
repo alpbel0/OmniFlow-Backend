@@ -261,7 +261,10 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
                 request.DurationMinutes ?? throw new ApiException("DurationMinutes is required for CustomEvent entries."),
                 request.CustomCategory,
                 request.Price,
-                request.Notes),
+                request.Notes,
+                request.CustomLatitude,
+                request.CustomLongitude,
+                request.IsLocked),
 
             _ => throw new ApiException($"Unsupported EntryType: {request.EntryType}")
         };

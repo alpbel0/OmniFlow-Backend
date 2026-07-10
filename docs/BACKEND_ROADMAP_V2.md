@@ -858,6 +858,56 @@ Lokal para birimi ana, kullanıcının para birimi ikincil gösterilecek. Backen
 
 ---
 
+## 🎯 B9 — Trip Planning Sayfası Backend Follow-up'ları
+
+### Scope
+
+Mobil Trip Planning sayfası tasarımı sırasında (`omniflow-mobile/TRIP_PLANNING_PAGE.md`) ortaya çıkan, mevcut backend'de eksik olan üç küçük ama gerekli düzeltme. Hepsi Trip Planning'in M3 akışlarının tam çalışması için gerekli.
+
+**Mobil karşılığı:** `MOBILE_ROADMAP.md → Task 3.11-3.16` (Trip Planning)
+
+### Task B9.1: CustomEvent Koordinat Mapping'i
+
+**Tahmini Süre:** 1 saat
+**Durum:** [x] Tamamlandı
+
+**Sorun:** `CreateTimelineEntryCommandHandler.CreateEntryFromRequestAsync` içinde `CustomEvent` factory çağrısı (`TimelineEntry.CreateCustomEventEntry`) request'ten gelen `CustomLatitude` / `CustomLongitude` değerlerini **entity'ye set etmiyor** (CustomAccommodation set ediyor, CustomEvent atlıyor). Bu yüzden haritadan dokunarak eklenen "Mekan/Diğer" öğeleri harita pini olarak saklanamıyor.
+
+- [x] `TimelineEntry.CreateCustomEventEntry` factory'sine `customLatitude` / `customLongitude` parametreleri eklenmesi (veya entity üzerinde set edilmesi)
+- [x] `CreateTimelineEntryCommandHandler`'daki `CustomEvent` case'inde `request.CustomLatitude` / `request.CustomLongitude`'un aktarılması
+- [x] Aynı mapping'in `UpdateTimelineEntry` handler'ında da doğrulanması (varsa aynı eksik giderilir)
+- [x] Unit test: koordinatlı `CustomEvent` create → entity'de `CustomLatitude/Longitude` set olmuş oluyor
+
+### Task B9.2: Publish %80 CompletionPercentage Enforce
+
+**Tahmini Süre:** 1 saat
+**Durum:** [x] Tamamlandı
+
+**Sorun:** `TripCompletionCalculator` / `CompletionPercentage` mevcut (bkz. B0.6) ve mobil "Yayınla" butonunu bu değere göre pasifleştirecek, ancak backend publish handler'ında bu kural **doğrulanmıyor** — API'ye doğrudan istek atılırsa %80 altında bir trip yayınlanabiliyor.
+
+- [x] Trip publish handler'ında `CompletionPercentage >= 80` kontrolü
+- [x] Yetersizse net mesajla `400 Bad Request` (örn. "Trip is only %X complete; publishing requires at least 80%")
+- [x] Unit test: %80 altı trip publish → 400; %80+ → başarılı
+
+### Task B9.3: Haritadan "Mekan" CustomEvent Kilitsiz Oluşturma
+
+**Tahmini Süre:** 1 saat
+**Durum:** [x] Tamamlandı
+
+**Sorun:** Genel kural "Place hariç tüm Custom* tipler otomatik `IsLocked = true`". Ancak haritadan "Mekan" olarak eklenen öğe teknik olarak `CustomEvent` tipinde kaydediliyor ve bu bir "fikir" (rezervasyon değil) — bu yüzden **kilitsiz** olmalı. "Diğer" olarak eklenen `CustomEvent` ise normal kural (kilitli) kalmalı.
+
+- [x] Oluşturma bağlamına göre `IsLocked` set edilebilmesi: haritadan "Mekan" niyetli `CustomEvent` → `IsLocked = false`, "Diğer" → `IsLocked = true`
+- [x] Ayrım için request'e bir işaret (örn. `IsLocked` opsiyonel alanı ya da bir "custom place" bayrağı) — mobil hangi butondan geldiğini bildiği için oluşturma anında iletir
+- [x] Unit test: mekan-niyetli CustomEvent → kilitsiz; generic event → kilitli
+
+### Definition of Done (B9)
+
+- [x] Haritadan eklenen custom mekanlar koordinatlarıyla saklanıyor ve pin olarak dönüyor
+- [x] %80 altındaki trip API üzerinden yayınlanamıyor
+- [x] Haritadan "Mekan" olarak eklenen öğe kilitsiz, "Diğer" kilitli oluşuyor
+
+---
+
 ## 📌 Genel Notlar
 
 - Her faz bağımsız deploy edilebilir; mobil ekip ilgili fazı bekler.

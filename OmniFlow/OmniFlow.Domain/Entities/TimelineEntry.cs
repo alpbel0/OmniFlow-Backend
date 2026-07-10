@@ -261,7 +261,10 @@ public class TimelineEntry : AuditableBaseEntity
         int durationMinutes,
         PlaceCategory? category = null,
         decimal price = 0,
-        string? notes = null)
+        string? notes = null,
+        double? customLatitude = null,
+        double? customLongitude = null,
+        bool? isLocked = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("CustomName is required for a CustomEvent entry.");
@@ -277,9 +280,11 @@ public class TimelineEntry : AuditableBaseEntity
             EntryType = TimelineEntryType.CustomEvent,
             CustomName = name.Trim(),
             CustomCategory = category,
+            CustomLatitude = customLatitude,
+            CustomLongitude = customLongitude,
             StartTime = startTime,
             DurationMinutes = durationMinutes,
-            IsLocked = true,
+            IsLocked = isLocked ?? true,
             BufferMinutes = 0,
             Price = price,
             Notes = notes
@@ -407,7 +412,9 @@ public class TimelineEntry : AuditableBaseEntity
     /// </summary>
     public void UpdateEventDetails(
         string? name, TimeOnly? startTime,
-        int? durationMinutes, PlaceCategory? category)
+        int? durationMinutes, PlaceCategory? category,
+        double? customLatitude = null,
+        double? customLongitude = null)
     {
         if (IsLocked && EntryType == TimelineEntryType.CustomEvent)
             throw new DomainException("Cannot modify event details of a locked timeline entry.");
@@ -424,6 +431,10 @@ public class TimelineEntry : AuditableBaseEntity
         }
         if (category.HasValue)
             CustomCategory = category.Value;
+        if (customLatitude.HasValue)
+            CustomLatitude = customLatitude.Value;
+        if (customLongitude.HasValue)
+            CustomLongitude = customLongitude.Value;
     }
 
     /// <summary>

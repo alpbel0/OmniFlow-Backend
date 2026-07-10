@@ -188,7 +188,8 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
 
                 case TimelineEntryType.CustomEvent:
                     entry.UpdateEventDetails(
-                        request.CustomName, request.StartTime, request.DurationMinutes, request.CustomCategory);
+                        request.CustomName, request.StartTime, request.DurationMinutes, request.CustomCategory,
+                        request.CustomLatitude, request.CustomLongitude);
                     break;
             }
         }

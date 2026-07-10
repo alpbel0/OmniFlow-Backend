@@ -93,8 +93,13 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-        var entry = TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1000.0, "Event", new TimeOnly(10, 0), 60);
-        await db.TimelineEntries.AddAsync(entry);
+        var trip = db.Trips.First(t => t.Id == tripId);
+        trip.Description = "Publishable trip for timeline tests";
+        trip.CoverPhotoUrl = "https://example.com/cover.jpg";
+        trip.EstimatedCost = 1200;
+        var firstEntry = TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1000.0, "Event", new TimeOnly(10, 0), 60);
+        var secondEntry = TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1001.0, "Dinner", new TimeOnly(19, 0), 60);
+        await db.TimelineEntries.AddRangeAsync(firstEntry, secondEntry);
         await db.SaveChangesAsync();
 
         var publishResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);
@@ -203,7 +208,7 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
     // ── Create Entry Tests ────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task CreatePlaceEntry_OwnerDraft_Returns201()
+    public async Task CreateCustomEventEntry_WithCoordinates_Returns201AndGetTimelineIncludesCoordinates()
     {
         var token = await GetAccessTokenAsync();
         var authClient = CreateAuthenticatedClient(token);
@@ -216,6 +221,8 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
             DayNumber = 1,
             EntryType = TimelineEntryType.CustomEvent,
             CustomName = "Test Event",
+            CustomLatitude = 41.0082,
+            CustomLongitude = 28.9784,
             StartTime = new TimeOnly(10, 0),
             DurationMinutes = 60,
             Price = 50
@@ -228,9 +235,73 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         var result = JsonSerializer.Deserialize<TimelineEntryResponse>(body, _json);
         result!.EntryType.Should().Be(TimelineEntryType.CustomEvent);
         result.CustomName.Should().Be("Test Event");
+        result.CustomLatitude.Should().Be(41.0082);
+        result.CustomLongitude.Should().Be(28.9784);
         result.IsLocked.Should().BeTrue();
         result.BufferMinutes.Should().Be(0);
         result.PlanningSlotKey.Should().BeNull();
+
+        var timelineResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/timeline");
+        timelineResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var timelineBody = await timelineResponse.Content.ReadAsStringAsync();
+        var timeline = JsonSerializer.Deserialize<List<TimelineEntryResponse>>(timelineBody, _json);
+        var timelineEntry = timeline.Should().ContainSingle(e => e.Id == result.Id).Subject;
+        timelineEntry.CustomLatitude.Should().Be(41.0082);
+        timelineEntry.CustomLongitude.Should().Be(28.9784);
+    }
+
+    [Fact]
+    public async Task CreateCustomEventEntry_WithIsLockedFalse_ReturnsUnlockedEntry()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomEvent,
+            CustomName = "Map Place",
+            StartTime = new TimeOnly(14, 0),
+            DurationMinutes = 60,
+            IsLocked = false
+        };
+
+        var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<TimelineEntryResponse>(body, _json);
+        result!.EntryType.Should().Be(TimelineEntryType.CustomEvent);
+        result.IsLocked.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CreateCustomEventEntry_WithoutIsLocked_ReturnsLockedEntry()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomEvent,
+            CustomName = "Reserved Event",
+            StartTime = new TimeOnly(16, 0),
+            DurationMinutes = 60
+        };
+
+        var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<TimelineEntryResponse>(body, _json);
+        result!.IsLocked.Should().BeTrue();
     }
 
     [Fact]
@@ -421,7 +492,8 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
             DestinationId = destinationId,
             DayNumber = 1,
             EntryType = TimelineEntryType.CustomAccommodation,
-            ProviderHotelId = providerHotelId
+            ProviderHotelId = providerHotelId,
+            IsLocked = false
         };
 
         var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
@@ -545,6 +617,8 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
             DestinationId = destinationId,
             DayNumber = 1,
             CustomName = "Updated Event",
+            CustomLatitude = 40.7128,
+            CustomLongitude = -74.0060,
             StartTime = new TimeOnly(11, 0),
             DurationMinutes = 90,
             Price = 75,
@@ -557,6 +631,8 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         var updateBody = await updateResponse.Content.ReadAsStringAsync();
         var updateResult = JsonSerializer.Deserialize<TimelineEntryResponse>(updateBody, _json);
         updateResult!.CustomName.Should().Be("Updated Event");
+        updateResult.CustomLatitude.Should().Be(40.7128);
+        updateResult.CustomLongitude.Should().Be(-74.0060);
         updateResult.Price.Should().Be(75);
     }
 

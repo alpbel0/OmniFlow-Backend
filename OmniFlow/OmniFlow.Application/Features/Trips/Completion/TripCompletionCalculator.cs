@@ -1,6 +1,6 @@
 using OmniFlow.Domain.Entities;
 
-namespace OmniFlow.Application.Features.Trips.Queries.GetMyTrips;
+namespace OmniFlow.Application.Features.Trips.Completion;
 
 public static class TripCompletionCalculator
 {

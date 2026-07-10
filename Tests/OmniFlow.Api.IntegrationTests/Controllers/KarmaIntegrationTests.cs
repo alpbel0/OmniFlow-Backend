@@ -84,8 +84,13 @@ public class KarmaIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 		using var scope = _factory.Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
 		var dest = db.TripDestinations.First(d => d.TripId == tripId);
-		var entry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
-		await db.TimelineEntries.AddAsync(entry);
+		var trip = db.Trips.First(t => t.Id == tripId);
+		trip.Description = "Publishable trip for karma tests";
+		trip.CoverPhotoUrl = "https://example.com/cover.jpg";
+		trip.EstimatedCost = 1200;
+		var firstEntry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000, "Test Event", new TimeOnly(10, 0), 60);
+		var secondEntry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1001, "Dinner", new TimeOnly(19, 0), 60);
+		await db.TimelineEntries.AddRangeAsync(firstEntry, secondEntry);
 		await db.SaveChangesAsync();
 
 		var publishResponse = await authClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);

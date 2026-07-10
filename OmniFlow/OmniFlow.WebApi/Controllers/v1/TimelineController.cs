@@ -77,7 +77,8 @@ public class TimelineController : BaseApiController
             ProviderFlightId: request.ProviderFlightId,
             ProviderHotelId: request.ProviderHotelId,
             Notes: request.Notes,
-            PlanningSlotKey: request.PlanningSlotKey
+            PlanningSlotKey: request.PlanningSlotKey,
+            IsLocked: request.IsLocked
         );
 
         var result = await Mediator.Send(command);

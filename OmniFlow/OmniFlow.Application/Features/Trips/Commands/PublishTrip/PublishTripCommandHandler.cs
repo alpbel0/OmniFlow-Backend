@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.Exceptions;
+using OmniFlow.Application.Features.Trips.Completion;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Domain.Enums;
@@ -53,6 +54,19 @@ public class PublishTripCommandHandler : IRequestHandler<PublishTripCommand, Uni
         if (timelineEntries.Count() == 0)
         {
             throw new ApiException("Cannot publish a trip without any timeline entries.");
+        }
+
+        var destinations = await _context.TripDestinations
+            .Where(d => d.TripId == request.TripId && d.DeletedAt == null)
+            .OrderBy(d => d.OrderIndex)
+            .ToListAsync(cancellationToken);
+
+        var completionPercentage = TripCompletionCalculator.Calculate(trip, destinations, timelineEntries);
+        if (completionPercentage < 80)
+        {
+            throw new ApiException(
+                $"Trip is only {completionPercentage}% complete; publishing requires at least 80%.",
+                400);
         }
 
         trip.Status = TripStatus.Published;

@@ -297,6 +297,56 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Publish_WithCompletionBelow80_Returns400()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var tripId = await CreateTripAsync(authClient, "Low Completion Publish Trip");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var trip = db.Trips.First(t => t.Id == tripId);
+            trip.Description = null;
+            trip.CoverPhotoUrl = null;
+            trip.EstimatedCost = null;
+            trip.ManualBudget = null;
+            trip.PersonCount = 1;
+            trip.TravelStyles.Clear();
+            var destination = db.TripDestinations.First(d => d.TripId == tripId);
+            db.TimelineEntries.Add(TimelineEntry.CreateCustomEventEntry(
+                tripId,
+                destination.Id,
+                1,
+                1000,
+                "Only Event",
+                new TimeOnly(10, 0),
+                60));
+            await db.SaveChangesAsync();
+        }
+
+        var response = await authClient.PostAsync($"/api/v1/trips/{tripId}/publish", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("Trip is only");
+        body.Should().Contain("requires at least 80%");
+    }
+
+    [Fact]
+    public async Task Publish_WithCompletionAtLeast80_Returns204()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        var tripId = await CreateAndPublishTripAsync(authClient);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        db.Trips.Single(t => t.Id == tripId).Status.Should().Be(TripStatus.Published);
+    }
+
+    [Fact]
     public async Task UploadCoverPhoto_WithoutToken_Returns401()
     {
         using var client = CreateClientWithFakeBlobService();
@@ -1481,6 +1531,18 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
                 2.3522);
 
             db.TimelineEntries.Add(accommodationEntry);
+            var trip = db.Trips.First(t => t.Id == tripId);
+            trip.Description = "Publishable recommendation trip";
+            trip.CoverPhotoUrl = "https://example.com/cover.jpg";
+            trip.EstimatedCost = 1200;
+            db.TimelineEntries.Add(TimelineEntry.CreateCustomEventEntry(
+                tripId,
+                destinationId,
+                1,
+                1001,
+                "Dinner",
+                new TimeOnly(19, 0),
+                60));
 
             db.Places.Add(new Place
             {
@@ -1605,15 +1667,36 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var trip = db.Trips.First(t => t.Id == tripId);
+        trip.Description = "Publishable checklist trip";
+        trip.CoverPhotoUrl = "https://example.com/cover.jpg";
+        trip.EstimatedCost = 1200;
 
-        db.TimelineEntries.Add(TimelineEntry.CreateCustomEventEntry(
-            tripId,
-            destinationId,
-            1,
-            1000,
-            "Checklist publish entry",
-            new TimeOnly(10, 0),
-            60));
+        var destinations = db.TripDestinations
+            .Where(d => d.TripId == tripId && d.DeletedAt == null)
+            .OrderBy(d => d.OrderIndex)
+            .ToList();
+
+        foreach (var destination in destinations)
+        {
+            db.TimelineEntries.Add(TimelineEntry.CreateCustomEventEntry(
+                tripId,
+                destination.Id,
+                1,
+                1000,
+                destination.Id == destinationId ? "Checklist publish entry" : "Destination publish entry",
+                new TimeOnly(10, 0),
+                60));
+
+            db.TimelineEntries.Add(TimelineEntry.CreateCustomEventEntry(
+                tripId,
+                destination.Id,
+                1,
+                1001,
+                "Dinner",
+                new TimeOnly(19, 0),
+                60));
+        }
 
         await db.SaveChangesAsync();
     }
@@ -1654,8 +1737,13 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var dest = db.TripDestinations.First(d => d.TripId == tripId);
+        var trip = db.Trips.First(t => t.Id == tripId);
+        trip.Description = "Publishable trip for controller tests";
+        trip.CoverPhotoUrl = "https://example.com/cover.jpg";
+        trip.EstimatedCost = 1200;
+        var publishableEntryCount = Math.Max(entryCount, 2);
 
-        for (int i = 0; i < entryCount; i++)
+        for (int i = 0; i < publishableEntryCount; i++)
         {
             var entry = TimelineEntry.CreateCustomEventEntry(tripId, dest.Id, 1, 1000 + i, $"Event {i + 1}", new TimeOnly(10, 0), 60);
             await db.TimelineEntries.AddAsync(entry);

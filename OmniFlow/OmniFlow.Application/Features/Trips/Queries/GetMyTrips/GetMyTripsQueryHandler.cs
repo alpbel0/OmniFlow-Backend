@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OmniFlow.Application.DTOs.Trips;
+using OmniFlow.Application.Features.Trips.Completion;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Domain.Entities;

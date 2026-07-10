@@ -9,6 +9,7 @@ public class CreateTimelineEntryRequest : ITimelineEntryValidationProperties
     public int DayNumber { get; set; }
     public TimelineEntryType EntryType { get; set; }
     public string? PlanningSlotKey { get; set; }
+    public bool? IsLocked { get; set; }
 
     public Guid? PlaceId { get; set; }
 

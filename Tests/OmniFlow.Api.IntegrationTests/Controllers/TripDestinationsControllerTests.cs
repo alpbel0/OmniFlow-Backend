@@ -94,8 +94,13 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
         // Add a timeline entry so the trip can be published
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-        var entry = TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1000.0, "Event", new TimeOnly(10, 0), 60);
-        await db.TimelineEntries.AddAsync(entry);
+        var trip = db.Trips.First(t => t.Id == tripId);
+        trip.Description = "Publishable trip for destination tests";
+        trip.CoverPhotoUrl = "https://example.com/cover.jpg";
+        trip.EstimatedCost = 1200;
+        var firstEntry = TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1000.0, "Event", new TimeOnly(10, 0), 60);
+        var secondEntry = TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1001.0, "Dinner", new TimeOnly(19, 0), 60);
+        await db.TimelineEntries.AddRangeAsync(firstEntry, secondEntry);
         await db.SaveChangesAsync();
 
         // Publish

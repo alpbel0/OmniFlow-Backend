@@ -40,20 +40,16 @@ public class PublishTripCommandTests
 
         _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
 
-        var trip = new Trip
-        {
-            Id = tripId,
-            OwnerId = userId,
-            Status = TripStatus.Draft
-        };
+        var trip = CreatePublishableTrip(tripId, userId);
+        var destination = CreateDestination(tripId);
+        trip.Destinations.Add(destination);
+        trip.RecalculateFromDestinations();
 
         _tripRepositoryMock.Setup(x => x.GetByIdWithOwnerAsync(tripId)).ReturnsAsync(trip);
 
-        var timelineEntries = new List<TimelineEntry>
-        {
-            TimelineEntry.CreatePlaceEntry(tripId, Guid.NewGuid(), 1, 1000, Guid.NewGuid())
-        }.AsQueryable();
+        var timelineEntries = CreatePublishableTimelineEntries(tripId, destination.Id).AsQueryable();
         _contextMock.Setup(x => x.TimelineEntries).Returns(CreateMockDbSet(timelineEntries).Object);
+        _contextMock.Setup(x => x.TripDestinations).Returns(CreateMockDbSet(new List<TripDestination> { destination }.AsQueryable()).Object);
 
         var command = new PublishTripCommand { TripId = tripId };
 
@@ -163,6 +159,90 @@ public class PublishTripCommandTests
         var exception = await Assert.ThrowsAsync<ApiException>(() => _handler.Handle(command, CancellationToken.None));
         exception.StatusCode.Should().Be(400);
         exception.Message.Should().Contain("timeline");
+    }
+
+    [Fact]
+    public async Task Handle_CompletionBelow80_ThrowsApiExceptionAndDoesNotPublishOrAwardKarma()
+    {
+        var userId = Guid.NewGuid();
+        var tripId = Guid.NewGuid();
+
+        _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+
+        var trip = new Trip
+        {
+            Id = tripId,
+            OwnerId = userId,
+            Status = TripStatus.Draft,
+            Title = "Partial Trip",
+            Origin = "Istanbul",
+            OriginCountry = "Turkey",
+            PersonCount = 2,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural }
+        };
+        var destination = CreateDestination(tripId);
+        trip.Destinations.Add(destination);
+        trip.RecalculateFromDestinations();
+        var timelineEntries = new List<TimelineEntry>
+        {
+            TimelineEntry.CreateCustomEventEntry(tripId, destination.Id, 1, 1000, "Museum", new TimeOnly(10, 0), 90)
+        }.AsQueryable();
+
+        _tripRepositoryMock.Setup(x => x.GetByIdWithOwnerAsync(tripId)).ReturnsAsync(trip);
+        _contextMock.Setup(x => x.TimelineEntries).Returns(CreateMockDbSet(timelineEntries).Object);
+        _contextMock.Setup(x => x.TripDestinations).Returns(CreateMockDbSet(new List<TripDestination> { destination }.AsQueryable()).Object);
+
+        var exception = await Assert.ThrowsAsync<ApiException>(() =>
+            _handler.Handle(new PublishTripCommand { TripId = tripId }, CancellationToken.None));
+
+        exception.StatusCode.Should().Be(400);
+        exception.Message.Should().Contain("Trip is only");
+        exception.Message.Should().Contain("requires at least 80%");
+        trip.Status.Should().Be(TripStatus.Draft);
+        _karmaServiceMock.Verify(x => x.AwardKarmaAsync(
+            It.IsAny<Guid>(),
+            It.IsAny<Guid?>(),
+            It.IsAny<KarmaEventType>(),
+            It.IsAny<int>(),
+            It.IsAny<Guid?>(),
+            It.IsAny<KarmaSourceType?>()), Times.Never);
+        _tripRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Trip>()), Times.Never);
+    }
+
+    private static Trip CreatePublishableTrip(Guid tripId, Guid ownerId)
+    {
+        return new Trip
+        {
+            Id = tripId,
+            OwnerId = ownerId,
+            Status = TripStatus.Draft,
+            Title = "Publishable Trip",
+            Description = "A complete itinerary",
+            CoverPhotoUrl = "https://example.com/cover.jpg",
+            Origin = "Istanbul",
+            OriginCountry = "Turkey",
+            PersonCount = 2,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural },
+            EstimatedCost = 1200
+        };
+    }
+
+    private static TripDestination CreateDestination(Guid tripId)
+    {
+        return new TripDestination(new DateOnly(2026, 8, 10), new DateOnly(2026, 8, 13), "Paris", "France", 1)
+        {
+            Id = Guid.NewGuid(),
+            TripId = tripId
+        };
+    }
+
+    private static List<TimelineEntry> CreatePublishableTimelineEntries(Guid tripId, Guid destinationId)
+    {
+        return new List<TimelineEntry>
+        {
+            TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1000, "Museum", new TimeOnly(10, 0), 90),
+            TimelineEntry.CreateCustomEventEntry(tripId, destinationId, 1, 1001, "Dinner", new TimeOnly(19, 0), 60)
+        };
     }
 
     private static Mock<DbSet<T>> CreateMockDbSet<T>(IQueryable<T> data) where T : class
