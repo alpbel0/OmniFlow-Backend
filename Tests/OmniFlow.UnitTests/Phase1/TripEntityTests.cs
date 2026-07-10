@@ -68,4 +68,27 @@ public class TripEntityTests
         var trip = new Trip();
         trip.ForkedFromId.Should().BeNull();
     }
+
+    [Fact]
+    public void SetOriginCoordinates_WithValues_SetsLatitudeAndLongitude()
+    {
+        var trip = new Trip();
+
+        trip.SetOriginCoordinates(41.0082, 28.9784);
+
+        trip.OriginLatitude.Should().Be(41.0082);
+        trip.OriginLongitude.Should().Be(28.9784);
+    }
+
+    [Fact]
+    public void SetOriginCoordinates_WithNulls_ClearsLatitudeAndLongitude()
+    {
+        var trip = new Trip();
+        trip.SetOriginCoordinates(41.0082, 28.9784);
+
+        trip.SetOriginCoordinates(null, null);
+
+        trip.OriginLatitude.Should().BeNull();
+        trip.OriginLongitude.Should().BeNull();
+    }
 }

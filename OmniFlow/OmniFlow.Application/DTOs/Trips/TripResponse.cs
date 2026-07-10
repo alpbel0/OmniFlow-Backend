@@ -13,6 +13,8 @@ public class TripResponse
     // Step 1: Origin
     public string Origin { get; set; } = string.Empty;
     public string OriginCountry { get; set; } = string.Empty;
+    public double? OriginLatitude { get; set; }
+    public double? OriginLongitude { get; set; }
 
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }

@@ -30,6 +30,8 @@ public class TripConfiguration : IEntityTypeConfiguration<Trip>
 		// Origin fields (replaced City/Country)
 		builder.Property(t => t.Origin).HasColumnName("origin").IsRequired();
 		builder.Property(t => t.OriginCountry).HasColumnName("origin_country").IsRequired();
+		builder.Property(t => t.OriginLatitude).HasColumnName("origin_latitude");
+		builder.Property(t => t.OriginLongitude).HasColumnName("origin_longitude");
 
 		builder.Property(t => t.StartDate).HasColumnName("start_date");
 		builder.Property(t => t.EndDate).HasColumnName("end_date");

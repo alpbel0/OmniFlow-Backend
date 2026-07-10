@@ -10,6 +10,9 @@ public class TestGeocodingService : IGeocodingService
         string country,
         CancellationToken cancellationToken = default)
     {
+        if (string.Equals(city.Trim(), "Unknown Origin", StringComparison.OrdinalIgnoreCase))
+            return Task.FromResult<GeocodingResult?>(null);
+
         return Task.FromResult<GeocodingResult?>(new GeocodingResult
         {
             Latitude = 41.0082,

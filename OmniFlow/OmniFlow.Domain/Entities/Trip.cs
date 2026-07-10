@@ -22,6 +22,10 @@ public class Trip : AuditableBaseEntity
 
 	public string OriginCountry { get; set; } = string.Empty;
 
+	public double? OriginLatitude { get; private set; }
+
+	public double? OriginLongitude { get; private set; }
+
 	// Date range computed from Destinations
 	public DateOnly StartDate { get; private set; }
 
@@ -71,6 +75,12 @@ public class Trip : AuditableBaseEntity
 	public ICollection<Flight> Flights { get; set; } = new List<Flight>();
 
 	public ICollection<Hotel> Hotels { get; set; } = new List<Hotel>();
+
+	public void SetOriginCoordinates(double? latitude, double? longitude)
+	{
+		OriginLatitude = latitude;
+		OriginLongitude = longitude;
+	}
 
 	/// <summary>
 	/// Recalculates StartDate and EndDate from the Destinations collection.

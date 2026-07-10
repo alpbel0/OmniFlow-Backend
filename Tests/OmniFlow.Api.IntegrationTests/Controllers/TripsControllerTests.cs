@@ -233,6 +233,21 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         result.Destinations[0].City.Should().Be("Antalya");
         result.Destinations[0].Latitude.Should().Be(41.0082);
         result.Destinations[0].Longitude.Should().Be(28.9784);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var createdTrip = db.Trips.Single(t => t.Id == result.TripId);
+            createdTrip.OriginLatitude.Should().Be(41.0082);
+            createdTrip.OriginLongitude.Should().Be(28.9784);
+        }
+
+        var detailResponse = await authClient.GetAsync($"/api/v1/trips/{result.TripId}");
+        detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var trip = JsonSerializer.Deserialize<TripResponse>(await detailResponse.Content.ReadAsStringAsync(), _json);
+        trip.Should().NotBeNull();
+        trip!.OriginLatitude.Should().Be(41.0082);
+        trip.OriginLongitude.Should().Be(28.9784);
     }
 
     [Fact]
@@ -1280,6 +1295,58 @@ public class TripsControllerTests : IClassFixture<CustomWebApplicationFactory>
         result.Destinations.Should().HaveCount(1);
         result.Destinations[0].City.Should().Be("Paris");
         result.BudgetMessages.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateWizard_WhenOriginGeocodingReturnsNull_CreatesTripWithNullOriginCoordinates()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+
+        var request = new CreateTripWizardRequest
+        {
+            Title = "Unknown Origin Trip",
+            Origin = "Unknown Origin",
+            OriginCountry = "Nowhere",
+            PersonCount = 2,
+            BudgetTier = BudgetTier.Standard,
+            TravelCompanion = TravelCompanion.Couple,
+            TravelStyles = new List<TravelStyle> { TravelStyle.Cultural },
+            Tempo = Tempo.Moderate,
+            TransportPreference = TransportPreference.Walking,
+            Destinations =
+            [
+                new CreateTripDestinationRequest
+                {
+                    City = "Paris",
+                    Country = "France",
+                    ArrivalDate = new DateOnly(2026, 6, 10),
+                    DepartureDate = new DateOnly(2026, 6, 15),
+                    OrderIndex = 1
+                }
+            ]
+        };
+
+        var response = await authClient.PostAsJsonAsync("/api/v1/trips/wizard", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var result = JsonSerializer.Deserialize<CreateTripWizardResponse>(
+            await response.Content.ReadAsStringAsync(),
+            _json);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var createdTrip = db.Trips.Single(t => t.Id == result!.TripId);
+        createdTrip.OriginLatitude.Should().BeNull();
+        createdTrip.OriginLongitude.Should().BeNull();
+
+        var detailResponse = await authClient.GetAsync($"/api/v1/trips/{result!.TripId}");
+        detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var trip = JsonSerializer.Deserialize<TripResponse>(await detailResponse.Content.ReadAsStringAsync(), _json);
+        trip.Should().NotBeNull();
+        trip!.OriginLatitude.Should().BeNull();
+        trip.OriginLongitude.Should().BeNull();
+        trip.Destinations.Should().OnlyContain(destination => destination.Latitude.HasValue && destination.Longitude.HasValue);
     }
 
     [Fact]

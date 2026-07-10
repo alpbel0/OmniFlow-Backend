@@ -39,6 +39,11 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
         var trip = _mapper.Map<Trip>(request);
         trip.OwnerId = Guid.Parse(_authenticatedUserService.UserId);
         trip.Status = TripStatus.Draft;
+        var originGeocodingResult = await _geocodingService.GeocodeAsync(
+            request.Origin,
+            request.OriginCountry,
+            cancellationToken);
+        trip.SetOriginCoordinates(originGeocodingResult?.Latitude, originGeocodingResult?.Longitude);
 
         foreach (var destRequest in request.Destinations.OrderBy(d => d.OrderIndex))
         {
