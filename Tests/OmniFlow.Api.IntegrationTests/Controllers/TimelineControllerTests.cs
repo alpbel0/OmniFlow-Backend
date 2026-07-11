@@ -251,6 +251,54 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
+    public async Task CreateCustomTransportEntry_WithFromToCoordinates_Returns201AndGetTimelineIncludesCoordinates()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+
+        var request = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomTransport,
+            TransportType = TransportMode.Train,
+            TransportFromStation = "Roma Termini",
+            TransportToStation = "Firenze SMN",
+            TransportCompany = "Trenitalia",
+            TransportFromLatitude = 41.901,
+            TransportFromLongitude = 12.501,
+            TransportToLatitude = 43.776,
+            TransportToLongitude = 11.248,
+            StartTime = new TimeOnly(9, 0),
+            DurationMinutes = 90,
+            Price = 55
+        };
+
+        var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var result = JsonSerializer.Deserialize<TimelineEntryResponse>(await response.Content.ReadAsStringAsync(), _json);
+        result!.EntryType.Should().Be(TimelineEntryType.CustomTransport);
+        result.TransportFromLatitude.Should().Be(41.901);
+        result.TransportFromLongitude.Should().Be(12.501);
+        result.TransportToLatitude.Should().Be(43.776);
+        result.TransportToLongitude.Should().Be(11.248);
+
+        var timelineResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/timeline");
+        timelineResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var timeline = JsonSerializer.Deserialize<List<TimelineEntryResponse>>(
+            await timelineResponse.Content.ReadAsStringAsync(),
+            _json);
+        var timelineEntry = timeline.Should().ContainSingle(e => e.Id == result.Id).Subject;
+        timelineEntry.TransportFromLatitude.Should().Be(41.901);
+        timelineEntry.TransportFromLongitude.Should().Be(12.501);
+        timelineEntry.TransportToLatitude.Should().Be(43.776);
+        timelineEntry.TransportToLongitude.Should().Be(11.248);
+    }
+
+    [Fact]
     public async Task CreateCustomEventEntry_WithIsLockedFalse_ReturnsUnlockedEntry()
     {
         var token = await GetAccessTokenAsync();
@@ -675,6 +723,113 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         };
 
         var updateResponse = await authClient.PutAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry/{entryId}", updateRequest);
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateCustomTransportEntry_WhenUnlocked_UpdatesFromToCoordinates()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+
+        var createRequest = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomTransport,
+            TransportType = TransportMode.Train,
+            TransportFromStation = "Roma Termini",
+            TransportToStation = "Firenze SMN",
+            TransportFromLatitude = 41.901,
+            TransportFromLongitude = 12.501,
+            TransportToLatitude = 43.776,
+            TransportToLongitude = 11.248,
+            StartTime = new TimeOnly(9, 0),
+            DurationMinutes = 90
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createResult = JsonSerializer.Deserialize<TimelineEntryResponse>(
+            await createResponse.Content.ReadAsStringAsync(),
+            _json);
+        var entryId = createResult!.Id;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            var entry = db.TimelineEntries.First(e => e.Id == entryId);
+            entry.Unlock();
+            await db.SaveChangesAsync();
+        }
+
+        var updateRequest = new UpdateTimelineEntryRequest
+        {
+            Id = entryId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            TransportType = TransportMode.Train,
+            TransportFromStation = "Roma Tiburtina",
+            TransportToStation = "Bologna Centrale",
+            TransportFromLatitude = 41.911,
+            TransportFromLongitude = 12.530,
+            TransportToLatitude = 44.505,
+            TransportToLongitude = 11.343,
+            StartTime = new TimeOnly(10, 0),
+            DurationMinutes = 120
+        };
+
+        var updateResponse = await authClient.PutAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry/{entryId}", updateRequest);
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updateResult = JsonSerializer.Deserialize<TimelineEntryResponse>(
+            await updateResponse.Content.ReadAsStringAsync(),
+            _json);
+        updateResult!.TransportFromLatitude.Should().Be(41.911);
+        updateResult.TransportFromLongitude.Should().Be(12.530);
+        updateResult.TransportToLatitude.Should().Be(44.505);
+        updateResult.TransportToLongitude.Should().Be(11.343);
+    }
+
+    [Fact]
+    public async Task UpdateCustomTransportEntry_WhenLockedCoordinateChanges_Returns400()
+    {
+        var token = await GetAccessTokenAsync();
+        var authClient = CreateAuthenticatedClient(token);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+
+        var createRequest = new CreateTimelineEntryRequest
+        {
+            TripId = tripId,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            EntryType = TimelineEntryType.CustomTransport,
+            TransportType = TransportMode.Train,
+            TransportFromStation = "Roma Termini",
+            TransportToStation = "Firenze SMN",
+            TransportFromLatitude = 41.901,
+            TransportFromLongitude = 12.501,
+            TransportToLatitude = 43.776,
+            TransportToLongitude = 11.248
+        };
+
+        var createResponse = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry", createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createResult = JsonSerializer.Deserialize<TimelineEntryResponse>(
+            await createResponse.Content.ReadAsStringAsync(),
+            _json);
+
+        var updateRequest = new UpdateTimelineEntryRequest
+        {
+            Id = createResult!.Id,
+            DestinationId = destinationId,
+            DayNumber = 1,
+            TransportFromLatitude = 41.911
+        };
+
+        var updateResponse = await authClient.PutAsJsonAsync($"/api/v1/trips/{tripId}/timeline/entry/{createResult.Id}", updateRequest);
         updateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 

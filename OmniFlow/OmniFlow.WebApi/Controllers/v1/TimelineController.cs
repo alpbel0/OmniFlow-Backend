@@ -77,6 +77,10 @@ public class TimelineController : BaseApiController
             ProviderFlightId: request.ProviderFlightId,
             ProviderHotelId: request.ProviderHotelId,
             Notes: request.Notes,
+            TransportFromLatitude: request.TransportFromLatitude,
+            TransportFromLongitude: request.TransportFromLongitude,
+            TransportToLatitude: request.TransportToLatitude,
+            TransportToLongitude: request.TransportToLongitude,
             PlanningSlotKey: request.PlanningSlotKey,
             IsLocked: request.IsLocked
         );
@@ -130,7 +134,11 @@ public class TimelineController : BaseApiController
             ProviderFlightId: request.ProviderFlightId,
             ProviderHotelId: request.ProviderHotelId,
             Notes: request.Notes,
-            IsLocked: request.IsLocked
+            IsLocked: request.IsLocked,
+            TransportFromLatitude: request.TransportFromLatitude,
+            TransportFromLongitude: request.TransportFromLongitude,
+            TransportToLatitude: request.TransportToLatitude,
+            TransportToLongitude: request.TransportToLongitude
         );
 
         var result = await Mediator.Send(command);

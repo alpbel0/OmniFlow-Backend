@@ -49,6 +49,10 @@ public class TimelineEntryResponse
     public string? TransportFromStation { get; set; }
     public string? TransportToStation { get; set; }
     public string? TransportCompany { get; set; }
+    public double? TransportFromLatitude { get; set; }
+    public double? TransportFromLongitude { get; set; }
+    public double? TransportToLatitude { get; set; }
+    public double? TransportToLongitude { get; set; }
 
     // CustomAccommodation
     public DateTime? AccommodationCheckIn { get; set; }

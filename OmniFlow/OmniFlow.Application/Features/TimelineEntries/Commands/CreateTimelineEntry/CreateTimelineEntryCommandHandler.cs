@@ -240,6 +240,10 @@ public class CreateTimelineEntryCommandHandler : IRequestHandler<CreateTimelineE
                 request.TransportFromStation,
                 request.TransportToStation,
                 request.TransportCompany,
+                request.TransportFromLatitude,
+                request.TransportFromLongitude,
+                request.TransportToLatitude,
+                request.TransportToLongitude,
                 request.Price,
                 request.Notes),
 

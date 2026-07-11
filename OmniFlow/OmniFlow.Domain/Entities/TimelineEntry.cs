@@ -51,6 +51,10 @@ public class TimelineEntry : AuditableBaseEntity
     public string? TransportFromStation { get; set; }
     public string? TransportToStation { get; set; }
     public string? TransportCompany { get; set; }
+    public double? TransportFromLatitude { get; set; }
+    public double? TransportFromLongitude { get; set; }
+    public double? TransportToLatitude { get; set; }
+    public double? TransportToLongitude { get; set; }
 
     // === CustomAccommodation specific ===
     public DateTime? AccommodationCheckIn { get; private set; }
@@ -176,6 +180,10 @@ public class TimelineEntry : AuditableBaseEntity
         string? fromStation = null,
         string? toStation = null,
         string? company = null,
+        double? fromLatitude = null,
+        double? fromLongitude = null,
+        double? toLatitude = null,
+        double? toLongitude = null,
         decimal price = 0,
         string? notes = null)
     {
@@ -195,6 +203,10 @@ public class TimelineEntry : AuditableBaseEntity
             TransportFromStation = fromStation?.Trim(),
             TransportToStation = toStation?.Trim(),
             TransportCompany = company?.Trim(),
+            TransportFromLatitude = fromLatitude,
+            TransportFromLongitude = fromLongitude,
+            TransportToLatitude = toLatitude,
+            TransportToLongitude = toLongitude,
             IsLocked = true,
             BufferMinutes = 30,
             Price = price,
@@ -355,7 +367,9 @@ public class TimelineEntry : AuditableBaseEntity
     /// </summary>
     public void UpdateTransportDetails(
         TransportMode? transportType, TimeOnly? startTime, int? durationMinutes,
-        string? fromStation, string? toStation, string? company)
+        string? fromStation, string? toStation, string? company,
+        double? fromLatitude = null, double? fromLongitude = null,
+        double? toLatitude = null, double? toLongitude = null)
     {
         if (IsLocked && EntryType == TimelineEntryType.CustomTransport)
             throw new DomainException("Cannot modify transport details of a locked timeline entry.");
@@ -376,6 +390,14 @@ public class TimelineEntry : AuditableBaseEntity
             TransportToStation = toStation.Trim();
         if (!string.IsNullOrWhiteSpace(company))
             TransportCompany = company.Trim();
+        if (fromLatitude.HasValue)
+            TransportFromLatitude = fromLatitude.Value;
+        if (fromLongitude.HasValue)
+            TransportFromLongitude = fromLongitude.Value;
+        if (toLatitude.HasValue)
+            TransportToLatitude = toLatitude.Value;
+        if (toLongitude.HasValue)
+            TransportToLongitude = toLongitude.Value;
     }
 
     /// <summary>
@@ -525,6 +547,10 @@ public class TimelineEntry : AuditableBaseEntity
             TransportFromStation = TransportFromStation,
             TransportToStation = TransportToStation,
             TransportCompany = TransportCompany,
+            TransportFromLatitude = TransportFromLatitude,
+            TransportFromLongitude = TransportFromLongitude,
+            TransportToLatitude = TransportToLatitude,
+            TransportToLongitude = TransportToLongitude,
             AccommodationCheckIn = AccommodationCheckIn,
             AccommodationCheckOut = AccommodationCheckOut,
             AccommodationAddress = AccommodationAddress,

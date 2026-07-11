@@ -153,6 +153,80 @@ public class TimelineEntryEntityTests
 	}
 
 	[Fact]
+	public void CreateCustomTransportEntry_WithCoordinates_SetsFromAndToCoordinates()
+	{
+		var entry = TimelineEntry.CreateCustomTransportEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			TransportMode.Train,
+			fromStation: "Roma Termini", toStation: "Firenze SMN",
+			company: "Trenitalia",
+			fromLatitude: 41.901,
+			fromLongitude: 12.501,
+			toLatitude: 43.776,
+			toLongitude: 11.248);
+
+		entry.TransportFromLatitude.Should().Be(41.901);
+		entry.TransportFromLongitude.Should().Be(12.501);
+		entry.TransportToLatitude.Should().Be(43.776);
+		entry.TransportToLongitude.Should().Be(11.248);
+	}
+
+	[Fact]
+	public void CreateCustomTransportEntry_WithoutCoordinates_LeavesCoordinatesNull()
+	{
+		var entry = TimelineEntry.CreateCustomTransportEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			TransportMode.Bus);
+
+		entry.TransportFromLatitude.Should().BeNull();
+		entry.TransportFromLongitude.Should().BeNull();
+		entry.TransportToLatitude.Should().BeNull();
+		entry.TransportToLongitude.Should().BeNull();
+	}
+
+	[Fact]
+	public void UpdateTransportDetails_UnlockedEntry_UpdatesCoordinates()
+	{
+		var entry = TimelineEntry.CreateCustomTransportEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			TransportMode.Train);
+		entry.Unlock();
+
+		entry.UpdateTransportDetails(
+			null, null, null,
+			null, null, null,
+			fromLatitude: 41.901,
+			fromLongitude: 12.501,
+			toLatitude: 43.776,
+			toLongitude: 11.248);
+
+		entry.TransportFromLatitude.Should().Be(41.901);
+		entry.TransportFromLongitude.Should().Be(12.501);
+		entry.TransportToLatitude.Should().Be(43.776);
+		entry.TransportToLongitude.Should().Be(11.248);
+	}
+
+	[Fact]
+	public void UpdateTransportDetails_NullCoordinates_KeepsExistingCoordinates()
+	{
+		var entry = TimelineEntry.CreateCustomTransportEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			TransportMode.Train,
+			fromLatitude: 41.901,
+			fromLongitude: 12.501,
+			toLatitude: 43.776,
+			toLongitude: 11.248);
+		entry.Unlock();
+
+		entry.UpdateTransportDetails(null, null, null, null, null, null);
+
+		entry.TransportFromLatitude.Should().Be(41.901);
+		entry.TransportFromLongitude.Should().Be(12.501);
+		entry.TransportToLatitude.Should().Be(43.776);
+		entry.TransportToLongitude.Should().Be(11.248);
+	}
+
+	[Fact]
 	public void CreateCustomTransportEntry_MissingType_Throws()
 	{
 		var act = () => TimelineEntry.CreateCustomTransportEntry(
@@ -388,5 +462,24 @@ public class TimelineEntryEntityTests
 		property.Should().NotBeNull();
 		property!.SetMethod.Should().NotBeNull();
 		property.SetMethod!.IsPublic.Should().BeFalse();
+	}
+
+	[Fact]
+	public void CloneForFork_CustomTransport_CopiesTransportCoordinates()
+	{
+		var entry = TimelineEntry.CreateCustomTransportEntry(
+			TripId, DestinationId, DayNumber, OrderIndex,
+			TransportMode.Train,
+			fromLatitude: 41.901,
+			fromLongitude: 12.501,
+			toLatitude: 43.776,
+			toLongitude: 11.248);
+
+		var clone = entry.CloneForFork(Guid.NewGuid(), Guid.NewGuid());
+
+		clone.TransportFromLatitude.Should().Be(41.901);
+		clone.TransportFromLongitude.Should().Be(12.501);
+		clone.TransportToLatitude.Should().Be(43.776);
+		clone.TransportToLongitude.Should().Be(11.248);
 	}
 }

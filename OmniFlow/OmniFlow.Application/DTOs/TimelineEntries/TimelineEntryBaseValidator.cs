@@ -32,6 +32,26 @@ public abstract class TimelineEntryBaseValidator<T> : AbstractValidator<T>
             .When(x => x.CustomLongitude.HasValue)
             .WithMessage("Longitude must be between -180 and 180.");
 
+        RuleFor(x => x.TransportFromLatitude)
+            .InclusiveBetween(-90.0, 90.0)
+            .When(x => x.TransportFromLatitude.HasValue)
+            .WithMessage("TransportFromLatitude must be between -90 and 90.");
+
+        RuleFor(x => x.TransportFromLongitude)
+            .InclusiveBetween(-180.0, 180.0)
+            .When(x => x.TransportFromLongitude.HasValue)
+            .WithMessage("TransportFromLongitude must be between -180 and 180.");
+
+        RuleFor(x => x.TransportToLatitude)
+            .InclusiveBetween(-90.0, 90.0)
+            .When(x => x.TransportToLatitude.HasValue)
+            .WithMessage("TransportToLatitude must be between -90 and 90.");
+
+        RuleFor(x => x.TransportToLongitude)
+            .InclusiveBetween(-180.0, 180.0)
+            .When(x => x.TransportToLongitude.HasValue)
+            .WithMessage("TransportToLongitude must be between -180 and 180.");
+
         // URL
         RuleFor(x => x.CustomPhotoUrl)
             .Must(url => Uri.IsWellFormedUriString(url, UriKind.Absolute))

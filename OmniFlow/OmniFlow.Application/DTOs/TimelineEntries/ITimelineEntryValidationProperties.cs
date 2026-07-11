@@ -10,6 +10,10 @@ public interface ITimelineEntryValidationProperties
     string? CurrencyCode { get; }
     double? CustomLatitude { get; }
     double? CustomLongitude { get; }
+    double? TransportFromLatitude { get; }
+    double? TransportFromLongitude { get; }
+    double? TransportToLatitude { get; }
+    double? TransportToLongitude { get; }
     string? CustomPhotoUrl { get; }
     string? FlightFromAirport { get; }
     string? FlightToAirport { get; }

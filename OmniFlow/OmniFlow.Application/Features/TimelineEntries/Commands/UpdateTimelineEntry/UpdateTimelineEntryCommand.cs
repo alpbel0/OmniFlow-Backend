@@ -44,5 +44,9 @@ public record UpdateTimelineEntryCommand(
     Guid? ProviderHotelId,
 
     string? Notes,
-    bool? IsLocked
+    bool? IsLocked,
+    double? TransportFromLatitude = null,
+    double? TransportFromLongitude = null,
+    double? TransportToLatitude = null,
+    double? TransportToLongitude = null
 ) : IRequest<OmniFlow.Application.DTOs.TimelineEntries.TimelineEntryResponse>;

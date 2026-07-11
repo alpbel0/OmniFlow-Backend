@@ -67,6 +67,10 @@ public class TimelineEntryConfiguration : IEntityTypeConfiguration<TimelineEntry
 		builder.Property(e => e.TransportFromStation).HasColumnName("transport_from_station");
 		builder.Property(e => e.TransportToStation).HasColumnName("transport_to_station");
 		builder.Property(e => e.TransportCompany).HasColumnName("transport_company");
+		builder.Property(e => e.TransportFromLatitude).HasColumnName("transport_from_latitude");
+		builder.Property(e => e.TransportFromLongitude).HasColumnName("transport_from_longitude");
+		builder.Property(e => e.TransportToLatitude).HasColumnName("transport_to_latitude");
+		builder.Property(e => e.TransportToLongitude).HasColumnName("transport_to_longitude");
 
 		// CustomAccommodation specific
 		builder.Property(e => e.AccommodationCheckIn).HasColumnName("accommodation_check_in");

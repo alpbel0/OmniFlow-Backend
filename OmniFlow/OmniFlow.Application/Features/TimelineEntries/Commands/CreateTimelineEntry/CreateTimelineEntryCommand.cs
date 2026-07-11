@@ -46,6 +46,10 @@ public record CreateTimelineEntryCommand(
     Guid? ProviderHotelId,
 
     string? Notes,
+    double? TransportFromLatitude = null,
+    double? TransportFromLongitude = null,
+    double? TransportToLatitude = null,
+    double? TransportToLongitude = null,
     string? PlanningSlotKey = null,
     bool? IsLocked = null
 ) : IRequest<OmniFlow.Application.DTOs.TimelineEntries.TimelineEntryResponse>;

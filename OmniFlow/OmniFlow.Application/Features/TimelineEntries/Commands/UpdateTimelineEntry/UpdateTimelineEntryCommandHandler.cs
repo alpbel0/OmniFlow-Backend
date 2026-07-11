@@ -139,7 +139,9 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
                 || request.Airline != null || request.FlightNumber != null,
             TimelineEntryType.CustomTransport =>
                 request.TransportType.HasValue || request.StartTime.HasValue || request.DurationMinutes.HasValue
-                || request.TransportFromStation != null || request.TransportToStation != null || request.TransportCompany != null,
+                || request.TransportFromStation != null || request.TransportToStation != null || request.TransportCompany != null
+                || request.TransportFromLatitude.HasValue || request.TransportFromLongitude.HasValue
+                || request.TransportToLatitude.HasValue || request.TransportToLongitude.HasValue,
             TimelineEntryType.CustomAccommodation =>
                 request.AccommodationCheckIn.HasValue || request.AccommodationCheckOut.HasValue
                 || request.AccommodationAddress != null || request.CustomName != null
@@ -176,7 +178,9 @@ public class UpdateTimelineEntryCommandHandler : IRequestHandler<UpdateTimelineE
                 case TimelineEntryType.CustomTransport:
                     entry.UpdateTransportDetails(
                         request.TransportType, request.StartTime, request.DurationMinutes,
-                        request.TransportFromStation, request.TransportToStation, request.TransportCompany);
+                        request.TransportFromStation, request.TransportToStation, request.TransportCompany,
+                        request.TransportFromLatitude, request.TransportFromLongitude,
+                        request.TransportToLatitude, request.TransportToLongitude);
                     break;
 
                 case TimelineEntryType.CustomAccommodation:
