@@ -80,7 +80,7 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
         }
 
         var destinationSegments = await BuildSegmentsAsync(destinations, timelineSignals, cancellationToken);
-        var entrySegments = await BuildEntrySegmentsAsync(timelineSignals, cancellationToken);
+        var entrySegments = await BuildEntrySegmentsAsync(destinations, timelineSignals, cancellationToken);
 
         var response = new TripRoutesResponse
         {
@@ -217,7 +217,9 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
                 e.Place != null ? e.Place.Category : null,
                 e.CustomCategory,
                 e.EntryType == TimelineEntryType.Place && e.Place != null ? e.Place.Latitude : e.CustomLatitude,
-                e.EntryType == TimelineEntryType.Place && e.Place != null ? e.Place.Longitude : e.CustomLongitude))
+                e.EntryType == TimelineEntryType.Place && e.Place != null ? e.Place.Longitude : e.CustomLongitude,
+                e.AccommodationCheckIn,
+                e.AccommodationCheckOut))
             .ToListAsync(cancellationToken);
     }
 
@@ -228,31 +230,112 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
         TimelineEntryType.CustomEvent
     ];
 
+    // Each day's walking/driving chain starts from an anchor point: that day's hotel
+    // (CustomAccommodation) if one is booked, otherwise the destination's city-center
+    // coordinate. This mirrors the anchor pin (pin #1) the mobile map shows per day.
     private async Task<List<RouteSegmentResponse>> BuildEntrySegmentsAsync(
+        List<TripDestination> destinations,
         List<TimelineRouteSignal> timelineSignals,
         CancellationToken cancellationToken)
     {
-        var groups = timelineSignals
-            .Where(s => RoutablePointEntryTypes.Contains(s.EntryType) && s.Latitude.HasValue && s.Longitude.HasValue)
-            .GroupBy(s => (s.DestinationId, s.DayNumber))
-            .Where(g => g.Count() >= 2);
-
         var segmentTasks = new List<Task<RouteSegmentResponse>>();
-        foreach (var group in groups)
+
+        foreach (var destination in destinations)
         {
-            var ordered = group.OrderBy(s => s.OrderIndex).ThenBy(s => s.Id).ToList();
-            for (var i = 0; i < ordered.Count - 1; i++)
+            if (!HasCoordinates(destination))
+                continue;
+
+            var destinationSignals = timelineSignals.Where(s => s.DestinationId == destination.Id).ToList();
+            var dayNumbers = ResolveDayNumbersForDestination(destination, destinationSignals);
+
+            foreach (var dayNumber in dayNumbers)
             {
-                segmentTasks.Add(BuildEntrySegmentAsync(ordered[i], ordered[i + 1], cancellationToken));
+                var dayPoints = destinationSignals
+                    .Where(s => RoutablePointEntryTypes.Contains(s.EntryType) && s.Latitude.HasValue && s.Longitude.HasValue)
+                    .Where(s => IsActiveOnDay(s, destination, dayNumber))
+                    .ToList();
+
+                var hotel = dayPoints.FirstOrDefault(s => s.EntryType == TimelineEntryType.CustomAccommodation);
+                var others = dayPoints
+                    .Where(s => s.EntryType != TimelineEntryType.CustomAccommodation)
+                    .OrderBy(s => s.OrderIndex).ThenBy(s => s.Id)
+                    .ToList();
+
+                if (others.Count == 0)
+                    continue;
+
+                var chain = new List<RouteChainNode>
+                {
+                    hotel is not null
+                        ? new RouteChainNode(hotel.Id, hotel.Latitude!.Value, hotel.Longitude!.Value, IsNature(hotel))
+                        : new RouteChainNode(destination.Id, destination.Latitude!.Value, destination.Longitude!.Value, false)
+                };
+                chain.AddRange(others.Select(o => new RouteChainNode(o.Id, o.Latitude!.Value, o.Longitude!.Value, IsNature(o))));
+
+                for (var i = 0; i < chain.Count - 1; i++)
+                {
+                    segmentTasks.Add(BuildEntrySegmentAsync(chain[i], chain[i + 1], cancellationToken));
+                }
             }
         }
 
         return (await Task.WhenAll(segmentTasks)).ToList();
     }
 
+    // CustomAccommodation entries carry a single DayNumber (their check-in day) but the stay
+    // spans AccommodationCheckIn..AccommodationCheckOut, so they must anchor every day in that
+    // range, not just the literal DayNumber. DayNumber is destination-relative
+    // (Destination.ArrivalDate + DayNumber - 1), so the range is derived from that base date.
+    private static List<int> ResolveDayNumbersForDestination(
+        TripDestination destination,
+        List<TimelineRouteSignal> destinationSignals)
+    {
+        var days = new HashSet<int>();
+        foreach (var signal in destinationSignals)
+        {
+            if (signal.EntryType == TimelineEntryType.CustomAccommodation &&
+                signal.AccommodationCheckIn.HasValue && signal.AccommodationCheckOut.HasValue)
+            {
+                foreach (var day in AccommodationDayRange(destination, signal))
+                    days.Add(day);
+            }
+            else
+            {
+                days.Add(signal.DayNumber);
+            }
+        }
+
+        return days.ToList();
+    }
+
+    private static bool IsActiveOnDay(TimelineRouteSignal signal, TripDestination destination, int dayNumber)
+    {
+        if (signal.EntryType == TimelineEntryType.CustomAccommodation &&
+            signal.AccommodationCheckIn.HasValue && signal.AccommodationCheckOut.HasValue)
+        {
+            return AccommodationDayRange(destination, signal).Contains(dayNumber);
+        }
+
+        return signal.DayNumber == dayNumber;
+    }
+
+    private static IEnumerable<int> AccommodationDayRange(TripDestination destination, TimelineRouteSignal signal)
+    {
+        var checkIn = DateOnly.FromDateTime(signal.AccommodationCheckIn!.Value);
+        var checkOut = DateOnly.FromDateTime(signal.AccommodationCheckOut!.Value);
+        var firstDayNumber = checkIn.DayNumber - destination.ArrivalDate.DayNumber + 1;
+        var lastDayNumber = checkOut.DayNumber - destination.ArrivalDate.DayNumber;
+
+        for (var d = firstDayNumber; d <= lastDayNumber; d++)
+        {
+            if (d > 0)
+                yield return d;
+        }
+    }
+
     private async Task<RouteSegmentResponse> BuildEntrySegmentAsync(
-        TimelineRouteSignal from,
-        TimelineRouteSignal to,
+        RouteChainNode from,
+        RouteChainNode to,
         CancellationToken cancellationToken)
     {
         var segment = new RouteSegmentResponse
@@ -261,7 +344,7 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
             ToDestinationId = to.Id
         };
 
-        var walkingProfile = (IsNature(from) || IsNature(to)) ? FootHikingProfile : FootWalkingProfile;
+        var walkingProfile = (from.IsNature || to.IsNature) ? FootHikingProfile : FootWalkingProfile;
         var tasks = new List<Task>
         {
             SetEntryDetailAsync(segment, walkingProfile, from, to, cancellationToken, isWalking: true),
@@ -274,17 +357,17 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
     private async Task SetEntryDetailAsync(
         RouteSegmentResponse segment,
         string profile,
-        TimelineRouteSignal from,
-        TimelineRouteSignal to,
+        RouteChainNode from,
+        RouteChainNode to,
         CancellationToken cancellationToken,
         bool isWalking)
     {
         var detail = await _routingService.GetRouteAsync(
             profile,
-            from.Latitude!.Value,
-            from.Longitude!.Value,
-            to.Latitude!.Value,
-            to.Longitude!.Value,
+            from.Latitude,
+            from.Longitude,
+            to.Latitude,
+            to.Longitude,
             cancellationToken);
 
         if (isWalking)
@@ -296,6 +379,8 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
     private static bool IsNature(TimelineRouteSignal signal) =>
         (signal.PlaceCategory.HasValue && NatureCategories.Contains(signal.PlaceCategory.Value)) ||
         (signal.CustomCategory.HasValue && NatureCategories.Contains(signal.CustomCategory.Value));
+
+    private sealed record RouteChainNode(Guid Id, double Latitude, double Longitude, bool IsNature);
 
     private static bool UsesNatureWalking(
         Guid fromDestinationId,
@@ -374,7 +459,9 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
                 .Append(signal.PlaceCategory?.ToString()).Append('|')
                 .Append(signal.CustomCategory?.ToString()).Append('|')
                 .Append(signal.Latitude?.ToString("F6")).Append('|')
-                .Append(signal.Longitude?.ToString("F6"))
+                .Append(signal.Longitude?.ToString("F6")).Append('|')
+                .Append(signal.AccommodationCheckIn?.ToString("O")).Append('|')
+                .Append(signal.AccommodationCheckOut?.ToString("O"))
                 .Append(';');
         }
 
@@ -427,5 +514,7 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
         PlaceCategory? PlaceCategory,
         PlaceCategory? CustomCategory,
         double? Latitude,
-        double? Longitude);
+        double? Longitude,
+        DateTime? AccommodationCheckIn,
+        DateTime? AccommodationCheckOut);
 }
