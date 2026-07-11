@@ -11,6 +11,7 @@ namespace OmniFlow.Infrastructure.Services;
 public class OpenRouteServiceRoutingService : IRoutingService
 {
     private static readonly SemaphoreSlim RequestGate = new(3, 3);
+    private const int MaxRateLimitRetries = 3;
 
     private readonly HttpClient _httpClient;
     private readonly OpenRouteServiceSettings _settings;
@@ -45,41 +46,60 @@ public class OpenRouteServiceRoutingService : IRoutingService
         await RequestGate.WaitAsync(cancellationToken);
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"/v2/directions/{profile}/geojson");
-            request.Headers.TryAddWithoutValidation("Authorization", _settings.ApiKey);
-            request.Content = JsonContent.Create(new OrsDirectionsRequest
+            for (var attempt = 0; attempt <= MaxRateLimitRetries; attempt++)
             {
-                Coordinates =
-                [
-                    [fromLongitude, fromLatitude],
-                    [toLongitude, toLatitude]
-                ]
-            });
+                using var request = new HttpRequestMessage(HttpMethod.Post, $"/v2/directions/{profile}/geojson");
+                request.Headers.TryAddWithoutValidation("Authorization", _settings.ApiKey);
+                request.Content = JsonContent.Create(new OrsDirectionsRequest
+                {
+                    Coordinates =
+                    [
+                        [fromLongitude, fromLatitude],
+                        [toLongitude, toLatitude]
+                    ]
+                });
 
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning(
-                    "ORS route request failed with status {StatusCode} for profile {Profile}",
-                    (int)response.StatusCode,
-                    profile);
-                return RouteDetailDto.Empty();
+                using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < MaxRateLimitRetries)
+                {
+                    var delay = ResolveRetryDelay(response, attempt);
+                    _logger.LogWarning(
+                        "ORS route request rate-limited (429) for profile {Profile}, retrying in {DelaySeconds}s (attempt {Attempt}/{MaxAttempts})",
+                        profile,
+                        delay.TotalSeconds,
+                        attempt + 1,
+                        MaxRateLimitRetries);
+                    await Task.Delay(delay, cancellationToken);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning(
+                        "ORS route request failed with status {StatusCode} for profile {Profile}",
+                        (int)response.StatusCode,
+                        profile);
+                    return RouteDetailDto.Empty();
+                }
+
+                var payload = await response.Content.ReadFromJsonAsync<OrsDirectionsResponse>(cancellationToken);
+                var feature = payload?.Features?.FirstOrDefault();
+                if (feature?.Geometry?.Coordinates is null || feature.Properties?.Summary is null)
+                    return RouteDetailDto.Empty();
+
+                return new RouteDetailDto
+                {
+                    Coordinates = feature.Geometry.Coordinates
+                        .Where(c => c.Count >= 2)
+                        .Select(c => new List<double> { c[0], c[1] })
+                        .ToList(),
+                    DistanceMeters = feature.Properties.Summary.Distance,
+                    DurationSeconds = feature.Properties.Summary.Duration
+                };
             }
 
-            var payload = await response.Content.ReadFromJsonAsync<OrsDirectionsResponse>(cancellationToken);
-            var feature = payload?.Features?.FirstOrDefault();
-            if (feature?.Geometry?.Coordinates is null || feature.Properties?.Summary is null)
-                return RouteDetailDto.Empty();
-
-            return new RouteDetailDto
-            {
-                Coordinates = feature.Geometry.Coordinates
-                    .Where(c => c.Count >= 2)
-                    .Select(c => new List<double> { c[0], c[1] })
-                    .ToList(),
-                DistanceMeters = feature.Properties.Summary.Distance,
-                DurationSeconds = feature.Properties.Summary.Duration
-            };
+            return RouteDetailDto.Empty();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -90,6 +110,21 @@ public class OpenRouteServiceRoutingService : IRoutingService
         {
             RequestGate.Release();
         }
+    }
+
+    private static TimeSpan ResolveRetryDelay(HttpResponseMessage response, int attempt)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+        if (retryAfter?.Delta.HasValue == true)
+            return retryAfter.Delta.Value;
+        if (retryAfter?.Date.HasValue == true)
+        {
+            var delta = retryAfter.Date.Value - DateTimeOffset.UtcNow;
+            if (delta > TimeSpan.Zero)
+                return delta;
+        }
+
+        return TimeSpan.FromSeconds(Math.Pow(2, attempt + 1));
     }
 
     private sealed class OrsDirectionsRequest
