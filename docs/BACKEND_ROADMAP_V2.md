@@ -933,3 +933,24 @@ Mobil Trip Planning sayfası tasarımı sırasında (`omniflow-mobile/TRIP_PLANN
 - Mobil: Trip Detail `⋮` menüsüne 3 seçenekli visibility toggle eklenmesi
 
 **Öncelik:** ⚪ Ertelendi — B8 sonrası değerlendirilebilir. Mezuniyet projesi takvimi göz önüne alınarak şu an tasarım detayına girilmiyor, sadece fikir olarak not düşüldü.
+
+### Fikir: Gerçek Şehir Arama / Geocoding Servisi
+
+**Fikir:** Mobil tarafta trip wizard'daki ve "destinasyon ekle" akışındaki şehir seçimi şu an `WizardCityCatalog.kt` içinde **hardcoded ~37 şehirlik bir liste** (İngilizce isim + ülke + birkaç Türkçe arama takma adı) ile yapılıyor. Aynı şekilde destinasyon pinlerinin koordinatları da `MockCityCoordinates.kt` içinde hardcoded bir şehir→lat/lng tablosundan geliyor. Backend'de gerçek bir şehir arama/geocoding endpoint'i hiç yok — bu yüzden hem şehir seçenekleri 37 ile sınırlı hem de yazım/dil uyuşmazlıkları (örn. "Roma" yazıp "Rome" bulamama, ya da seçilen şehir adının otel/uçuş/mekan sağlayıcı verisindeki şehir adıyla birebir eşleşmemesi) sürekli hataya yol açıyor.
+
+**Motivasyon:** Otel/uçuş/mekan arama uçları (`/providers/hotels`, `/providers/flights`, `/places/city/{city}`) şehir adını **birebir string eşleştirmesiyle** karşılaştırıyor (`ToLower()` dışında normalize yok). Sabit liste + serbest metin girişi olmayan bir yapı yerine gerçek bir geocoding/autocomplete servisi kullanılırsa hem şehir kapsamı sınırsız hale gelir hem de kanonik isim/koordinat backend'den tutarlı gelir.
+
+**Seçenekler:**
+- **Google Places Autocomplete** — en iyi UX (çoklu dil, anlık öneri, dünya çapında kapsam), ama ücretli (istek başına ücret) + API key/faturalandırma kurulumu gerekir.
+- **OpenStreetMap Nominatim** — ücretsiz, proje zaten MapLibre + OpenFreeMap (OSM tabanlı) kullandığı için temaya uygun; ama saniyede 1 istek sınırı var, ağır kullanım için kendi sunucunda barındırma (self-host) önerilir, doğrudan halka açık servisi production'da kullanmak riskli.
+- **Mapbox Geocoding** — ücretsiz kotası var, iyi kalite, API key + hesap gerekir.
+
+**Önerilen yaklaşım:** Nominatim'i **backend üzerinden proxy'leyerek** çağırmak (mobilden doğrudan değil) — ücretsiz, mevcut OSM ekosistemiyle tutarlı. Bunun için backend'e yeni bir "city search" endpoint'i eklenmesi gerekir (örn. `GET /api/v1/geo/cities?query=...` → Nominatim'e proxy, sonucu normalize edip döner); mobil tarafta `WizardCityCatalog`/`MockCityCoordinates` bu endpoint'i çağıran bir implementasyonla değiştirilir, UI/arama fonksiyon imzası aynı kalabilir.
+
+**Gerektirecekleri:**
+- Backend: Nominatim (veya seçilecek servis) için bir `IGeocodingService` soyutlaması + HTTP client entegrasyonu
+- Yeni endpoint: şehir adı + ülke + lat/lng dönen bir arama ucu (rate-limit/caching düşünülmeli — Nominatim kullanım politikası gereği)
+- Mobil: `WizardCityCatalog.search()` ve `MockCityCoordinates.lookup()` yerine bu endpoint'i çağıran repository metodu
+- Var olan trip'lerdeki destinasyonların şehir adlarının yeni kanonik isimlerle uyumlu olup olmadığının değerlendirilmesi (mevcut veri migration'ı gerekebilir)
+
+**Öncelik:** ⚪ Ertelendi — kullanıcı talebiyle not düşüldü, şu an değerlendirme aşamasında.

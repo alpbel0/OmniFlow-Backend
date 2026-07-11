@@ -87,6 +87,62 @@ public class NominatimGeocodingService : IGeocodingService
         }
     }
 
+    public async Task<IReadOnlyList<GeocodingResult>> SearchCitiesAsync(
+        string query,
+        int limit = 8,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return Array.Empty<GeocodingResult>();
+
+        try
+        {
+            await WaitForRateLimitAsync(cancellationToken);
+
+            var url =
+                $"/search?format=jsonv2&addressdetails=1&accept-language=en&limit={Math.Clamp(limit, 1, 20)}&q={Uri.EscapeDataString(query.Trim())}";
+
+            var response = await _httpClient.GetFromJsonAsync<List<NominatimSearchWithAddressResponse>>(url, cancellationToken);
+            if (response is null)
+                return Array.Empty<GeocodingResult>();
+
+            var results = new List<GeocodingResult>();
+            foreach (var item in response)
+            {
+                if (!double.TryParse(item.Latitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var latitude) ||
+                    !double.TryParse(item.Longitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var longitude))
+                {
+                    continue;
+                }
+
+                var city = item.Address?.City ?? item.Address?.Town ?? item.Address?.Village ?? item.Address?.County;
+                var country = item.Address?.Country;
+                if (string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(country))
+                    continue;
+
+                results.Add(new GeocodingResult
+                {
+                    Latitude = latitude,
+                    Longitude = longitude,
+                    DisplayName = BuildDisplayName(city, country, item.DisplayName),
+                    City = city,
+                    Country = country,
+                });
+            }
+
+            // Nominatim can return the same city multiple times under different OSM feature types.
+            return results
+                .GroupBy(r => (City: r.City!.ToLowerInvariant(), Country: r.Country!.ToLowerInvariant()))
+                .Select(g => g.First())
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "City search failed for {Query}", query);
+            return Array.Empty<GeocodingResult>();
+        }
+    }
+
     public async Task<GeocodingResult?> ReverseGeocodeAsync(
         double latitude,
         double longitude,
@@ -255,6 +311,21 @@ public class NominatimGeocodingService : IGeocodingService
 
         [JsonPropertyName("display_name")]
         public string? DisplayName { get; set; }
+    }
+
+    private sealed class NominatimSearchWithAddressResponse
+    {
+        [JsonPropertyName("lat")]
+        public string? Latitude { get; set; }
+
+        [JsonPropertyName("lon")]
+        public string? Longitude { get; set; }
+
+        [JsonPropertyName("display_name")]
+        public string? DisplayName { get; set; }
+
+        [JsonPropertyName("address")]
+        public NominatimAddress? Address { get; set; }
     }
 
     private sealed class NominatimReverseResponse
