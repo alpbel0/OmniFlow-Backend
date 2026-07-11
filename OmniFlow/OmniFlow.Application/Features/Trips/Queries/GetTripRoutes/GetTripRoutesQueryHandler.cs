@@ -75,7 +75,7 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
         if (cached is not null && cached.RouteSignature == routeSignature)
         {
             var cachedResponse = JsonSerializer.Deserialize<TripRoutesResponse>(cached.ResponseJson, JsonOptions);
-            if (cachedResponse is not null)
+            if (cachedResponse is not null && HasUsableRoute(cachedResponse))
                 return cachedResponse;
         }
 
@@ -85,7 +85,11 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
             Segments = await BuildSegmentsAsync(destinations, timelineSignals, cancellationToken)
         };
 
-        await UpsertCacheAsync(cached, request.TripId, routeSignature, response, cancellationToken);
+        if (HasUsableRoute(response))
+        {
+            await UpsertCacheAsync(cached, request.TripId, routeSignature, response, cancellationToken);
+        }
+
         return response;
     }
 
@@ -292,6 +296,22 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
     private static bool HasCoordinates(TripDestination destination)
     {
         return destination.Latitude.HasValue && destination.Longitude.HasValue;
+    }
+
+    private static bool HasUsableRoute(TripRoutesResponse response)
+    {
+        return response.Segments.Any(segment =>
+            HasUsableRouteDetail(segment.Walking) ||
+            HasUsableRouteDetail(segment.Cycling) ||
+            HasUsableRouteDetail(segment.Driving));
+    }
+
+    private static bool HasUsableRouteDetail(RouteDetailDto? detail)
+    {
+        return detail is not null &&
+               detail.Coordinates.Count >= 2 &&
+               detail.DistanceMeters > 0 &&
+               detail.DurationSeconds > 0;
     }
 
     private static double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)

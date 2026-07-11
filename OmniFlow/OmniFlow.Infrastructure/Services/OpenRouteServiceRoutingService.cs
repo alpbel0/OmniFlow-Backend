@@ -35,7 +35,12 @@ public class OpenRouteServiceRoutingService : IRoutingService
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(_settings.ApiKey))
+        {
+            _logger.LogWarning(
+                "ORS route request skipped for profile {Profile}: Routing:OpenRouteService:ApiKey is not configured",
+                profile);
             return RouteDetailDto.Empty();
+        }
 
         await RequestGate.WaitAsync(cancellationToken);
         try
