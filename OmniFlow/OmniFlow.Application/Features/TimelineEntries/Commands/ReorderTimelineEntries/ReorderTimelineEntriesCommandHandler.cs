@@ -68,12 +68,29 @@ public class ReorderTimelineEntriesCommandHandler : IRequestHandler<ReorderTimel
                 ?? throw new EntityNotFoundException("TimelineEntry (AfterEntry)", request.AfterEntryId.Value);
         }
 
-        // 7. Same destination and day validation
-        if (beforeEntry != null && (beforeEntry.DestinationId != entry.DestinationId || beforeEntry.DayNumber != entry.DayNumber))
-            throw new ApiException("BeforeEntry must belong to the same destination and day.");
+        // 7. Same destination and day validation.
+        // CustomAccommodation entries span multiple nights under a single DayNumber (their
+        // check-in day) but the client shows/reorders them alongside every day of the stay, so
+        // the DayNumber equality check is skipped whenever either side of the pair is an
+        // accommodation entry - the destination match is still enforced.
+        bool SkipDayCheck(TimelineEntry a, TimelineEntry b) =>
+            a.EntryType == TimelineEntryType.CustomAccommodation || b.EntryType == TimelineEntryType.CustomAccommodation;
 
-        if (afterEntry != null && (afterEntry.DestinationId != entry.DestinationId || afterEntry.DayNumber != entry.DayNumber))
-            throw new ApiException("AfterEntry must belong to the same destination and day.");
+        if (beforeEntry != null)
+        {
+            if (beforeEntry.DestinationId != entry.DestinationId)
+                throw new ApiException("BeforeEntry must belong to the same destination.");
+            if (!SkipDayCheck(entry, beforeEntry) && beforeEntry.DayNumber != entry.DayNumber)
+                throw new ApiException("BeforeEntry must belong to the same destination and day.");
+        }
+
+        if (afterEntry != null)
+        {
+            if (afterEntry.DestinationId != entry.DestinationId)
+                throw new ApiException("AfterEntry must belong to the same destination.");
+            if (!SkipDayCheck(entry, afterEntry) && afterEntry.DayNumber != entry.DayNumber)
+                throw new ApiException("AfterEntry must belong to the same destination and day.");
+        }
 
         // 8. Calculate new LexoRank using previous and next neighbors in visual order
         entry.OrderIndex = _timelineService.GetLexoRankBetween(beforeEntry?.OrderIndex, afterEntry?.OrderIndex);
