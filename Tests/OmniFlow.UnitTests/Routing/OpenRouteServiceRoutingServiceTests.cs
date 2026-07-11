@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OmniFlow.Infrastructure.Services;
@@ -33,7 +34,7 @@ public class OpenRouteServiceRoutingServiceTests
         result.Coordinates.Should().BeEmpty();
         result.DistanceMeters.Should().Be(0);
         result.DurationSeconds.Should().Be(0);
-        handler.CallCount.Should().Be(1);
+        handler.CallCount.Should().Be(4);
     }
 
     [Fact]
@@ -110,10 +111,15 @@ public class OpenRouteServiceRoutingServiceTests
             CallCount++;
             LastRequestUri = request.RequestUri;
 
-            return Task.FromResult(new HttpResponseMessage(_statusCode)
+            var response = new HttpResponseMessage(_statusCode)
             {
                 Content = new StringContent(_body)
-            });
+            };
+
+            if (_statusCode == HttpStatusCode.TooManyRequests)
+                response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.Zero);
+
+            return Task.FromResult(response);
         }
     }
 }
