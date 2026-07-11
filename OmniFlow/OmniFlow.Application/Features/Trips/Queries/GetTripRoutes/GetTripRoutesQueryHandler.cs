@@ -79,10 +79,13 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
                 return cachedResponse;
         }
 
+        var destinationSegments = await BuildSegmentsAsync(destinations, timelineSignals, cancellationToken);
+        var entrySegments = await BuildEntrySegmentsAsync(timelineSignals, cancellationToken);
+
         var response = new TripRoutesResponse
         {
             TripId = request.TripId,
-            Segments = await BuildSegmentsAsync(destinations, timelineSignals, cancellationToken)
+            Segments = destinationSegments.Concat(entrySegments).ToList()
         };
 
         if (HasUsableRoute(response))
@@ -208,10 +211,91 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
             .Select(e => new TimelineRouteSignal(
                 e.Id,
                 e.DestinationId,
+                e.DayNumber,
+                e.OrderIndex,
+                e.EntryType,
                 e.Place != null ? e.Place.Category : null,
-                e.CustomCategory))
+                e.CustomCategory,
+                e.EntryType == TimelineEntryType.Place && e.Place != null ? e.Place.Latitude : e.CustomLatitude,
+                e.EntryType == TimelineEntryType.Place && e.Place != null ? e.Place.Longitude : e.CustomLongitude))
             .ToListAsync(cancellationToken);
     }
+
+    private static readonly HashSet<TimelineEntryType> RoutablePointEntryTypes =
+    [
+        TimelineEntryType.Place,
+        TimelineEntryType.CustomAccommodation,
+        TimelineEntryType.CustomEvent
+    ];
+
+    private async Task<List<RouteSegmentResponse>> BuildEntrySegmentsAsync(
+        List<TimelineRouteSignal> timelineSignals,
+        CancellationToken cancellationToken)
+    {
+        var groups = timelineSignals
+            .Where(s => RoutablePointEntryTypes.Contains(s.EntryType) && s.Latitude.HasValue && s.Longitude.HasValue)
+            .GroupBy(s => (s.DestinationId, s.DayNumber))
+            .Where(g => g.Count() >= 2);
+
+        var segmentTasks = new List<Task<RouteSegmentResponse>>();
+        foreach (var group in groups)
+        {
+            var ordered = group.OrderBy(s => s.OrderIndex).ThenBy(s => s.Id).ToList();
+            for (var i = 0; i < ordered.Count - 1; i++)
+            {
+                segmentTasks.Add(BuildEntrySegmentAsync(ordered[i], ordered[i + 1], cancellationToken));
+            }
+        }
+
+        return (await Task.WhenAll(segmentTasks)).ToList();
+    }
+
+    private async Task<RouteSegmentResponse> BuildEntrySegmentAsync(
+        TimelineRouteSignal from,
+        TimelineRouteSignal to,
+        CancellationToken cancellationToken)
+    {
+        var segment = new RouteSegmentResponse
+        {
+            FromDestinationId = from.Id,
+            ToDestinationId = to.Id
+        };
+
+        var walkingProfile = (IsNature(from) || IsNature(to)) ? FootHikingProfile : FootWalkingProfile;
+        var tasks = new List<Task>
+        {
+            SetEntryDetailAsync(segment, walkingProfile, from, to, cancellationToken, isWalking: true),
+            SetEntryDetailAsync(segment, DrivingProfile, from, to, cancellationToken, isWalking: false)
+        };
+        await Task.WhenAll(tasks);
+        return segment;
+    }
+
+    private async Task SetEntryDetailAsync(
+        RouteSegmentResponse segment,
+        string profile,
+        TimelineRouteSignal from,
+        TimelineRouteSignal to,
+        CancellationToken cancellationToken,
+        bool isWalking)
+    {
+        var detail = await _routingService.GetRouteAsync(
+            profile,
+            from.Latitude!.Value,
+            from.Longitude!.Value,
+            to.Latitude!.Value,
+            to.Longitude!.Value,
+            cancellationToken);
+
+        if (isWalking)
+            segment.Walking = detail;
+        else
+            segment.Driving = detail;
+    }
+
+    private static bool IsNature(TimelineRouteSignal signal) =>
+        (signal.PlaceCategory.HasValue && NatureCategories.Contains(signal.PlaceCategory.Value)) ||
+        (signal.CustomCategory.HasValue && NatureCategories.Contains(signal.CustomCategory.Value));
 
     private static bool UsesNatureWalking(
         Guid fromDestinationId,
@@ -284,8 +368,13 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
                 .Append("e:")
                 .Append(signal.Id).Append('|')
                 .Append(signal.DestinationId).Append('|')
+                .Append(signal.DayNumber).Append('|')
+                .Append(signal.OrderIndex).Append('|')
+                .Append(signal.EntryType).Append('|')
                 .Append(signal.PlaceCategory?.ToString()).Append('|')
-                .Append(signal.CustomCategory?.ToString())
+                .Append(signal.CustomCategory?.ToString()).Append('|')
+                .Append(signal.Latitude?.ToString("F6")).Append('|')
+                .Append(signal.Longitude?.ToString("F6"))
                 .Append(';');
         }
 
@@ -332,6 +421,11 @@ public class GetTripRoutesQueryHandler : IRequestHandler<GetTripRoutesQuery, Tri
     private sealed record TimelineRouteSignal(
         Guid Id,
         Guid DestinationId,
+        int DayNumber,
+        double OrderIndex,
+        TimelineEntryType EntryType,
         PlaceCategory? PlaceCategory,
-        PlaceCategory? CustomCategory);
+        PlaceCategory? CustomCategory,
+        double? Latitude,
+        double? Longitude);
 }
