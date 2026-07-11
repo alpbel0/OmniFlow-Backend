@@ -934,7 +934,10 @@ Mobil Trip Planning sayfası tasarımı sırasında (`omniflow-mobile/TRIP_PLANN
 
 **Öncelik:** ⚪ Ertelendi — B8 sonrası değerlendirilebilir. Mezuniyet projesi takvimi göz önüne alınarak şu an tasarım detayına girilmiyor, sadece fikir olarak not düşüldü.
 
-### Fikir: Gerçek Şehir Arama / Geocoding Servisi
+### Fikir: Gerçek Şehir Arama / Geocoding Servisi — ✅ Tamamlandı
+
+> **Not:** Bu fikir uygulandı. `IGeocodingService.SearchCitiesAsync()` (Nominatim `/search` proxy'si, mevcut rate-limit gate'i paylaşıyor) + `GET /api/v1/geo/cities?query=&limit=` (`GeoController`) eklendi. Mobilde `WizardCityCatalog.kt` ve `MockCityCoordinates.kt` (ikisi de hardcoded) tamamen silindi; `CitySearchViewModel` artık bu uca debounce'lu istek atıyor, hem trip wizard hem "destinasyon ekle" akışı bunu kullanıyor. Aşağıdaki orijinal not tarihsel referans için duruyor.
+
 
 **Fikir:** Mobil tarafta trip wizard'daki ve "destinasyon ekle" akışındaki şehir seçimi şu an `WizardCityCatalog.kt` içinde **hardcoded ~37 şehirlik bir liste** (İngilizce isim + ülke + birkaç Türkçe arama takma adı) ile yapılıyor. Aynı şekilde destinasyon pinlerinin koordinatları da `MockCityCoordinates.kt` içinde hardcoded bir şehir→lat/lng tablosundan geliyor. Backend'de gerçek bir şehir arama/geocoding endpoint'i hiç yok — bu yüzden hem şehir seçenekleri 37 ile sınırlı hem de yazım/dil uyuşmazlıkları (örn. "Roma" yazıp "Rome" bulamama, ya da seçilen şehir adının otel/uçuş/mekan sağlayıcı verisindeki şehir adıyla birebir eşleşmemesi) sürekli hataya yol açıyor.
 

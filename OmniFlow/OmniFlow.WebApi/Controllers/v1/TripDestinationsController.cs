@@ -30,7 +30,7 @@ public class TripDestinationsController : BaseApiController
 
     /// <summary>Add a new destination to a draft trip.</summary>
     [HttpPost("~/api/v1/trips/{tripId:guid}/destinations")]
-    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(TripDestinationResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -50,7 +50,10 @@ public class TripDestinationsController : BaseApiController
         };
 
         var destinationId = await Mediator.Send(command);
-        return CreatedAtAction(nameof(GetByTrip), new { tripId }, destinationId);
+        var destinations = await Mediator.Send(new GetTripDestinationsQuery(tripId));
+        var destination = destinations.First(d => d.Id == destinationId);
+
+        return CreatedAtAction(nameof(GetByTrip), new { tripId }, destination);
     }
 
     /// <summary>Update an existing destination.</summary>

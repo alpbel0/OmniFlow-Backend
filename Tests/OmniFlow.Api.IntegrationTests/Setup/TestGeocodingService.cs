@@ -37,4 +37,26 @@ public class TestGeocodingService : IGeocodingService
             Country = "Turkiye"
         });
     }
+
+    public Task<IReadOnlyList<GeocodingResult>> SearchCitiesAsync(
+        string query,
+        int limit = 8,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<GeocodingResult> results = string.IsNullOrWhiteSpace(query)
+            ? Array.Empty<GeocodingResult>()
+            :
+            [
+                new GeocodingResult
+                {
+                    Latitude = 41.0082,
+                    Longitude = 28.9784,
+                    DisplayName = $"{query.Trim()}, Turkey",
+                    City = query.Trim(),
+                    Country = "Turkey"
+                }
+            ];
+
+        return Task.FromResult(results);
+    }
 }

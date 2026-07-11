@@ -305,6 +305,16 @@ public class TripDestinationsControllerTests : IClassFixture<CustomWebApplicatio
         var response = await authClient.PostAsJsonAsync($"/api/v1/trips/{tripId}/destinations", request);
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
+        var createBody = await response.Content.ReadAsStringAsync();
+        var createdDestination = JsonSerializer.Deserialize<TripDestinationResponse>(createBody, _json);
+        createdDestination.Should().NotBeNull();
+        createdDestination!.Id.Should().NotBeEmpty();
+        createdDestination.City.Should().Be("Paris");
+        createdDestination.Country.Should().Be("France");
+        createdDestination.ArrivalDate.Should().Be(request.ArrivalDate);
+        createdDestination.DepartureDate.Should().Be(request.DepartureDate);
+        createdDestination.OrderIndex.Should().Be(2);
+
         // Verify it was added
         var getResponse = await authClient.GetAsync($"/api/v1/trips/{tripId}/destinations");
         var body = await getResponse.Content.ReadAsStringAsync();
