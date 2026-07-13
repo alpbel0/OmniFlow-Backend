@@ -224,6 +224,71 @@ public class GetFeedQueryTests
         result.Data[0].Content.Should().Be("visible");
     }
 
+    [Fact]
+    public async Task Handle_QueryTagAndPostType_ReturnsOnlyMatchingPosts()
+    {
+        var userId = Guid.NewGuid();
+        _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+
+        var matchingPost = CreatePost(Guid.NewGuid(), DateTime.UtcNow, "Barcelona food guide");
+        matchingPost.Tags = new List<string> { "barselona", "gastronomi" };
+        matchingPost.PostType = PostType.Route;
+
+        var wrongType = CreatePost(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-1), "Barcelona photo");
+        wrongType.Tags = new List<string> { "barselona" };
+        wrongType.PostType = PostType.Photo;
+
+        var wrongTag = CreatePost(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-2), "Barcelona route");
+        wrongTag.Tags = new List<string> { "madrid" };
+        wrongTag.PostType = PostType.Route;
+
+        SetupFeedData(userId, matchingPost, wrongType, wrongTag);
+
+        var result = await CreateHandler().Handle(new GetFeedQuery(new GetFeedParameter
+        {
+            Query = "food",
+            Tag = "#BARSELONA",
+            PostType = PostType.Route,
+            Sort = FeedSort.Latest
+        }), CancellationToken.None);
+
+        result.Data.Should().ContainSingle().Which.Id.Should().Be(matchingPost.Id);
+    }
+
+    [Fact]
+    public async Task Handle_MostUpvotedSort_UsesCountThenCreatedAtThenId()
+    {
+        var userId = Guid.NewGuid();
+        _authenticatedUserServiceMock.Setup(x => x.UserId).Returns(userId.ToString());
+
+        var lower = CreatePost(Guid.NewGuid(), DateTime.UtcNow, "lower");
+        lower.UpvoteCount = 2;
+        var olderHigh = CreatePost(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-2), "older-high");
+        olderHigh.UpvoteCount = 10;
+        var newerHigh = CreatePost(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-1), "newer-high");
+        newerHigh.UpvoteCount = 10;
+        SetupFeedData(userId, lower, olderHigh, newerHigh);
+
+        var result = await CreateHandler().Handle(new GetFeedQuery(new GetFeedParameter
+        {
+            Sort = FeedSort.MostUpvoted,
+            PageSize = 20
+        }), CancellationToken.None);
+
+        result.Data.Select(post => post.Id).Should().Equal(newerHigh.Id, olderHigh.Id, lower.Id);
+    }
+
+    private void SetupFeedData(Guid userId, params Post[] posts)
+    {
+        _contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(posts.ToList()).Object);
+        _contextMock.Setup(x => x.Follows).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Follow>()).Object);
+        _contextMock.Setup(x => x.Blocks).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Block>()).Object);
+        _contextMock.Setup(x => x.PostUpvotes).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<PostUpvote>
+        {
+            new() { UserId = userId, PostId = Guid.NewGuid() }
+        }).Object);
+    }
+
     private GetFeedQueryHandler CreateHandler()
     {
         return new GetFeedQueryHandler(_contextMock.Object, _authenticatedUserServiceMock.Object, _mapper);

@@ -7,6 +7,7 @@ namespace OmniFlow.Application.Interfaces.Repositories;
 public interface IPostRepositoryAsync : IGenericRepositoryAsync<Post>
 {
 	Task<Post?> GetByIdWithUserAsync(Guid postId);
+	Task<bool> CanLinkPublishedTripAsync(Guid tripId, Guid userId, CancellationToken cancellationToken);
 	Task<PagedResponse<Post>> GetByUserAsync(Guid userId, RequestParameter parameter);
 	Task<PagedResponse<Post>> GetVisibleByUserAsync(Guid userId, RequestParameter parameter);
 	Task<PagedResponse<Post>> GetLikedVisibleByUserAsync(

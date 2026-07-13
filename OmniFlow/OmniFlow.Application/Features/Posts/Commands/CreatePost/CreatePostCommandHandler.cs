@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
+using OmniFlow.Application.Features.Posts;
 using OmniFlow.Domain.Entities;
 
 namespace OmniFlow.Application.Features.Posts.Commands.CreatePost;
@@ -24,8 +25,17 @@ public class CreatePostCommandHandler : IRequestHandler<CreatePostCommand, Guid>
 
     public async Task<Guid> Handle(CreatePostCommand request, CancellationToken cancellationToken)
     {
+        var currentUserId = Guid.Parse(_authenticatedUserService.UserId);
+
+        await PostCommandGuard.EnsureTripCanBeLinkedAsync(
+            _postRepository,
+            request.PostType,
+            request.TripId,
+            currentUserId,
+            cancellationToken);
+
         var post = _mapper.Map<Post>(request);
-        post.UserId = Guid.Parse(_authenticatedUserService.UserId);
+        post.UserId = currentUserId;
 
         await _postRepository.AddAsync(post);
         return post.Id;

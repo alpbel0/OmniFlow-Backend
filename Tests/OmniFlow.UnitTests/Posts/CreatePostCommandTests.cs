@@ -60,6 +60,21 @@ public class CreatePostCommandValidatorTests
 		result.IsValid.Should().BeFalse();
 		result.Errors.Should().Contain(x => x.PropertyName == nameof(CreatePostCommand.TripId));
 	}
+
+	[Fact]
+	public void Validate_MoreThanFivePhotos_ShouldFail()
+	{
+		var command = new CreatePostCommand
+		{
+			PostType = PostType.Photo,
+			Photos = Enumerable.Range(1, 6).Select(index => $"https://cdn.example.com/{index}.jpg").ToList()
+		};
+
+		var result = _validator.Validate(command);
+
+		result.IsValid.Should().BeFalse();
+		result.Errors.Should().Contain(error => error.PropertyName == nameof(CreatePostCommand.Photos));
+	}
 }
 
 public class CreatePostCommandHandlerTests
@@ -97,5 +112,31 @@ public class CreatePostCommandHandlerTests
 		result.Should().Be(mappedPost.Id);
 		mappedPost.UserId.Should().Be(currentUserId);
 		_postRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Post>()), Times.Once);
+	}
+
+	[Fact]
+	public async Task Handle_RoutePostWithUnavailableTrip_ShouldThrowValidationException()
+	{
+		var currentUserId = Guid.NewGuid();
+		var tripId = Guid.NewGuid();
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+		_postRepositoryMock.Setup(x => x.CanLinkPublishedTripAsync(tripId, currentUserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(false);
+
+		var command = new CreatePostCommand
+		{
+			PostType = PostType.Route,
+			TripId = tripId,
+			Content = "Route post"
+		};
+		_mapperMock.Setup(x => x.Map<Post>(command)).Returns(new Post { Id = Guid.NewGuid() });
+
+		var handler = new CreatePostCommandHandler(
+			_postRepositoryMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_mapperMock.Object);
+
+		await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(command, CancellationToken.None));
+		_postRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Post>()), Times.Never);
 	}
 }

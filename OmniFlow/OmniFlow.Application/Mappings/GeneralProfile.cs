@@ -119,11 +119,14 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.PostCount, opt => opt.Ignore());
 
         // Post mappings
+        CreateMap<Trip, PostTripPreviewResponse>()
+            .ForMember(dest => dest.PrimaryLocation, opt => opt.MapFrom(src => GetPostTripPrimaryLocation(src)));
         CreateMap<Post, PostResponse>()
             .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.User != null ? src.User.Username : string.Empty))
             .ForMember(dest => dest.ProfilePhotoUrl, opt => opt.MapFrom(src => src.User != null ? src.User.ProfilePhotoUrl : null))
             .ForMember(dest => dest.KarmaScore, opt => opt.MapFrom(src => src.User != null ? src.User.KarmaScore : 0))
-            .ForMember(dest => dest.IsUpvoted, opt => opt.Ignore());
+            .ForMember(dest => dest.IsUpvoted, opt => opt.Ignore())
+            .ForMember(dest => dest.TripPreview, opt => opt.MapFrom(src => src.Trip));
 
         CreateMap<CreatePostCommand, Post>();
         CreateMap<UpdatePostCommand, Post>()
@@ -190,5 +193,18 @@ public class GeneralProfile : Profile
             .ForMember(dest => dest.User, opt => opt.Ignore())
             .ForMember(dest => dest.ParentComment, opt => opt.Ignore())
             .ForMember(dest => dest.Replies, opt => opt.Ignore());
+    }
+
+    private static string GetPostTripPrimaryLocation(Trip trip)
+    {
+        var primaryDestination = trip.Destinations.OrderBy(destination => destination.OrderIndex).FirstOrDefault();
+        if (primaryDestination != null)
+        {
+            return string.Join(", ", new[] { primaryDestination.City, primaryDestination.Country }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+
+        return string.Join(", ", new[] { trip.Origin, trip.OriginCountry }
+            .Where(value => !string.IsNullOrWhiteSpace(value)));
     }
 }

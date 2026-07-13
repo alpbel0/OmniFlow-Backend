@@ -3,6 +3,7 @@ using MediatR;
 using OmniFlow.Application.Exceptions;
 using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
+using OmniFlow.Application.Features.Posts;
 
 namespace OmniFlow.Application.Features.Posts.Commands.UpdatePost;
 
@@ -37,6 +38,15 @@ public class UpdatePostCommandHandler : IRequestHandler<UpdatePostCommand, Unit>
         }
 
         _mapper.Map(request, post);
+
+        PostCommandGuard.EnsureValidContent(post);
+        await PostCommandGuard.EnsureTripCanBeLinkedAsync(
+            _postRepository,
+            post.PostType,
+            post.TripId,
+            currentUserId,
+            cancellationToken);
+
         await _postRepository.UpdateAsync(post);
 
         return Unit.Value;

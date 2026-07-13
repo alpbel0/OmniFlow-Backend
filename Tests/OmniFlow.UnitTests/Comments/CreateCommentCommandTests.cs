@@ -114,6 +114,44 @@ public class CreateCommentCommandHandlerTests
 	}
 
 	[Fact]
+	public async Task Handle_ReplyToReply_ShouldThrowValidationException()
+	{
+		var postId = Guid.NewGuid();
+		var parentCommentId = Guid.NewGuid();
+		var currentUserId = Guid.NewGuid();
+
+		_authenticatedUserServiceMock.Setup(x => x.UserId).Returns(currentUserId.ToString());
+		_contextMock.Setup(x => x.Posts).Returns(MockDbSetHelper.CreateAsyncMockDbSet(new List<Post>
+		{
+			new() { Id = postId, CommentCount = 0 }
+		}).Object);
+		_commentRepositoryMock.Setup(x => x.GetByIdWithRepliesAsync(parentCommentId)).ReturnsAsync(new Comment
+		{
+			Id = parentCommentId,
+			PostId = postId,
+			ParentCommentId = Guid.NewGuid(),
+			UserId = Guid.NewGuid()
+		});
+
+		var handler = new CreateCommentCommandHandler(
+			_commentRepositoryMock.Object,
+			_contextMock.Object,
+			_authenticatedUserServiceMock.Object,
+			_mapper,
+			_notificationServiceMock.Object);
+
+		var command = new CreateCommentCommand
+		{
+			PostId = postId,
+			ParentCommentId = parentCommentId,
+			Content = "Nested reply"
+		};
+
+		await Assert.ThrowsAsync<OmniFlow.Application.Exceptions.ValidationException>(
+			() => handler.Handle(command, CancellationToken.None));
+	}
+
+	[Fact]
 	public async Task Handle_ValidComment_ShouldCreateCommentAndIncrementPostCount()
 	{
 		var postId = Guid.NewGuid();

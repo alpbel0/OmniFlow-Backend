@@ -28,4 +28,13 @@ public class PostResponse
 	public int KarmaScore { get; set; }
 
 	public bool IsUpvoted { get; set; }
+	public PostTripPreviewResponse? TripPreview { get; set; }
+}
+
+public class PostTripPreviewResponse
+{
+	public Guid Id { get; set; }
+	public string Title { get; set; } = string.Empty;
+	public string? CoverPhotoUrl { get; set; }
+	public string PrimaryLocation { get; set; } = string.Empty;
 }

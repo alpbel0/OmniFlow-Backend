@@ -17,6 +17,10 @@ public class CreatePostCommandValidator : AbstractValidator<CreatePostCommand>
 		RuleFor(x => x)
 			.Must(HaveContentOrPhoto)
 			.WithMessage("Post must contain content or at least one photo.");
+
+		RuleFor(x => x.Photos)
+			.Must(photos => photos.Count <= 5)
+			.WithMessage("A post can contain at most 5 photos.");
 	}
 
 	private static bool HaveContentOrPhoto(CreatePostCommand command)

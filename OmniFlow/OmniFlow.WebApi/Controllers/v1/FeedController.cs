@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using OmniFlow.Application.Features.Posts.Queries.GetFeed;
+using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.WebApi.Controllers.v1;
 
@@ -16,16 +17,24 @@ public class FeedController : BaseApiController
     public async Task<IActionResult> Get(
         [FromQuery] FeedTab tab = FeedTab.Latest,
         [FromQuery] string? cursor = null,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery(Name = "q")] string? searchQuery = null,
+        [FromQuery] string? tag = null,
+        [FromQuery] PostType? postType = null,
+        [FromQuery] FeedSort sort = FeedSort.Latest)
     {
-        var query = new GetFeedQuery(new GetFeedParameter
+        var feedQuery = new GetFeedQuery(new GetFeedParameter
         {
             Tab = tab,
             Cursor = cursor,
-            PageSize = pageSize
+            PageSize = pageSize,
+            Query = searchQuery,
+            Tag = tag,
+            PostType = postType,
+            Sort = sort
         });
 
-        var result = await Mediator.Send(query);
+        var result = await Mediator.Send(feedQuery);
         return Ok(result);
     }
 }

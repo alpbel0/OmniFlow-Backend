@@ -82,6 +82,17 @@ public class FeedControllerTests : IClassFixture<CustomWebApplicationFactory>
         await dbContext.SaveChangesAsync();
     }
 
+    private async Task SetPostFeedFieldsAsync(Guid postId, int upvoteCount, PostType postType, params string[] tags)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var post = dbContext.Posts.Single(x => x.Id == postId);
+        post.UpvoteCount = upvoteCount;
+        post.PostType = postType;
+        post.Tags = tags.ToList();
+        await dbContext.SaveChangesAsync();
+    }
+
     private async Task EnsureFollowRelationAsync(Guid followerId, Guid followingId)
     {
         using var scope = _factory.Services.CreateScope();
@@ -259,5 +270,55 @@ public class FeedControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         result.Should().NotBeNull();
         result!.Data.Should().NotContain(post => post.UserId == adminId);
+    }
+
+    [Fact]
+    public async Task Get_WithCombinedFiltersAndSort_ReturnsMatchingPostsInRequestedOrder()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await TestDatabaseSeeder.ClearFeedDataAsync(scope.ServiceProvider);
+        }
+
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var authClient = CreateAuthenticatedClient(token);
+        var firstId = await CreatePostAsync(authClient, "Barcelona food one");
+        var secondId = await CreatePostAsync(authClient, "Barcelona food two");
+        var excludedId = await CreatePostAsync(authClient, "Barcelona photo");
+
+        await SetPostFeedFieldsAsync(firstId, 4, PostType.Photo, "barselona", "gastronomi");
+        await SetPostFeedFieldsAsync(secondId, 12, PostType.Photo, "BARSELONA");
+        await SetPostFeedFieldsAsync(excludedId, 50, PostType.Tip, "barselona");
+
+        var response = await authClient.GetAsync(
+            "/api/v1/feed?q=food&tag=%23barselona&postType=Photo&sort=MostUpvoted&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = JsonSerializer.Deserialize<GetFeedViewModel>(await response.Content.ReadAsStringAsync(), _json);
+        result.Should().NotBeNull();
+        result!.Data.Select(post => post.Id).Should().Equal(secondId, firstId);
+    }
+
+    [Fact]
+    public async Task Get_WithoutQueryParameters_RemainsBackwardCompatible()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var response = await CreateAuthenticatedClient(token).GetAsync("/api/v1/feed");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        JsonSerializer.Deserialize<GetFeedViewModel>(await response.Content.ReadAsStringAsync(), _json)
+            .Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Get_WithInvalidCursor_FallsBackToFirstPage()
+    {
+        var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+        var response = await CreateAuthenticatedClient(token).GetAsync("/api/v1/feed?cursor=not-base64&pageSize=5");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = JsonSerializer.Deserialize<GetFeedViewModel>(await response.Content.ReadAsStringAsync(), _json);
+        result.Should().NotBeNull();
+        result!.Data.Count.Should().BeLessThanOrEqualTo(5);
     }
 }

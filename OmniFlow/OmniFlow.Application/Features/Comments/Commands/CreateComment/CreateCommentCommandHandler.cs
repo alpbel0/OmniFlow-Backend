@@ -5,6 +5,7 @@ using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
+using FluentValidation.Results;
 
 namespace OmniFlow.Application.Features.Comments.Commands.CreateComment;
 
@@ -44,6 +45,14 @@ public class CreateCommentCommandHandler : IRequestHandler<CreateCommentCommand,
 			if (parentComment == null || parentComment.PostId != request.PostId)
 			{
 				throw new EntityNotFoundException("Comment", request.ParentCommentId.Value);
+			}
+
+			if (parentComment.ParentCommentId.HasValue)
+			{
+				throw new OmniFlow.Application.Exceptions.ValidationException(new[]
+				{
+					new ValidationFailure(nameof(request.ParentCommentId), "Replies can only be added to top-level comments.")
+				});
 			}
 		}
 

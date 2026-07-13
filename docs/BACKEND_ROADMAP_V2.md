@@ -908,6 +908,50 @@ Mobil Trip Planning sayfası tasarımı sırasında (`omniflow-mobile/TRIP_PLANN
 
 ---
 
+## 🎯 B10 — Community Feed Backend Follow-up'ları
+
+**Mobil karşılığı:** `MOBILE_ROADMAP.md → M5 — Social & Community`  
+**Durum:** [x] Tamamlandı (2026-07-13)  
+**Migration:** Gerekmiyor
+
+### Task B10.1: Feed Arama, Filtreleme ve Sıralama
+
+- [x] `GET /api/v1/feed`: geriye uyumlu ForYou/Following/Latest + `q`, `tag`, `postType`, `sort`
+- [x] Case-insensitive içerik/etiket araması ve normalize etikette tam eşleşme
+- [x] Latest/MostUpvoted/MostCommented için deterministik cursor; tie-break `CreatedAt` + `Id`
+- [x] Following ve block görünürlük kuralları korunuyor
+
+### Task B10.2: Post ve Rota Önizleme Sözleşmesi
+
+- [x] `PostResponse` içine additive nullable `TripPreview` (id, title, coverPhotoUrl, primaryLocation)
+- [x] Birincil konum ilk destinasyon; yoksa origin bilgisi
+- [x] Route create/update yalnızca oturum sahibinin Published tripini bağlayabilir
+- [x] İçerik/fotoğraf minimumu, max 5 fotoğraf ve Route için TripId guard'ları
+- [x] Place alanları web/API geriye uyumluluğu için korundu
+
+### Task B10.3: Yorum Derinliği
+
+- [x] Cross-post parent kontrolü korundu
+- [x] Reply altına reply açıklayıcı 422 validation cevabıyla reddediliyor
+
+### Task B10.4: Doğrulama
+
+- [x] Feed unit testleri: keyword/tag/type/sort/cursor/Following/block
+- [x] Post testleri: medya limiti ve bağlanamayan trip reddi
+- [x] Comment testleri: cross-post ve ikinci seviye reply reddi
+- [x] Birleşik feed filtre/sort integration testi ve eski endpoint testleri
+- [x] `dotnet test Tests/OmniFlow.UnitTests/OmniFlow.UnitTests.csproj --no-restore` — **481/481 başarılı**
+- [x] Feed/Posts/Comments/CommunityTips integration grubu — **46/46 başarılı**
+
+### Definition of Done (B10)
+
+- [x] Mobil Search filtreleri server-side çalışıyor ve eski parametresiz Feed sözleşmesi bozulmuyor
+- [x] Route postlar mobil için yeterli trip özeti döndürüyor
+- [x] Yalnızca tek seviye yorum reply'ı backend tarafından enforce ediliyor
+- [x] Yeni veritabanı migration'ı oluşmadı
+
+---
+
 ## 📌 Genel Notlar
 
 - Her faz bağımsız deploy edilebilir; mobil ekip ilgili fazı bekler.

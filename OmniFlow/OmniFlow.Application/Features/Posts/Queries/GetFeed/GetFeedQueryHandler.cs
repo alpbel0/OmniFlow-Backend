@@ -41,6 +41,8 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
 
         IQueryable<Post> query = _context.Posts
             .Include(post => post.User)
+            .Include(post => post.Trip)
+                .ThenInclude(trip => trip!.Destinations)
             .Where(post => post.DeletedAt == null && post.IsVisible);
 
         if (currentUserId.HasValue)
@@ -73,17 +75,14 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
             query = query.Where(post => followingIds.Contains(post.UserId));
         }
 
-        query = query.OrderByDescending(post => post.CreatedAt).ThenByDescending(post => post.Id);
+        query = ApplyFilters(query, parameter);
 
         if (cursorInfo != null)
         {
-            var cursorCreatedAt = cursorInfo.CreatedAt;
-            var cursorId = cursorInfo.Id;
-
-            query = query.Where(post =>
-                post.CreatedAt < cursorCreatedAt ||
-                (post.CreatedAt == cursorCreatedAt && post.Id.CompareTo(cursorId) < 0));
+            query = ApplyCursor(query, parameter.Sort, cursorInfo);
         }
+
+        query = ApplyOrdering(query, parameter.Sort);
 
         var items = await query
             .Take(pageSize + 1)
@@ -111,7 +110,8 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
             ? EncodeCursor(new FeedCursorInfo
             {
                 CreatedAt = resultItems.Last().CreatedAt,
-                Id = resultItems.Last().Id
+                Id = resultItems.Last().Id,
+                SortValue = GetSortValue(resultItems.Last(), parameter.Sort)
             })
             : null;
 
@@ -122,6 +122,74 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
             HasMore = hasMore
         };
     }
+
+    private static IQueryable<Post> ApplyFilters(IQueryable<Post> query, GetFeedParameter parameter)
+    {
+        var searchQuery = parameter.Query?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            query = query.Where(post =>
+                (post.Content != null && post.Content.ToLower().Contains(searchQuery)) ||
+                post.Tags.Any(tag => tag.ToLower().Contains(searchQuery)));
+        }
+
+        var normalizedTag = parameter.Tag?.Trim().TrimStart('#').ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(normalizedTag))
+        {
+            query = query.Where(post => post.Tags.Any(tag => tag.ToLower() == normalizedTag));
+        }
+
+        if (parameter.PostType.HasValue)
+        {
+            query = query.Where(post => post.PostType == parameter.PostType.Value);
+        }
+
+        return query;
+    }
+
+    private static IQueryable<Post> ApplyCursor(
+        IQueryable<Post> query,
+        FeedSort sort,
+        FeedCursorInfo cursor)
+    {
+        return sort switch
+        {
+            FeedSort.MostUpvoted => query.Where(post =>
+                post.UpvoteCount < cursor.SortValue ||
+                (post.UpvoteCount == cursor.SortValue && post.CreatedAt < cursor.CreatedAt) ||
+                (post.UpvoteCount == cursor.SortValue && post.CreatedAt == cursor.CreatedAt && post.Id.CompareTo(cursor.Id) < 0)),
+            FeedSort.MostCommented => query.Where(post =>
+                post.CommentCount < cursor.SortValue ||
+                (post.CommentCount == cursor.SortValue && post.CreatedAt < cursor.CreatedAt) ||
+                (post.CommentCount == cursor.SortValue && post.CreatedAt == cursor.CreatedAt && post.Id.CompareTo(cursor.Id) < 0)),
+            _ => query.Where(post =>
+                post.CreatedAt < cursor.CreatedAt ||
+                (post.CreatedAt == cursor.CreatedAt && post.Id.CompareTo(cursor.Id) < 0))
+        };
+    }
+
+    private static IOrderedQueryable<Post> ApplyOrdering(IQueryable<Post> query, FeedSort sort)
+    {
+        return sort switch
+        {
+            FeedSort.MostUpvoted => query
+                .OrderByDescending(post => post.UpvoteCount)
+                .ThenByDescending(post => post.CreatedAt)
+                .ThenByDescending(post => post.Id),
+            FeedSort.MostCommented => query
+                .OrderByDescending(post => post.CommentCount)
+                .ThenByDescending(post => post.CreatedAt)
+                .ThenByDescending(post => post.Id),
+            _ => query.OrderByDescending(post => post.CreatedAt).ThenByDescending(post => post.Id)
+        };
+    }
+
+    private static int GetSortValue(Post post, FeedSort sort) => sort switch
+    {
+        FeedSort.MostUpvoted => post.UpvoteCount,
+        FeedSort.MostCommented => post.CommentCount,
+        _ => 0
+    };
 
     private static FeedCursorInfo? ParseCursor(string? cursor)
     {
@@ -152,4 +220,5 @@ internal sealed class FeedCursorInfo
 {
     public DateTime CreatedAt { get; set; }
     public Guid Id { get; set; }
+    public int SortValue { get; set; }
 }
