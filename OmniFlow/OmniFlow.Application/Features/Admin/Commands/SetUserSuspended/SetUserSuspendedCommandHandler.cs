@@ -33,6 +33,10 @@ public class SetUserSuspendedCommandHandler : IRequestHandler<SetUserSuspendedCo
 		{
 			throw new EntityNotFoundException("User", request.UserId);
 		}
+		if (user.Role == Roles.Admin)
+		{
+			throw new ForbiddenException("Admin accounts cannot be suspended.");
+		}
 
 		user.IsSuspended = request.IsSuspended;
 		user.UpdatedAt = DateTime.UtcNow;

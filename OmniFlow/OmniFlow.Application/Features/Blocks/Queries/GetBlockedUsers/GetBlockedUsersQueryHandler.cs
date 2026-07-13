@@ -22,6 +22,11 @@ public class GetBlockedUsersQueryHandler : IRequestHandler<GetBlockedUsersQuery,
 
 	public async Task<PagedResponse<BlockedUserResponse>> Handle(GetBlockedUsersQuery request, CancellationToken cancellationToken)
 	{
+		if (!Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId) || currentUserId != request.UserId)
+		{
+			throw new ForbiddenException("You can only view your own blocked users.");
+		}
+
 		var userExists = _context.Users.Any(user => user.Id == request.UserId);
 		if (!userExists)
 		{
@@ -49,7 +54,7 @@ public class GetBlockedUsersQueryHandler : IRequestHandler<GetBlockedUsersQuery,
 			})
 			.ToList();
 
-		if (Guid.TryParse(_authenticatedUserService.UserId, out var currentUserId) && response.Any())
+		if (response.Any())
 		{
 			var blockedUserIds = response.Select(user => user.Id).ToList();
 			var followedIds = await _context.Follows

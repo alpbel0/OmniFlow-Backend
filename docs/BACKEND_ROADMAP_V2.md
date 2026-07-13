@@ -385,6 +385,21 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 
 ---
 
+### Task B0.16: M6 Admin Stats & Güvenlik Tamamlama
+
+**Tahmini Süre:** 2 saat
+**Durum:** [x] Tamamlandı
+
+> **Mobil karşılığı:** `MOBILE_ROADMAP.md → Task 6.1-6.5`
+
+- [x] `GET /api/v1/admin/stats` — silinmemiş kullanıcı/trip/post toplamları, İstanbul takvimine göre bugün ve bu hafta sayaçları
+- [x] Blocked-users listesi yalnız oturum sahibinin kendi `userId` değeri için okunabilir; başka kullanıcı hedefi `403`
+- [x] Suspend/unsuspend komutu admin hesaplarını hedef alamaz; kendi hesap korumasına ek olarak diğer adminler de korunur
+- [x] UTC saat kaynağı `IDateTimeService` üzerinden test edilebilir hale getirildi
+- [x] Unit ve API integration testleri eklendi
+
+---
+
 ### Definition of Done (B0)
 
 - [x] Dokümanlar koddaki gerçeği yansıtıyor
@@ -401,6 +416,7 @@ MVP sonrası borç temizliği. Yeni özellik yazmadan önce zemini düzeltir. Bu
 - [x] Checklist satırları ile TimelineEntry'ler arasında belirsizlik olmadan (exact match) bağlantı kuruluyor (B0.13)
 - [x] Owner, yayınladığı bir trip'i düzenlemek için Taslağa alıp tekrar yayınlayabiliyor, sayaçlar korunuyor (B0.14)
 - [x] Map'in Yol modu backend proxy üzerinden çalışıyor, ORS API key client'a hiç gitmiyor (B0.15)
+- [x] M6 admin dashboard sayaçları canlı API'den geliyor; block-list gizliliği ve admin suspend koruması uygulanıyor (B0.16)
 
 > **📝 Düşük öncelikli not (gelecekte değerlendirilebilir):** `TripsController` (`[controller]` token → `/api/v1/Trips/...`, büyük T) ile `TimelineController` (literal route override → `/api/v1/trips/...`, küçük t) arasında casing tutarsızlığı var. ASP.NET Core route matching genelde case-insensitive çalıştığı için şu an **işlevsel bir sorun yaratmıyor**, ama Retrofit contract'larında gereksiz kafa karışıklığına yol açabiliyor. Kısa vadede dokümanlarda gerçek casing'in yazılması (yapıldı) yeterli; orta/uzun vadede tüm controller route'larının lowercase literal'e standardize edilmesi düşünülebilir (B0 kapsamında zorunlu değil).
 

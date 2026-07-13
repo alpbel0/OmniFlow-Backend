@@ -61,6 +61,7 @@ public static class ServiceRegistration
 			return new BlobServiceClient(opts.ConnectionString);
 		});
 		services.AddScoped<IAccountService, AccountService>();
+		services.AddSingleton<IDateTimeService, SystemDateTimeService>();
 		services.AddScoped<IEmailService, EmailService>();
 		services.AddScoped<IBlobService, BlobService>();
 		services.AddSingleton<IGoogleJsonWebSignatureValidator, GoogleJsonWebSignatureValidator>();

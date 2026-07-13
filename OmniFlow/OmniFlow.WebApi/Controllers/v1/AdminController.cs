@@ -4,6 +4,7 @@ using OmniFlow.Application.DTOs.Admin;
 using OmniFlow.Application.Features.Admin.Commands.AdminDeletePost;
 using OmniFlow.Application.Features.Admin.Commands.SetUserSuspended;
 using OmniFlow.Application.Features.Admin.Queries.GetAdminPosts;
+using OmniFlow.Application.Features.Admin.Queries.GetAdminDashboardStats;
 using OmniFlow.Application.Features.Admin.Queries.GetAdminUsers;
 using OmniFlow.Application.Wrappers;
 using OmniFlow.Domain.Enums;
@@ -14,6 +15,14 @@ namespace OmniFlow.WebApi.Controllers.v1;
 [Authorize(Roles = nameof(Roles.Admin))]
 public class AdminController : BaseApiController
 {
+	[HttpGet("stats")]
+	[ProducesResponseType(typeof(AdminDashboardStatsResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
+	public async Task<IActionResult> GetStats()
+	{
+		return Ok(await Mediator.Send(new GetAdminDashboardStatsQuery()));
+	}
+
 	[HttpGet("posts")]
 	[ProducesResponseType(typeof(PagedResponse<AdminPostListItemResponse>), StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -194,14 +194,14 @@ public class BlocksControllerTests : IClassFixture<CustomWebApplicationFactory>
 	}
 
 	[Fact]
-	public async Task GetBlockedUsers_UserNotFound_Returns404()
+	public async Task GetBlockedUsers_ForAnotherUser_Returns403()
 	{
 		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
 		var authClient = CreateAuthenticatedClient(token);
 
 		var response = await authClient.GetAsync($"/api/v1/users/{Guid.NewGuid()}/blocked-users?pageNumber=1&pageSize=10");
 
-		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+		response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 	}
 
 	[Fact]
