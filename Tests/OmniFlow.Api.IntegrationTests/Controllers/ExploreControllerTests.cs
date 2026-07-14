@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Trips;
@@ -223,6 +224,7 @@ public class ExploreControllerTests : IClassFixture<CustomWebApplicationFactory>
 		db.CommunityTips.RemoveRange(db.CommunityTips);
 		db.SavedTrips.RemoveRange(db.SavedTrips);
 		db.TripUpvotes.RemoveRange(db.TripUpvotes);
+		db.PlaceVisitLogs.RemoveRange(db.PlaceVisitLogs.IgnoreQueryFilters());
 		db.TimelineEntries.RemoveRange(db.TimelineEntries);
 		db.Flights.RemoveRange(db.Flights);
 		db.Hotels.RemoveRange(db.Hotels);

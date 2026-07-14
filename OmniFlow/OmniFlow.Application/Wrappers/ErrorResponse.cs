@@ -4,11 +4,13 @@ public class ErrorResponse
 {
 	public string Message { get; init; }
 	public IReadOnlyList<ValidationErrorDetail>? Errors { get; init; }
+	public string? Code { get; init; }
 
-	public ErrorResponse(string message, IReadOnlyList<ValidationErrorDetail>? errors = null)
+	public ErrorResponse(string message, IReadOnlyList<ValidationErrorDetail>? errors = null, string? code = null)
 	{
 		Message = message;
 		Errors = errors;
+		Code = code;
 	}
 }
 

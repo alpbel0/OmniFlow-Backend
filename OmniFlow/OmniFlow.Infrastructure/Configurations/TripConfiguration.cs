@@ -71,6 +71,7 @@ public class TripConfiguration : IEntityTypeConfiguration<Trip>
 			.HasConversion<string>();
 
 		builder.Property(t => t.EstimatedCost).HasColumnName("estimated_cost");
+		builder.Property(t => t.BaseCurrencyCode).HasColumnName("base_currency_code").HasMaxLength(3).HasDefaultValue("USD").IsRequired();
 		builder.Property(t => t.ForkCount).HasColumnName("fork_count").HasDefaultValue(0);
 		builder.Property(t => t.UpvoteCount).HasColumnName("upvote_count").HasDefaultValue(0);
 		builder.Property(t => t.ViewCount).HasColumnName("view_count").HasDefaultValue(0);

@@ -49,6 +49,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 		builder.Property(u => u.Role).HasColumnName("role").HasConversion<string>();
 		builder.Property(u => u.IsVerified).HasColumnName("is_verified").HasDefaultValue(false);
 		builder.Property(u => u.IsSuspended).HasColumnName("is_suspended").HasDefaultValue(false);
+		builder.Property(u => u.PreferredCurrencyCode).HasColumnName("preferred_currency_code").HasMaxLength(3);
 		builder.Property(u => u.CreatedAt).HasColumnName("created_at");
 		builder.Property(u => u.UpdatedAt).HasColumnName("updated_at");
 		builder.Property(u => u.DeletedAt).HasColumnName("deleted_at");

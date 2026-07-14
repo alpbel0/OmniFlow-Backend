@@ -1,4 +1,5 @@
 using OmniFlow.Domain.Enums;
+using System.Text.Json.Serialization;
 
 namespace OmniFlow.Application.DTOs.TimelineEntries;
 
@@ -69,7 +70,10 @@ public class TimelineEntryResponse
 
     // Extra
     public string? Notes { get; set; }
-    public bool IsVisited { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsVisited { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? VisitedAt { get; set; }
     public StopAddedBy AddedBy { get; set; }
     public string? AiReasoning { get; set; }

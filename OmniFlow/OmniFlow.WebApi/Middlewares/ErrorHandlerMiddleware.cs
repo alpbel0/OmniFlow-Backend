@@ -52,7 +52,7 @@ public class ErrorHandlerMiddleware
 
 			case ApiException apiEx:
 				statusCode = apiEx.StatusCode;
-				response = new ErrorResponse(apiEx.Message);
+				response = new ErrorResponse(apiEx.Message, code: apiEx.Code);
 				break;
 
 			case SmtpException:

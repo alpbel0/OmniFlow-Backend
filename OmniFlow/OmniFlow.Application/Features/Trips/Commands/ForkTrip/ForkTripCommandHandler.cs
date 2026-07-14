@@ -71,6 +71,7 @@ public class ForkTripCommandHandler : IRequestHandler<ForkTripCommand, Guid>
             ManualBudget = originalTrip.ManualBudget,
             AdjustedBudgetTier = originalTrip.AdjustedBudgetTier,
             EstimatedCost = originalTrip.EstimatedCost,
+            BaseCurrencyCode = originalTrip.BaseCurrencyCode,
             ForkCount = 0,
             UpvoteCount = 0,
             ViewCount = 0,
@@ -103,6 +104,8 @@ public class ForkTripCommandHandler : IRequestHandler<ForkTripCommand, Guid>
                 Id = newDestId,
                 TripId = forkedTrip.Id
             };
+            forkedDest.SetCoordinates(originalDest.Latitude, originalDest.Longitude);
+            forkedDest.Timezone = originalDest.Timezone;
             await _context.TripDestinations.AddAsync(forkedDest, cancellationToken);
         }
 

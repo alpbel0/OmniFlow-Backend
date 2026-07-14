@@ -501,8 +501,15 @@ public class TimelineEntry : AuditableBaseEntity
     // ------------------------------------------------------------------
     public void MarkVisited()
     {
+        MarkVisitedAt(DateTime.UtcNow);
+    }
+
+    public void MarkVisitedAt(DateTime visitedAt)
+    {
+        if (visitedAt.Kind != DateTimeKind.Utc)
+            throw new ArgumentException("VisitedAt must be UTC.", nameof(visitedAt));
         IsVisited = true;
-        VisitedAt = DateTime.UtcNow;
+        VisitedAt = visitedAt;
     }
 
     public void MarkUnvisited()

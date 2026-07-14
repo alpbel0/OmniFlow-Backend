@@ -26,6 +26,8 @@ public class ApplicationDbContext
 	public DbSet<TripRouteCache> TripRouteCaches => Set<TripRouteCache>();
 	public DbSet<TripChecklistConfirmation> TripChecklistConfirmations => Set<TripChecklistConfirmation>();
 	public DbSet<TimelineEntry> TimelineEntries => Set<TimelineEntry>();
+	public DbSet<PlaceVisitLog> PlaceVisitLogs => Set<PlaceVisitLog>();
+	public DbSet<ExchangeRateSnapshot> ExchangeRateSnapshots => Set<ExchangeRateSnapshot>();
 	public DbSet<Place> Places => Set<Place>();
 	public DbSet<Flight> Flights => Set<Flight>();
 	public DbSet<Hotel> Hotels => Set<Hotel>();

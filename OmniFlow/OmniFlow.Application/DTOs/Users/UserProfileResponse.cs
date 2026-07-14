@@ -22,4 +22,5 @@ public class UserProfileResponse
 	public int PostCount { get; set; }
 	public bool IsBlocked { get; set; }
 	public bool IsBlockedByMe { get; set; }
+	public string? PreferredCurrencyCode { get; set; }
 }

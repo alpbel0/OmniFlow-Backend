@@ -375,6 +375,70 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.ToTable("email_verification_dispatches", (string)null);
                 });
 
+            modelBuilder.Entity("OmniFlow.Domain.Entities.ExchangeRateSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BaseCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("base_currency");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTime>("FetchedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fetched_at_utc");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("QuoteCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("quote_currency");
+
+                    b.Property<decimal>("Rate")
+                        .HasColumnType("numeric(18,8)")
+                        .HasColumnName("rate");
+
+                    b.Property<DateOnly>("RateDate")
+                        .HasColumnType("date")
+                        .HasColumnName("rate_date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BaseCurrency", "QuoteCurrency", "RateDate", "Provider")
+                        .IsUnique()
+                        .HasDatabaseName("ux_exchange_rate_pair_date_provider")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("exchange_rate_snapshots", null, t =>
+                        {
+                            t.HasCheckConstraint("exchange_rate_currency_codes", "length(base_currency) = 3 AND length(quote_currency) = 3");
+
+                            t.HasCheckConstraint("exchange_rate_positive", "rate > 0");
+                        });
+                });
+
             modelBuilder.Entity("OmniFlow.Domain.Entities.Flight", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1074,6 +1138,135 @@ namespace OmniFlow.Infrastructure.Migrations
                             t.HasCheckConstraint("valid_best_months", "best_months IS NULL OR best_months <@ ARRAY[1,2,3,4,5,6,7,8,9,10,11,12]");
 
                             t.HasCheckConstraint("valid_rating", "rating IS NULL OR (rating >= 1 AND rating <= 5)");
+                        });
+                });
+
+            modelBuilder.Entity("OmniFlow.Domain.Entities.PlaceVisitLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("ActualCost")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("actual_cost");
+
+                    b.Property<string>("BaseCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("base_currency_code");
+
+                    b.Property<int>("ConversionAttemptCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("conversion_attempt_count");
+
+                    b.Property<string>("ConversionStatus")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("conversion_status");
+
+                    b.Property<decimal?>("ConvertedActualCost")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("converted_actual_cost");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency_code");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<decimal?>("ExchangeRate")
+                        .HasColumnType("numeric(18,8)")
+                        .HasColumnName("exchange_rate");
+
+                    b.Property<DateOnly?>("ExchangeRateDate")
+                        .HasColumnType("date")
+                        .HasColumnName("exchange_rate_date");
+
+                    b.Property<DateTime?>("LastConversionAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_conversion_attempt_at_utc");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid?>("PlaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("place_id");
+
+                    b.Property<DateOnly?>("RateRequestedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("rate_requested_date");
+
+                    b.Property<int?>("Rating")
+                        .HasColumnType("integer")
+                        .HasColumnName("rating");
+
+                    b.Property<Guid?>("TimelineEntryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("timeline_entry_id");
+
+                    b.Property<Guid>("TripDestinationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_destination_id");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("VisitedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("visited_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlaceId");
+
+                    b.HasIndex("TimelineEntryId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_visit_log_timeline_active")
+                        .HasFilter("timeline_entry_id IS NOT NULL AND deleted_at IS NULL");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ConversionStatus", "LastConversionAttemptAtUtc")
+                        .HasDatabaseName("ix_visit_logs_pending_conversion");
+
+                    b.HasIndex("TripDestinationId", "VisitedAt")
+                        .HasDatabaseName("ix_visit_logs_destination_visited_at");
+
+                    b.HasIndex("TripId", "UserId")
+                        .HasDatabaseName("ix_visit_logs_trip_user");
+
+                    b.ToTable("place_visit_logs", null, t =>
+                        {
+                            t.HasCheckConstraint("visit_log_cost_non_negative", "actual_cost IS NULL OR actual_cost >= 0");
+
+                            t.HasCheckConstraint("visit_log_currency_codes", "length(currency_code) = 3 AND length(base_currency_code) = 3");
+
+                            t.HasCheckConstraint("visit_log_rating_range", "rating IS NULL OR rating BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("visit_log_target_xor", "(timeline_entry_id IS NOT NULL) <> (place_id IS NOT NULL)");
                         });
                 });
 
@@ -1822,6 +2015,14 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("adjusted_budget_tier");
 
+                    b.Property<string>("BaseCurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("USD")
+                        .HasColumnName("base_currency_code");
+
                     b.Property<string>("BudgetTier")
                         .IsRequired()
                         .HasColumnType("text")
@@ -2062,6 +2263,11 @@ namespace OmniFlow.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("order_index");
 
+                    b.Property<string>("Timezone")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("timezone");
+
                     b.Property<Guid>("TripId")
                         .HasColumnType("uuid")
                         .HasColumnName("trip_id");
@@ -2229,6 +2435,11 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.Property<double?>("LocationLongitude")
                         .HasColumnType("double precision")
                         .HasColumnName("location_longitude");
+
+                    b.Property<string>("PreferredCurrencyCode")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("preferred_currency_code");
 
                     b.Property<string>("ProfilePhotoUrl")
                         .HasColumnType("text")
@@ -2579,6 +2790,47 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("OmniFlow.Domain.Entities.PlaceVisitLog", b =>
+                {
+                    b.HasOne("OmniFlow.Domain.Entities.Place", "Place")
+                        .WithMany()
+                        .HasForeignKey("PlaceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("OmniFlow.Domain.Entities.TimelineEntry", "TimelineEntry")
+                        .WithMany()
+                        .HasForeignKey("TimelineEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("OmniFlow.Domain.Entities.TripDestination", "TripDestination")
+                        .WithMany("VisitLogs")
+                        .HasForeignKey("TripDestinationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OmniFlow.Domain.Entities.Trip", "Trip")
+                        .WithMany("VisitLogs")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OmniFlow.Domain.Entities.User", "User")
+                        .WithMany("VisitLogs")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Place");
+
+                    b.Navigation("TimelineEntry");
+
+                    b.Navigation("Trip");
+
+                    b.Navigation("TripDestination");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("OmniFlow.Domain.Entities.Post", b =>
                 {
                     b.HasOne("OmniFlow.Domain.Entities.Place", "Place")
@@ -2790,11 +3042,15 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.Navigation("Hotels");
 
                     b.Navigation("TimelineEntries");
+
+                    b.Navigation("VisitLogs");
                 });
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.TripDestination", b =>
                 {
                     b.Navigation("TimelineEntries");
+
+                    b.Navigation("VisitLogs");
                 });
 
             modelBuilder.Entity("OmniFlow.Domain.Entities.User", b =>
@@ -2810,6 +3066,8 @@ namespace OmniFlow.Infrastructure.Migrations
                     b.Navigation("Posts");
 
                     b.Navigation("Trips");
+
+                    b.Navigation("VisitLogs");
                 });
 #pragma warning restore 612, 618
         }

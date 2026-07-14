@@ -51,6 +51,16 @@ public class GetTimelineQueryHandler : IRequestHandler<GetTimelineQuery, List<Ti
             entries = await _timelineRepo.GetByTripAsync(request.TripId);
         }
 
-        return _mapper.Map<List<TimelineEntryResponse>>(entries);
+        var response = _mapper.Map<List<TimelineEntryResponse>>(entries);
+        var isOwner = Guid.TryParse(_authService.UserId, out var userId) && userId == trip.OwnerId;
+        if (!isOwner)
+        {
+            foreach (var item in response)
+            {
+                item.IsVisited = null;
+                item.VisitedAt = null;
+            }
+        }
+        return response;
     }
 }

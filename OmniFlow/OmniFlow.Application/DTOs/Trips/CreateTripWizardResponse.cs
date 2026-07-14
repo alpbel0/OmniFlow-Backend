@@ -11,6 +11,7 @@ public class CreateTripWizardResponse
     public BudgetTier? AdjustedBudgetTier { get; set; }
     public decimal? EstimatedCost { get; set; }
     public decimal? ManualBudget { get; set; }
+    public string BaseCurrencyCode { get; set; } = "USD";
     public List<string> BudgetMessages { get; set; } = new();
     public List<TripDestinationResponse> Destinations { get; set; } = new();
     public DateOnly StartDate { get; set; }

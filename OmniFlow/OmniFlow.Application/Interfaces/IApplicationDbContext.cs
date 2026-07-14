@@ -13,6 +13,8 @@ public interface IApplicationDbContext
 	DbSet<TripRouteCache> TripRouteCaches { get; }
 	DbSet<TripChecklistConfirmation> TripChecklistConfirmations { get; }
 	DbSet<TimelineEntry> TimelineEntries { get; }
+	DbSet<PlaceVisitLog> PlaceVisitLogs { get; }
+	DbSet<ExchangeRateSnapshot> ExchangeRateSnapshots { get; }
 	DbSet<Place> Places { get; }
 	DbSet<Flight> Flights { get; }
 	DbSet<Hotel> Hotels { get; }

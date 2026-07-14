@@ -56,15 +56,18 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
         return client;
     }
 
-    private async Task<(Guid TripId, Guid DestinationId)> CreateDraftTripWithDestinationAsync(HttpClient authClient)
+    private async Task<(Guid TripId, Guid DestinationId)> CreateDraftTripWithDestinationAsync(
+        HttpClient authClient,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null)
     {
         var createRequest = new CreateTripRequest
         {
             Title = "Draft Trip",
             Origin = "Istanbul",
             OriginCountry = "Turkey",
-            StartDate = new DateOnly(2026, 8, 10),
-            EndDate = new DateOnly(2026, 8, 13),
+            StartDate = startDate ?? new DateOnly(2026, 8, 10),
+            EndDate = endDate ?? new DateOnly(2026, 8, 13),
             PersonCount = 2,
             BudgetTier = BudgetTier.Standard,
             TravelStyles = new List<TravelStyle> { TravelStyle.Cultural }
@@ -1092,7 +1095,8 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
     {
         var token = await GetAccessTokenAsync();
         var authClient = CreateAuthenticatedClient(token);
-        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient, today, today);
 
         var createRequest = new CreateTimelineEntryRequest
         {
@@ -1120,7 +1124,8 @@ public class TimelineControllerTests : IClassFixture<CustomWebApplicationFactory
     {
         var token = await GetAccessTokenAsync();
         var authClient = CreateAuthenticatedClient(token);
-        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (tripId, destinationId) = await CreateDraftTripWithDestinationAsync(authClient, today, today);
 
         var createRequest = new CreateTimelineEntryRequest
         {

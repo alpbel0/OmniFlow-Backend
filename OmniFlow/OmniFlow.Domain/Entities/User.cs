@@ -33,9 +33,13 @@ public class User : AuditableBaseEntity
 
 	public bool IsSuspended { get; set; } = false;
 
+	public string? PreferredCurrencyCode { get; set; }
+
 	public ICollection<Trip> Trips { get; set; } = new List<Trip>();
 
 	public ICollection<Post> Posts { get; set; } = new List<Post>();
+
+	public ICollection<PlaceVisitLog> VisitLogs { get; set; } = new List<PlaceVisitLog>();
 
 	public ICollection<Follow> Followers { get; set; } = new List<Follow>();
 

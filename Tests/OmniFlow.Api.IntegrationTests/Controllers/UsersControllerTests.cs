@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
@@ -106,6 +107,8 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 		using (var scope = _factory.Services.CreateScope())
 		{
 			var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+			db.PlaceVisitLogs.RemoveRange(db.PlaceVisitLogs.IgnoreQueryFilters());
+			db.TimelineEntries.RemoveRange(db.TimelineEntries.IgnoreQueryFilters());
 			db.TripDestinations.RemoveRange(db.TripDestinations);
 			db.Trips.RemoveRange(db.Trips);
 

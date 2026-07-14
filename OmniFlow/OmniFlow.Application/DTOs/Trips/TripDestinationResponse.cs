@@ -7,6 +7,7 @@ public class TripDestinationResponse
     public string Country { get; set; } = string.Empty;
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+    public string? Timezone { get; set; }
     public DateOnly ArrivalDate { get; set; }
     public DateOnly DepartureDate { get; set; }
     public int OrderIndex { get; set; }

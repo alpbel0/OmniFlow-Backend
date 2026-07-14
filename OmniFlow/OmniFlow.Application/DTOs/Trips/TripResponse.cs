@@ -30,6 +30,9 @@ public class TripResponse
     public BudgetTier? AdjustedBudgetTier { get; set; }
 
     public decimal? EstimatedCost { get; set; }
+    public string BaseCurrencyCode { get; set; } = "USD";
+    public TripExecutionState? ExecutionState { get; set; }
+    public bool IsTimezoneComplete { get; set; }
     public int CompletionPercentage { get; set; }
     public int ForkCount { get; set; }
     public int UpvoteCount { get; set; }

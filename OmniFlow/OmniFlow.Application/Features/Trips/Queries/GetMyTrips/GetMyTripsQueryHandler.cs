@@ -16,17 +16,20 @@ public class GetMyTripsQueryHandler : IRequestHandler<GetMyTripsQuery, GetMyTrip
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
     private readonly IMapper _mapper;
+    private readonly ITripTemporalService _temporalService;
 
     public GetMyTripsQueryHandler(
         ITripRepositoryAsync tripRepository,
         IApplicationDbContext context,
         IAuthenticatedUserService authenticatedUserService,
-        IMapper mapper)
+        IMapper mapper,
+        ITripTemporalService temporalService)
     {
         _tripRepository = tripRepository;
         _context = context;
         _authenticatedUserService = authenticatedUserService;
         _mapper = mapper;
+        _temporalService = temporalService;
     }
 
     public async Task<GetMyTripsViewModel> Handle(GetMyTripsQuery request, CancellationToken cancellationToken)
@@ -78,6 +81,10 @@ public class GetMyTripsQueryHandler : IRequestHandler<GetMyTripsQuery, GetMyTrip
             destinationsByTripId.TryGetValue(response.Id, out var destinations);
             timelineEntriesByTripId.TryGetValue(response.Id, out var timelineEntries);
             response.CompletionPercentage = TripCompletionCalculator.Calculate(trip, destinations, timelineEntries);
+            trip.Destinations = destinations ?? [];
+            var execution = _temporalService.GetExecutionState(trip);
+            response.ExecutionState = execution.State;
+            response.IsTimezoneComplete = execution.IsTimezoneComplete;
         }
 
         return new GetMyTripsViewModel(

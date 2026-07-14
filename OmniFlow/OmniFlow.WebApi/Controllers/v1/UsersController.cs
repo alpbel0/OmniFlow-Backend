@@ -7,6 +7,7 @@ using OmniFlow.Application.Features.Posts.Queries.GetMyPosts;
 using OmniFlow.Application.Features.Posts.Queries.GetPostsByUser;
 using OmniFlow.Application.Features.Trips.Queries.GetPublishedTripsByUser;
 using OmniFlow.Application.Features.Users.Commands.UpdateProfile;
+using OmniFlow.Application.Features.Users.Commands.UpdateCurrencyPreference;
 using OmniFlow.Application.Features.Users.Queries.GetSuggestedFollows;
 using OmniFlow.Application.Features.Users.Queries.GetTopContributors;
 using OmniFlow.Application.Features.Users.Queries.GetUserProfile;
@@ -165,6 +166,17 @@ public class UsersController : BaseApiController
 		};
 
 		await Mediator.Send(command);
+		return NoContent();
+	}
+
+	[HttpPut("me/currency-preference")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+	public async Task<IActionResult> UpdateCurrencyPreference(
+		[FromBody] UpdateCurrencyPreferenceRequest request,
+		CancellationToken cancellationToken)
+	{
+		await Mediator.Send(new UpdateCurrencyPreferenceCommand(request.CurrencyCode), cancellationToken);
 		return NoContent();
 	}
 

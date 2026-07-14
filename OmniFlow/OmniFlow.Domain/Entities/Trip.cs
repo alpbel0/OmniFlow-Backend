@@ -55,6 +55,8 @@ public class Trip : AuditableBaseEntity
 
 	public decimal? EstimatedCost { get; set; }
 
+	public string BaseCurrencyCode { get; set; } = "USD";
+
 	public int ForkCount { get; set; } = 0;
 
 	public int UpvoteCount { get; set; } = 0;
@@ -71,6 +73,8 @@ public class Trip : AuditableBaseEntity
 	public ICollection<TripDestination> Destinations { get; set; } = new List<TripDestination>();
 
 	public ICollection<TimelineEntry> TimelineEntries { get; set; } = new List<TimelineEntry>();
+
+	public ICollection<PlaceVisitLog> VisitLogs { get; set; } = new List<PlaceVisitLog>();
 
 	public ICollection<Flight> Flights { get; set; } = new List<Flight>();
 

@@ -12,6 +12,7 @@ namespace OmniFlow.Api.IntegrationTests.Setup;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private static readonly object MigrationLock = new();
     private readonly string _connectionString;
     public TestEmailService EmailService { get; } = new();
     public TestGoogleTokenValidator GoogleTokenValidator { get; } = new();
@@ -34,7 +35,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["GoogleAuth:AllowedClientIds:0"] = "integration-test-google-client-id"
+                ["GoogleAuth:AllowedClientIds:0"] = "integration-test-google-client-id",
+                ["Currency:EnableWorkers"] = "false"
             });
         });
 
@@ -60,11 +62,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IGeocodingService, TestGeocodingService>();
             services.RemoveAll<IRoutingService>();
             services.AddSingleton<IRoutingService, TestRoutingService>();
+            services.RemoveAll<IExchangeRateService>();
+            services.AddSingleton<IExchangeRateService, TestExchangeRateService>();
 
             // Ensure test DB schema is up to date.
-            using var scope = services.BuildServiceProvider().CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            db.Database.Migrate();
+            lock (MigrationLock)
+            {
+                using var scope = services.BuildServiceProvider().CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                db.Database.Migrate();
+            }
         });
     }
 
@@ -108,6 +115,26 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                     _ => 900
                 }
             });
+        }
+    }
+
+    private sealed class TestExchangeRateService : IExchangeRateService
+    {
+        public Task<ExchangeRateResult> GetRateAsync(
+            string baseCurrencyCode,
+            string quoteCurrencyCode,
+            DateOnly? date,
+            CancellationToken cancellationToken = default)
+        {
+            var requestedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+            var rate = baseCurrencyCode == quoteCurrencyCode ? 1m : 2m;
+            return Task.FromResult(new ExchangeRateResult(
+                baseCurrencyCode,
+                quoteCurrencyCode,
+                requestedDate,
+                requestedDate,
+                rate,
+                "ECB"));
         }
     }
 }

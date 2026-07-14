@@ -27,6 +27,8 @@ public static class ServiceExtensions
         services.AddScoped<IKarmaService, KarmaService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ITripVisibilityService, TripVisibilityService>();
+        services.AddScoped<ITripTemporalService, TripTemporalService>();
+        services.AddScoped<IVisitLogConversionService, VisitLogConversionService>();
 
         return services;
     }

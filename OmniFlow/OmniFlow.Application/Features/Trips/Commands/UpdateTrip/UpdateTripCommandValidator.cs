@@ -1,4 +1,5 @@
 using FluentValidation;
+using OmniFlow.Application.Currency;
 
 namespace OmniFlow.Application.Features.Trips.Commands.UpdateTrip;
 
@@ -33,5 +34,9 @@ public class UpdateTripCommandValidator : AbstractValidator<UpdateTripCommand>
         RuleFor(x => x.ManualBudget)
             .GreaterThanOrEqualTo(0).When(x => x.ManualBudget.HasValue)
             .WithMessage("Manual budget must be greater than or equal to 0.");
+
+        RuleFor(x => x.BaseCurrencyCode)
+            .Must(CurrencyPolicy.IsSupported)
+            .WithMessage("Base currency must be TRY, USD, or EUR.");
     }
 }

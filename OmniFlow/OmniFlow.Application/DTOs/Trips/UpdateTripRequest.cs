@@ -31,6 +31,7 @@ public class UpdateTripRequest
 
     // Step 5: Manual budget
     public decimal? ManualBudget { get; set; }
+    public string BaseCurrencyCode { get; set; } = "USD";
 
     public string? CoverPhotoUrl { get; set; }
     public List<string> Tags { get; set; } = new();

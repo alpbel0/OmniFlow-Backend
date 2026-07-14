@@ -11,15 +11,18 @@ public class UpdateTripDestinationCommandHandler : IRequestHandler<UpdateTripDes
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
     private readonly IGeocodingService _geocodingService;
+    private readonly ITimeZoneResolver _timeZoneResolver;
 
     public UpdateTripDestinationCommandHandler(
         IApplicationDbContext context,
         IAuthenticatedUserService authenticatedUserService,
-        IGeocodingService geocodingService)
+        IGeocodingService geocodingService,
+        ITimeZoneResolver timeZoneResolver)
     {
         _context = context;
         _authenticatedUserService = authenticatedUserService;
         _geocodingService = geocodingService;
+        _timeZoneResolver = timeZoneResolver;
     }
 
     public async Task<Unit> Handle(UpdateTripDestinationCommand request, CancellationToken cancellationToken)
@@ -91,7 +94,10 @@ public class UpdateTripDestinationCommandHandler : IRequestHandler<UpdateTripDes
             destination.UpdateDates(request.ArrivalDate, request.DepartureDate);
             destination.UpdateCity(request.City, request.Country);
             if (cityChanged)
+            {
                 destination.SetCoordinates(geocodingResult?.Latitude, geocodingResult?.Longitude);
+                destination.Timezone = _timeZoneResolver.Resolve(geocodingResult?.Latitude, geocodingResult?.Longitude);
+            }
 
             trip.RecalculateFromDestinations();
 

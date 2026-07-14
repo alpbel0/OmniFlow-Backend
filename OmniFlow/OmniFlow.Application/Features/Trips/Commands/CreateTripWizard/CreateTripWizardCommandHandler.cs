@@ -6,6 +6,7 @@ using OmniFlow.Application.Interfaces;
 using OmniFlow.Application.Interfaces.Repositories;
 using OmniFlow.Domain.Entities;
 using OmniFlow.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace OmniFlow.Application.Features.Trips.Commands.CreateTripWizard;
 
@@ -17,6 +18,7 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
     private readonly IBudgetCalculationService _budgetService;
     private readonly IMapper _mapper;
     private readonly IGeocodingService _geocodingService;
+    private readonly ITimeZoneResolver _timeZoneResolver;
 
     public CreateTripWizardCommandHandler(
         IApplicationDbContext context,
@@ -24,7 +26,8 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
         IAuthenticatedUserService authenticatedUserService,
         IBudgetCalculationService budgetService,
         IMapper mapper,
-        IGeocodingService geocodingService)
+        IGeocodingService geocodingService,
+        ITimeZoneResolver timeZoneResolver)
     {
         _context = context;
         _tripRepository = tripRepository;
@@ -32,6 +35,7 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
         _budgetService = budgetService;
         _mapper = mapper;
         _geocodingService = geocodingService;
+        _timeZoneResolver = timeZoneResolver;
     }
 
     public async Task<CreateTripWizardResponse> Handle(CreateTripWizardCommand request, CancellationToken cancellationToken)
@@ -39,6 +43,12 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
         var trip = _mapper.Map<Trip>(request);
         trip.OwnerId = Guid.Parse(_authenticatedUserService.UserId);
         trip.Status = TripStatus.Draft;
+        var preferredCurrency = await _context.Users
+            .Where(user => user.Id == trip.OwnerId)
+            .Select(user => user.PreferredCurrencyCode)
+            .FirstOrDefaultAsync(cancellationToken);
+        trip.BaseCurrencyCode = OmniFlow.Application.Currency.CurrencyPolicy.Normalize(
+            request.BaseCurrencyCode ?? preferredCurrency ?? "USD");
         var originGeocodingResult = await _geocodingService.GeocodeAsync(
             request.Origin,
             request.OriginCountry,
@@ -62,6 +72,7 @@ public class CreateTripWizardCommandHandler : IRequestHandler<CreateTripWizardCo
                 TripId = trip.Id
             };
             destination.SetCoordinates(geocodingResult?.Latitude, geocodingResult?.Longitude);
+            destination.Timezone = _timeZoneResolver.Resolve(geocodingResult?.Latitude, geocodingResult?.Longitude);
 
             trip.Destinations.Add(destination);
         }

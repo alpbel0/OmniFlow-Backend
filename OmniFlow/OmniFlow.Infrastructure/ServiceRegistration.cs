@@ -12,6 +12,7 @@ using OmniFlow.Infrastructure.Models;
 using OmniFlow.Infrastructure.Repositories;
 using OmniFlow.Infrastructure.Services;
 using OmniFlow.Infrastructure.Settings;
+using OmniFlow.Infrastructure.BackgroundServices;
 
 namespace OmniFlow.Infrastructure;
 
@@ -53,6 +54,11 @@ public static class ServiceRegistration
 			configuration.GetSection("Geocoding").Bind(options));
 		services.Configure<OpenRouteServiceSettings>(options =>
 			configuration.GetSection("Routing:OpenRouteService").Bind(options));
+		services.AddOptions<CurrencySettings>()
+			.Bind(configuration.GetSection("Currency"))
+			.Validate(settings => Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out _), "Currency:BaseUrl must be absolute.")
+			.Validate(settings => !string.IsNullOrWhiteSpace(settings.Provider), "Currency:Provider is required.")
+			.ValidateOnStart();
 		services.AddSingleton(sp =>
 		{
 			var opts = sp.GetRequiredService<IOptions<AzureStorageSettings>>().Value;
@@ -62,6 +68,7 @@ public static class ServiceRegistration
 		});
 		services.AddScoped<IAccountService, AccountService>();
 		services.AddSingleton<IDateTimeService, SystemDateTimeService>();
+		services.AddSingleton<ITimeZoneResolver, GeoTimeZoneResolver>();
 		services.AddScoped<IEmailService, EmailService>();
 		services.AddScoped<IBlobService, BlobService>();
 		services.AddSingleton<IGoogleJsonWebSignatureValidator, GoogleJsonWebSignatureValidator>();
@@ -70,6 +77,7 @@ public static class ServiceRegistration
 		services.AddScoped<IBudgetCalculationService, BudgetCalculationService>();
 		services.AddSingleton<ITimelineService, TimelineService>();
 		services.AddScoped<IRecommendationService, RecommendationService>();
+		services.AddScoped<INearbyPlaceSearchService, NearbyPlaceSearchService>();
 		services.AddHttpClient<IGeocodingService, NominatimGeocodingService>((sp, client) =>
 		{
 			var settings = sp.GetRequiredService<IOptions<GeocodingSettings>>().Value;
@@ -89,7 +97,19 @@ public static class ServiceRegistration
 				: settings.BaseUrl.TrimEnd('/'));
 			client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds <= 0 ? 8 : settings.TimeoutSeconds);
 		});
+		services.AddHttpClient<IExchangeRateService, FrankfurterExchangeRateService>((sp, client) =>
+		{
+			var settings = sp.GetRequiredService<IOptions<CurrencySettings>>().Value;
+			client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/'));
+			client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds <= 0 ? 5 : settings.TimeoutSeconds);
+		}).AddStandardResilienceHandler();
 		services.AddMemoryCache();
+		if (configuration.GetValue("Currency:EnableWorkers", true))
+		{
+			services.AddHostedService<CurrencyRefreshWorker>();
+			services.AddHostedService<VisitLogConversionWorker>();
+			services.AddHostedService<TimeZoneBackfillWorker>();
+		}
 
 		// Open-Generic DI registration for Generic Repository
 		services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));

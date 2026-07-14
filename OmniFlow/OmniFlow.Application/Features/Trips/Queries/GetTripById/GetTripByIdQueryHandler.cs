@@ -15,19 +15,22 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
     private readonly IAuthenticatedUserService _authenticatedUserService;
     private readonly ITripVisibilityService _tripVisibilityService;
     private readonly IMapper _mapper;
+    private readonly ITripTemporalService _temporalService;
 
     public GetTripByIdQueryHandler(
         ITripRepositoryAsync tripRepository,
         IApplicationDbContext context,
         IAuthenticatedUserService authenticatedUserService,
         ITripVisibilityService tripVisibilityService,
-        IMapper mapper)
+        IMapper mapper,
+        ITripTemporalService temporalService)
     {
         _tripRepository = tripRepository;
         _context = context;
         _authenticatedUserService = authenticatedUserService;
         _tripVisibilityService = tripVisibilityService;
         _mapper = mapper;
+        _temporalService = temporalService;
     }
 
     public async Task<TripResponse> Handle(GetTripByIdQuery request, CancellationToken cancellationToken)
@@ -50,6 +53,9 @@ public class GetTripByIdQueryHandler : IRequestHandler<GetTripByIdQuery, TripRes
         }
 
         var response = _mapper.Map<TripResponse>(trip);
+        var execution = _temporalService.GetExecutionState(trip);
+        response.ExecutionState = execution.State;
+        response.IsTimezoneComplete = execution.IsTimezoneComplete;
 
         if (ShouldIncrementViewCount(trip.OwnerId, currentUserId))
         {

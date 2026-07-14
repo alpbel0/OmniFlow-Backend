@@ -12,15 +12,18 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
     private readonly IApplicationDbContext _context;
     private readonly IAuthenticatedUserService _authenticatedUserService;
     private readonly IGeocodingService _geocodingService;
+    private readonly ITimeZoneResolver _timeZoneResolver;
 
     public CreateTripDestinationCommandHandler(
         IApplicationDbContext context,
         IAuthenticatedUserService authenticatedUserService,
-        IGeocodingService geocodingService)
+        IGeocodingService geocodingService,
+        ITimeZoneResolver timeZoneResolver)
     {
         _context = context;
         _authenticatedUserService = authenticatedUserService;
         _geocodingService = geocodingService;
+        _timeZoneResolver = timeZoneResolver;
     }
 
     public async Task<Guid> Handle(CreateTripDestinationCommand request, CancellationToken cancellationToken)
@@ -65,6 +68,7 @@ public class CreateTripDestinationCommandHandler : IRequestHandler<CreateTripDes
                 TripId = trip.Id
             };
             destination.SetCoordinates(geocodingResult?.Latitude, geocodingResult?.Longitude);
+            destination.Timezone = _timeZoneResolver.Resolve(geocodingResult?.Latitude, geocodingResult?.Longitude);
 
             await _context.TripDestinations.AddAsync(destination, cancellationToken);
 

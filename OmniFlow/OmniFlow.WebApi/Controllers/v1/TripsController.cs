@@ -25,6 +25,8 @@ using OmniFlow.Application.Features.Trips.Queries.GetRecommendedPlaces;
 using OmniFlow.Application.Features.Trips.Queries.GetTripChecklistStatus;
 using OmniFlow.Application.Features.Trips.Queries.GetTripById;
 using OmniFlow.Application.Features.Trips.Queries.GetTripRoutes;
+using OmniFlow.Application.Features.Trips.Queries.GetTripSummary;
+using OmniFlow.Application.Features.Trips.Queries.SearchNearbyPlaces;
 using OmniFlow.Domain.Enums;
 
 namespace OmniFlow.WebApi.Controllers.v1;
@@ -119,6 +121,7 @@ public class TripsController : BaseApiController
             Tempo = request.Tempo,
             TransportPreference = request.TransportPreference,
             ManualBudget = request.ManualBudget,
+            BaseCurrencyCode = request.BaseCurrencyCode,
             CoverPhotoUrl = request.CoverPhotoUrl,
             Tags = request.Tags,
             Destinations =
@@ -158,6 +161,7 @@ public class TripsController : BaseApiController
             Tempo = request.Tempo,
             TransportPreference = request.TransportPreference,
             ManualBudget = request.ManualBudget,
+            BaseCurrencyCode = request.BaseCurrencyCode,
             CoverPhotoUrl = request.CoverPhotoUrl,
             Tags = request.Tags,
             Destinations = request.Destinations
@@ -221,12 +225,48 @@ public class TripsController : BaseApiController
             Tempo = request.Tempo,
             TransportPreference = request.TransportPreference,
             ManualBudget = request.ManualBudget,
+            BaseCurrencyCode = request.BaseCurrencyCode,
             CoverPhotoUrl = request.CoverPhotoUrl,
             Tags = request.Tags
         };
 
         await Mediator.Send(command);
         return NoContent();
+    }
+
+    [HttpGet("/api/v1/trips/{tripId:guid}/summary")]
+    [ProducesResponseType(typeof(TripSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> GetSummary([FromRoute] Guid tripId, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new GetTripSummaryQuery(tripId), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>Search nearby personalized places during an active trip.</summary>
+    [HttpPost("/api/v1/trips/{tripId:guid}/nearby-places/search")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [ProducesResponseType(typeof(IReadOnlyList<NearbyPlaceResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SearchNearbyPlaces(
+        [FromRoute] Guid tripId,
+        [FromBody] SearchNearbyPlacesRequest request,
+        CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store, private";
+        var result = await Mediator.Send(new SearchNearbyPlacesQuery(
+            tripId,
+            request.TripDestinationId,
+            request.Latitude,
+            request.Longitude,
+            request.RadiusKm,
+            request.CategoryGroup), cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>Reorder draft trip destinations and shift destination dates/timeline days.</summary>

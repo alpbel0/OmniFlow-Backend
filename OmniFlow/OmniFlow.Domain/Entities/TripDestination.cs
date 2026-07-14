@@ -18,6 +18,8 @@ public class TripDestination : AuditableBaseEntity
 
 	public double? Longitude { get; set; }
 
+	public string? Timezone { get; set; }
+
 	public DateOnly ArrivalDate
 	{
 		get => _arrivalDate;
@@ -45,6 +47,8 @@ public class TripDestination : AuditableBaseEntity
 	public Trip? Trip { get; set; }
 
 	public ICollection<TimelineEntry> TimelineEntries { get; set; } = new List<TimelineEntry>();
+
+	public ICollection<PlaceVisitLog> VisitLogs { get; set; } = new List<PlaceVisitLog>();
 
 	public TripDestination(DateOnly arrivalDate, DateOnly departureDate, string city, string country, int orderIndex)
 	{

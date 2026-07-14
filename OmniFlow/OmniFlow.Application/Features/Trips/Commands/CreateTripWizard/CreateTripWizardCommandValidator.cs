@@ -1,5 +1,6 @@
 using FluentValidation;
 using OmniFlow.Application.DTOs.TripDestinations;
+using OmniFlow.Application.Currency;
 
 namespace OmniFlow.Application.Features.Trips.Commands.CreateTripWizard;
 
@@ -27,6 +28,11 @@ public class CreateTripWizardCommandValidator : AbstractValidator<CreateTripWiza
         RuleFor(x => x.ManualBudget)
             .GreaterThanOrEqualTo(0).When(x => x.ManualBudget.HasValue)
             .WithMessage("Manual budget must be greater than or equal to 0.");
+
+        RuleFor(x => x.BaseCurrencyCode)
+            .Must(CurrencyPolicy.IsSupported)
+            .When(x => !string.IsNullOrWhiteSpace(x.BaseCurrencyCode))
+            .WithMessage("Base currency must be TRY, USD, or EUR.");
 
         // Destinations: must have at least 1, at most 10
         RuleFor(x => x.Destinations)
