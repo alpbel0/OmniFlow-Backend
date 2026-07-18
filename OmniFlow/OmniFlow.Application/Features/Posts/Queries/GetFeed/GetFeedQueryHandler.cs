@@ -141,7 +141,12 @@ public class GetFeedQueryHandler : IRequestHandler<GetFeedQuery, GetFeedViewMode
 
         if (parameter.PostType.HasValue)
         {
-            query = query.Where(post => post.PostType == parameter.PostType.Value);
+            var postType = parameter.PostType.Value;
+            // "Foto" filtresi: Route olarak işaretlenmiş ama fotoğrafı olan gönderileri de kapsar
+            // (PostType enum'ında "Both" olmadığı için fotoğraf varlığına da bakılır).
+            query = postType == PostType.Photo
+                ? query.Where(post => post.PostType == PostType.Photo || post.Photos.Count > 0)
+                : query.Where(post => post.PostType == postType);
         }
 
         return query;
