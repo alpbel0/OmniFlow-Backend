@@ -145,6 +145,7 @@ public class UsersController : BaseApiController
 	}
 
 	[HttpPut("me")]
+	[Authorize]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
 	[ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
@@ -182,9 +183,10 @@ public class UsersController : BaseApiController
 
 	/// <summary>Yüklenen profil fotoğrafını blob'a alır ve <c>User.ProfilePhotoUrl</c> alanını günceller.</summary>
 	[HttpPost("me/profile-photo")]
+	[Authorize]
 	[RequestSizeLimit(MaxProfilePhotoBytes)]
 	[Consumes("multipart/form-data")]
-	[ProducesResponseType(typeof(UploadProfilePhotoResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(typeof(UserProfileResponse), StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
 	public async Task<IActionResult> UploadProfilePhoto(
@@ -218,6 +220,10 @@ public class UsersController : BaseApiController
 			},
 			cancellationToken);
 
-		return Ok(new UploadProfilePhotoResponse { ProfilePhotoUrl = url });
+		var profile = await Mediator.Send(
+			new GetUserProfileQuery { UserKey = _authenticatedUserService.UserId },
+			cancellationToken);
+
+		return Ok(profile);
 	}
 }

@@ -1,8 +1,10 @@
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OmniFlow.Api.IntegrationTests.Setup;
 using OmniFlow.Application.DTOs.Account;
 using OmniFlow.Application.DTOs.Posts;
@@ -474,6 +476,80 @@ public class UsersControllerTests : IClassFixture<CustomWebApplicationFactory>
 
 		user.Bio.Should().Be("Updated travel bio");
 		user.ProfilePhotoUrl.Should().Be("https://cdn.example.com/new-profile.jpg");
+	}
+
+	[Fact]
+	public async Task UploadProfilePhoto_WithoutToken_Returns401()
+	{
+		using var content = CreateMultipart(("file", "avatar.jpg", "image/jpeg", "fake image"));
+
+		var response = await _client.PostAsync("/api/v1/users/me/profile-photo", content);
+
+		response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	public async Task UploadProfilePhoto_WithValidImage_ReturnsUpdatedProfile()
+	{
+		var token = await GetAccessTokenAsync(TestDatabaseSeeder.TestUserEmail, TestDatabaseSeeder.TestUserPassword);
+		using var client = CreateClientWithFakeBlobService(token);
+		using var content = CreateMultipart(("file", "avatar.jpg", "image/jpeg", "fake image"));
+
+		var response = await client.PostAsync("/api/v1/users/me/profile-photo", content);
+
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var body = await response.Content.ReadAsStringAsync();
+		var result = JsonSerializer.Deserialize<UserProfileResponse>(body, _json);
+
+		result.Should().NotBeNull();
+		result!.Id.Should().NotBeEmpty();
+		result.Username.Should().Be(TestDatabaseSeeder.TestUserUsername);
+		result.ProfilePhotoUrl.Should().Be("https://blob.test/profile-photos/avatar.jpg");
+	}
+
+	private HttpClient CreateClientWithFakeBlobService(string? token = null)
+	{
+		var client = _factory.WithWebHostBuilder(builder =>
+		{
+			builder.ConfigureServices(services =>
+			{
+				services.RemoveAll<IBlobService>();
+				services.AddScoped<IBlobService, FakeBlobService>();
+			});
+		}).CreateClient();
+
+		if (!string.IsNullOrWhiteSpace(token))
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		return client;
+	}
+
+	private static MultipartFormDataContent CreateMultipart(params (string Name, string FileName, string ContentType, string Body)[] files)
+	{
+		var content = new MultipartFormDataContent();
+		foreach (var file in files)
+		{
+			var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes(file.Body));
+			fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+			content.Add(fileContent, file.Name, file.FileName);
+		}
+
+		return content;
+	}
+
+	private sealed class FakeBlobService : IBlobService
+	{
+		public Task<string> UploadAsync(
+			Stream stream,
+			string contentType,
+			string? originalFileName,
+			string? folder = null,
+			CancellationToken cancellationToken = default)
+		{
+			var safeFolder = string.IsNullOrWhiteSpace(folder) ? "root" : folder.Trim('/');
+			return Task.FromResult($"https://blob.test/{safeFolder}/{originalFileName}");
+		}
 	}
 
 	private async Task<User> CreateUserAsync(
